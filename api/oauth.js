@@ -46,7 +46,7 @@
    * @summary Gets the error code
    * @type {string}
    */
-  getError() {
+  get error() {
     return this._error;
   }
   /**
@@ -54,7 +54,7 @@
    * @summary Get the human readable description of the error
    * @type {string}
    */
-  getDescription() {
+  get description() {
     return this._description;
   }
   /**
@@ -91,7 +91,7 @@
      * @type {string}
      * @summary Gets the issued token
      */
-    getToken() {
+    get token() {
       return this._token;
     }
     /**
@@ -99,7 +99,7 @@
      * @summary Gets the type of token
      * @type {string}
      */
-    getTokenType() {
+    get tokenType() {
       return this._tokenType;
     }
     /**
@@ -107,7 +107,7 @@
      * @summary Gets the time (in epoch) that this token is valid
      * @type {number}
      */
-    getExpiresIn() {
+    get expiresIn() {
       return this._expiresIn;
     }
     /**
@@ -115,7 +115,7 @@
      * @summary Gets the refresh token
      * @type {string}
      */
-    getRefreshToken() {
+    get refreshToken() {
       return this._refreshToken;
     }
     /**
@@ -144,10 +144,21 @@
     }
     /**
      * @property
-     * @summary Gets the path on which this class should be routed
+     * @summary Gets the paths on which this class should be routed
      */
-    getRoute() {
-      return "auth/oauth2_token";
+    get routes() {
+      return {
+        "permission_group" : "oauth",
+        "routes" : [
+          {
+            "path": "auth/oauth2_token",
+            "post" : {
+              "demand" : uhc.Permission.EXECUTE,
+              "method":this.post 
+            }
+          }
+        ]           
+      }
     }
     /**
      * @method
@@ -184,16 +195,16 @@
      *        type: string
      */
     post(req, res) {
-      res.status(501).send("Not Implemented");
+      throw new uhc.NotImplementedException();
     }
     /**
      * Custom exception handler for OAUTH
      * @param {*} e The exception to be handled 
      */
     onException(e, res) {
-      if(e instanceof uhc.ErrorResult)
-        res.status(400).send(new OAuthErrorResult(e.code, e.message));
+      if(e instanceof uhc.Exception)
+        res.status(400).json(new OAuthErrorResult(e.code, e.message));
       else
-        res.status(400).send(new OAuthTokenResult(uhc.ErrorCodes.SECURITY_ERROR, e));
+        res.status(400).json(new OAuthTokenResult(uhc.ErrorCodes.SECURITY_ERROR, e));
     }
  }

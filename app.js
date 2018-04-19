@@ -1,4 +1,6 @@
-import { OAuth } from './api/oauth';
+import { OAuthTokenService } from './api/oauth';
+import { UserResource } from './api/user';
+import { UserPaymentResource } from './api/payment';
 
 'use strict';
 
@@ -44,9 +46,13 @@ app.use(bodyParser.urlencoded({ extended: true }))
 var restApi = new api.RestApi(uhc.Config.api.base, app);
 
 // Add resources to rest API
-restApi.enableCors();
-restApi.addResource(new OAuth());
+if(uhc.config.api.enableCors) 
+    restApi.enableCors();
 
+// Add OAuth token service
+restApi.addResource(new OAuthTokenService());
+restApi.addResource(new UserResource());
+restApi.addResource(new UserPaymentResource());
 // Start REST API
 restApi.start();
 

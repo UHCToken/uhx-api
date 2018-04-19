@@ -26,12 +26,8 @@
 // HTTP operations that are premitted
 const ALLOWED_OPS = [ 'use', 'options', 'get', 'post', 'put', 'delete' ];
 
-const express = require('express'),
-    uhc = require("./uhc"),
-    oauth = require("./api/oauth"),
-    user = require("./api/user"),
-    wallet = require("./api/wallet"),
-    payment = require("./api/payment");
+const uhc = require("./uhc"),
+    jwt = require('jsonwebtoken');
 
 /**
  * @class
@@ -54,19 +50,13 @@ module.exports.RestApi = class RestApi {
      */
     enableCors() {
         // Verify configuration
-        if(!this._application) throw new uhc.ErrorResult("Application is not specified", uhc.ErrorCodes.INVALID_CONFIGURATION);
+        if(!this._application) throw new uhc.Exception("Application is not specified", uhc.ErrorCodes.INVALID_CONFIGURATION);
 
         // CORS
         this._application.use((req, res, next) => {
-            // Website you wish to allow to connect
             res.setHeader('Access-Control-Allow-Origin', '*')
-
-            // Request methods you wish to allow
-            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE')
-
-            // Request headers you wish to allow
+            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE')
             res.setHeader('Access-Control-Allow-Headers', 'Origin,X-Requested-With,content-type')
-            // Pass to next layer of middleware
             next();
         });
     }
@@ -76,53 +66,131 @@ module.exports.RestApi = class RestApi {
     start() {
 
         // Verify configuration
-        if(!this._application) throw new uhc.ErrorResult("Application is not specified", uhc.ErrorCodes.INVALID_CONFIGURATION);
-        if(!this._basePath) throw new uhc.ErrorResult("Base Path is not specified", uhc.ErrorCodes.INVALID_CONFIGURATION);
+        if(!this._application) throw new uhc.Exception("Application is not specified", uhc.ErrorCodes.INVALID_CONFIGURATION);
+        if(!this._basePath) throw new uhc.Exception("Base Path is not specified", uhc.ErrorCodes.INVALID_CONFIGURATION);
 
         // Bind my own operations
         this._application.options(basePath + "/", this.options);
 
+        // This method needs to be private so we have to keep it in here :(
+        var securityMap = {
+            "/" : {
+                "options" : [ null, null ]
+            }
+        };
+
+        // This method enforces the permissions on the JWT token security map 
+        this._application.use((req, res, next) => {
+
+            // Get the security map
+            var permissionSet = securityMap[req.route][req.method];
+
+            // First, is the method open?
+            if(!permissionSet || !permissionSet[0] && !permissionSet[1])
+                next();
+            else // it isn't and must be authenticated
+            {
+                var authHeader = req.get('Authorization');
+
+                // No auth header?
+                if(!authHeader) {
+                    res.setHeader("WWW-Authenticate: BEARER");
+                    // TODO: Send to auth service
+                    res.send(401).json(new uhc.Exception("UNAUTHORIZED", uhc.ErrorCodes.UNAUTHORIZED));
+                }
+                else { // Auth header is present, validate it
+                    var authParts = authHeader.split(" ");
+
+                    // Verify that the authorization is bearer based and that it is a JWT token
+                    try {
+                        if(authParts[0].trim().toLowerCase() != "bearer")
+                            res.send(403).json(new uhc.Exception("INVALID AUTHORIZATION", uhc.ErrorCodes.SECURITY_ERROR));
+                        else if(!authParts[1] || authParts[1].split(".").length != 3)
+                            res.send(403).json(new uhc.Exception("INVALID BEARER TOKEN FORMAT", uhc.ErrorCodes.SECURITY_ERROR));
+                        else { // Validate the jwt
+                            var token = jwt.verify(authParts[1], uhc.Config.security.hmac256secret);
+                            
+                            // TODO: Check the grants!
+                        }
+                    }
+                    catch(e) {
+                        console.error(`Error validting security - ${e}`);
+                        res.send(500).json(new uhc.Exception("Error validating security", uhc.ErrorCodes.SECURITY_ERROR, new uhc.Exception(e, uhc.ErrorCodes.UNKNOWN)));
+                    }
+                }
+                
+            }    
+        });
+
         // Start other resources 
         for(var r in this._resources) {
-
-            // Identify the path 
-            var path = this._basePath + "/" + (r.route || r.constructor.name.toLowerCase());
-            var rPrototype = Reflect.getPrototypeOf(r);
 
             // Log
             console.info("Adding instance of " + r.constructor.name + " to API");
 
-            // Bind operations to the router 
-            for(var m in Reflect.ownKeys(rPrototype)) {
-                var fn =this._application[m];
-                if(fn && ALLOWED_OPS.indexOf(m) > -1) 
-                {
-                    console.info("\t" + m + " " + path + " => " + r.constructor.name + "." + m);
+            // Route information
+            var routeInfo = r.routes;
 
-                    // This is a stub that will call the user's code, it wraps the 
-                    // function from the API class in a common code which will handle
-                    // exceptions and return a consistent error object to the caller
-                    fn(path, async(req,res) => { 
-                        try {
-                            r[m](req, res);
-                        }
-                        catch(e) {
-                            if(r.onException)
-                                r.onException(e, res);
-                            else {
-                                // If the exception is not already an error result then we want to wrap it in one
-                                var retVal = e;
-                                if(!(retVal instanceof uhc.ErrorResult))
-                                    retVal = new uhc.ErrorResult(e, uhc.ErrorCodes.UNKNOWN);
-                                
-                                // Output to error log
-                                console.error("Error executing request: " + JSON.stringify(retVal));
-                    
-                                // Send result
-                                res.status(500).send(retVal);
+            // Bind operations to the router 
+            for(var route in routeInfo.routes) {
+                
+                var path = routeInfo[route].path;
+                
+                // Bind the HTTP parameters
+                for(var httpMethod in Object.keys(routeInfo[route])) {
+
+                    var fn = this._application[httpMethod];
+
+
+                    if(fn && ALLOWED_OPS.indexOf(httpMethod) > -1) 
+                    {
+                        console.info("\t" + m + " " + path + " => " + r.constructor.name + "." + m);
+
+                        // Register in the security map
+                        securityMap[routeInfo[route].path] = securityMap[routeInfo[route].path] || {};
+                        securityMap[routeInfo[route].path][httpMethod] = [ routeInfo[route].permission_group, routeInfo[route][httpMethod].demand ];
+
+                        // This is a stub that will call the user's code, it wraps the 
+                        // function from the API class in a common code which will handle
+                        // exceptions and return a consistent error object to the caller
+                        fn(path, async(req,res) => { 
+                            try {
+                                routeInfo[route][httpMethod].method(req, res);
                             }
-                        }
-                    });
+                            catch(e) {
+                                if(r.onException)
+                                    r.onException(e, res);
+                                else {
+                                    // If the exception is not already an error result then we want to wrap it in one
+                                    var retVal = e;
+                                    if(retVal instanceof uhc.Exception)
+                                        retVal = e;
+                                    else
+                                        retVal = new uhc.Exception(e, uhc.ErrorCodes.UNKNOWN);
+                                    
+                                    // Set appropriate status code
+                                    var httpStatusCode = 500;
+                                    switch(retVal.code) {
+                                        case uhc.ErrorCodes.NOT_IMPLEMENTED:
+                                            httpStatusCode = 501;
+                                            break;
+                                        case uhc.ErrorCodes.SECURITY_ERROR:
+                                            httpStatusCode = 403;
+                                            break;
+                                        case uhc.ErrorCodes.UNAUTHORIZED:
+                                            httpStatusCode = 401;
+                                            break;
+                                    }
+
+                                    // Output to error log
+                                    console.error("Error executing request: " + JSON.stringify(retVal));
+                        
+                                    // Send result
+                                    res.status(httpStatusCode).json(retVal);
+                                }
+                            }
+                        });
+                    }
                 }
             }
         }
@@ -133,7 +201,8 @@ module.exports.RestApi = class RestApi {
      */
     addResource(resourceInstance) {
         // Verify that the resource instance is valid
-        if(!resourceInstance.route) console.warn(resourceInstance.constructor.name + " does not define route property, will use {base}/" + resourceInstance.constructor.name.toLowerCase());
+        if(!resourceInstance.routes) 
+            console.warn(resourceInstance.constructor.name + " does not define routes property, will use {base}/" + resourceInstance.constructor.name.toLowerCase());
         this._resources.push(resourceInstance);
     }
     /**
@@ -152,16 +221,16 @@ module.exports.RestApi = class RestApi {
         }
         catch(e) {
             // Construct error result
-            var causedBy = e instanceof uhc.ErrorResult ?
+            var causedBy = e instanceof uhc.Exception ?
                 e : // exception is already an ErrorResult so we use it
-                new uhc.ErrorResult(e, uhc.ErrorCodes.UNKNOWN); // exception is another class 
+                new uhc.Exception(e, uhc.ErrorCodes.UNKNOWN); // exception is another class 
             
             // Output to error log
             console.error("Error executing options: " + JSON.stringify(causedBy));
 
             // Send result
-            res.status(500).send(
-                new uhc.ErrorResult("Error executing OPTIONS", uhc.ErrorCodes.UNKNOWN, causedBy)
+            res.status(500).json(
+                new uhc.Exception("Error executing OPTIONS", uhc.ErrorCodes.UNKNOWN, causedBy)
             );
         }
     }

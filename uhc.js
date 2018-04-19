@@ -29,31 +29,44 @@
   * @enum UHC API Error Codes
   * @description This is used to expose common error codes 
   */
- module.exports.ErrorCodes = {
+ const ErrorCodes = {
     UNKNOWN : "ERR_UNKNOWN",
     INVALID_CONFIGURATION: "ERR_CONFIGURATION",
     MISSING_PROPERTY: "ERR_MISSING_PROPERTY",
     SECURITY_ERROR: "ERR_SECURITY_ERROR",
-    UNAUTHORIZED: "ERR_UNAUTHORIZED"
+    UNAUTHORIZED: "ERR_UNAUTHORIZED",
+    NOT_IMPLEMENTED: "ERR_NOTIMPLEMENTED"
+ }
+
+ /**
+  * @enum UHC Permissions
+  * @description Permissions
+  */
+ const SecurityPermissions = {
+     EXECUTE : 1,
+     READ : 2,
+     WRITE : 4,
+     LIST: 8,
+     SELF : 16
  }
 
 /**
  * @swagger
  * models:
- *  ErrorResult:
- *      id: ErrorResult
+ *  Exception:
+ *      id: Exception
  *      properties:
  *          message:
  *              type: String
  *          cause:
  *              type: ErrorResult
  */
- module.exports.ErrorResult = class ErrorResult {
+  class Exception {
      /**
       * 
       * @param {string} message The human readable message 
       * @param {string} code A codified representation of the message
-      * @param {ErrorResult} cause The root cause of this particular error result
+      * @param {Exception} cause The root cause of this particular error result
       */
      constructor(message, code, cause) {
          this._message = message;
@@ -75,7 +88,7 @@
      /**
       * @property cause
       * @summary Gets a list of ErrorResults which may have caused this error to occur
-      * @type {ErrorResult[]}
+      * @type {Exception[]}
       */
      get cause() {
          return this._cause;
@@ -96,3 +109,26 @@
          };
      }
  }
+
+ /**
+  * @class
+  * @summary Represents a helper class for not implemented features
+  */
+ class NotImplementedException extends Exception 
+ {
+     /**
+      * @constructor
+      * @summary Constructs a new not implemented exception
+      */
+    constructor() {
+        super("Not Implemented", ErrorCodes.NOT_IMPLEMENTED);
+    }
+ }
+
+
+
+ // Exports section
+ module.exports.Exception = Exception;
+ module.exports.NotImplementedException = NotImplementedException;
+ module.exports.ErrorCodes = ErrorCodes;
+ module.exports.Permission = SecurityPermissions;
