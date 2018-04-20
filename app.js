@@ -1,7 +1,3 @@
-import { OAuthTokenService } from './api/oauth';
-import { UserResource } from './api/user';
-import { UserPaymentResource } from './api/payment';
-
 'use strict';
 
 /**
@@ -30,12 +26,16 @@ import { UserPaymentResource } from './api/payment';
     bodyParser = require('body-parser'),
     rp = require('request-promise'),
     Stellar = require('stellar-sdk'),
-    stripe = require('stripe')(config.stripeKey),
+    uhc = require("./uhc"),
+    stripe = require('stripe')(uhc.Config.stripe.key),
     jwt = require('jsonwebtoken'),
     pg = require('pg'),
     api = require('./api'),
-    uhc = require("./uhc"),
-    swagger = require('swagger-jsdoc');
+    swagger = require('swagger-jsdoc'),
+    oauth = require('./api/oauth'),
+    payment = require('./api/payment'),
+    user = require('./api/user');
+    
 
 // Startup application
 const app = express();
@@ -46,13 +46,14 @@ app.use(bodyParser.urlencoded({ extended: true }))
 var restApi = new api.RestApi(uhc.Config.api.base, app);
 
 // Add resources to rest API
-if(uhc.config.api.enableCors) 
+if(uhc.Config.security.enableCors) 
     restApi.enableCors();
 
 // Add OAuth token service
-restApi.addResource(new OAuthTokenService());
-restApi.addResource(new UserResource());
-restApi.addResource(new UserPaymentResource());
+restApi.addResource(new oauth.OAuthTokenService());
+restApi.addResource(new payment.UserPaymentResource());
+restApi.addResource(new user.UserResource());
+
 // Start REST API
 restApi.start();
 

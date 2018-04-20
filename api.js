@@ -70,7 +70,7 @@ module.exports.RestApi = class RestApi {
         if(!this._basePath) throw new uhc.Exception("Base Path is not specified", uhc.ErrorCodes.INVALID_CONFIGURATION);
 
         // Bind my own operations
-        this._application.options(basePath + "/", this.options);
+        this._application.options(this._basePath + "/", this.options);
 
         // This method needs to be private so we have to keep it in here :(
         var securityMap = {
@@ -83,6 +83,7 @@ module.exports.RestApi = class RestApi {
         this._application.use((req, res, next) => {
 
             // Get the security map
+            if(!req.route) next(); // no route defined
             var permissionSet = securityMap[req.route][req.method];
 
             // First, is the method open?
@@ -126,36 +127,37 @@ module.exports.RestApi = class RestApi {
         for(var r in this._resources) {
 
             // Log
-            console.info("Adding instance of " + r.constructor.name + " to API");
+            console.info("Adding instance of " + this._resources[r].constructor.name + " to API");
 
             // Route information
-            var routeInfo = r.routes;
+            var routesInfo = this._resources[r].routes;
 
             // Bind operations to the router 
-            for(var route in routeInfo.routes) {
+            for(var rid in routesInfo.routes) {
                 
-                var path = routeInfo[route].path;
+                var route  = routesInfo.routes[rid];
+                var path = uhc.Config.api.base + "/" + route.path;
                 
                 // Bind the HTTP parameters
-                for(var httpMethod in Object.keys(routeInfo[route])) {
+                for(var httpMethod in route) {
 
                     var fn = this._application[httpMethod];
 
 
                     if(fn && ALLOWED_OPS.indexOf(httpMethod) > -1) 
                     {
-                        console.info("\t" + m + " " + path + " => " + r.constructor.name + "." + m);
+                        console.info("\t" + httpMethod + " " + path + " => " + this._resources[r].constructor.name + "." + route[httpMethod].method.name);
 
                         // Register in the security map
-                        securityMap[routeInfo[route].path] = securityMap[routeInfo[route].path] || {};
-                        securityMap[routeInfo[route].path][httpMethod] = [ routeInfo[route].permission_group, routeInfo[route][httpMethod].demand ];
+                        securityMap[route.path] = securityMap[route.path] || {};
+                        securityMap[route.path][httpMethod] = [ routesInfo.permission_group, route[httpMethod].demand ];
 
                         // This is a stub that will call the user's code, it wraps the 
                         // function from the API class in a common code which will handle
                         // exceptions and return a consistent error object to the caller
-                        fn(path, async(req,res) => { 
+                        this._application[httpMethod](path, async(req,res) => { 
                             try {
-                                routeInfo[route][httpMethod].method(req, res);
+                                route[httpMethod].method(req, res);
                             }
                             catch(e) {
                                 if(r.onException)
