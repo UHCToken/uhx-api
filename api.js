@@ -30,6 +30,127 @@ const uhc = require("./uhc"),
     jwt = require('jsonwebtoken'),
     express = require('express');
 
+/** 
+ * @class
+ * @summary This class provides a wrapper for requests allowing for consistent error messaging, and authorization controls
+ */
+class RouteHandler {
+
+    /**
+     * @constructor
+     * @param {*} routeInfo Information about the route to which this handler is binding itself
+     */
+    constructor(routeInfo) {
+        this._routeInfo = routeInfo;
+        this.exec = this.exec.bind(this);
+        this.checkAccessCore = this.checkAccessCore.bind(this);
+    }
+
+    /**
+     * @method
+     * @summary The check access core function provides a basic implementation which will use the registered access information and provide basic ACL
+     * @param {Express.Request} req The HTTP request object for authorization to be checked
+     * @param {Express.Response} res The HTTP response object for writing any additional headers
+     */
+    checkAccessCore(req, res) {
+            
+        // Get the security map
+        if(!req.route) return true; // no route defined
+        var permissionSet = [
+            this._routeInfo._instance.routes.permission_group,
+            this._routeInfo[req.method.toLowerCase()].demand
+        ];
+
+        // First, is the method open?
+        if(!permissionSet || !permissionSet[0] && !permissionSet[1])
+            return true;
+        else // it isn't and must be authenticated
+        {
+            var authHeader = req.get('Authorization');
+
+            // No auth header?
+            if(!authHeader) {
+                res.setHeader("WWW-Authenticate", `Bearer authorization_uri="${uhc.Config.security.tokenServiceUri}"`);
+                // TODO: Send to auth service
+                throw new uhc.Exception("Missing authorization header", uhc.ErrorCodes.UNAUTHORIZED);
+            }
+            else { // Auth header is present, validate it
+                var authParts = authHeader.split(" ");
+
+                // Verify that the authorization is bearer based and that it is a JWT token
+                try {
+                    if(authParts[0].trim().toLowerCase() != "bearer")
+                        throw new uhc.Exception("Invalid type of authorization provided, this service expects Bearer", uhc.ErrorCodes.SECURITY_ERROR);
+                    else if(!authParts[1] || authParts[1].split(".").length != 3)
+                        throw new uhc.Exception("Invalid bearer token format, this service expects IETF RFC 7519 format tokens", uhc.ErrorCodes.SECURITY_ERROR);
+                    else { // Validate the jwt
+                        var token = jwt.verify(authParts[1], uhc.Config.security.hmac256secret);
+                        
+                        // TODO: Check the grants!
+                        return true;
+                    }
+                }
+                catch(e) {
+                    console.error(`Error validting security - ${e}`);
+                    throw new uhc.Exception("Error validating security", uhc.ErrorCodes.SECURITY_ERROR, new uhc.Exception(e, uhc.ErrorCodes.UNKNOWN));
+                }
+            }
+            
+        }    
+    }
+
+    /**
+     * @method
+     * @summary Wraps requests in a simple exception and logging handler
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to be sent to the client
+     */
+    async exec(req, res) {
+        try {
+            // Is there custom authentication checker?
+            if(this._routeInfo._instance.authorize)
+                this._routeInfo._instance.authorize(req, res);
+            else
+                this.checkAccessCore(req, res); // use our built in one
+
+                this._routeInfo[req.method.toLowerCase()].method(req, res);
+        }
+        catch(e) {
+            if(this._routeInfo._instance.error)
+                this._routeInfo._instance.error(e, res);
+            else {
+                // If the exception is not already an error result then we want to wrap it in one
+                var retVal = e;
+                if(retVal instanceof uhc.Exception)
+                    retVal = e;
+                else if(e.message)
+                    retVal = new uhc.Exception(e.message, uch.ErrorCodes.UNKNOWN);
+                else
+                    retVal = new uhc.Exception(e, uhc.ErrorCodes.UNKNOWN);
+                
+                // Set appropriate status code
+                var httpStatusCode = 500;
+                switch(retVal.code) {
+                    case uhc.ErrorCodes.NOT_IMPLEMENTED:
+                        httpStatusCode = 501;
+                        break;
+                    case uhc.ErrorCodes.SECURITY_ERROR:
+                        httpStatusCode = 403;
+                        break;
+                    case uhc.ErrorCodes.UNAUTHORIZED:
+                        httpStatusCode = 401;
+                        break;
+                }
+
+                // Output to error log
+                console.error(`Error executing ${req.method} ${req.path} :  ${JSON.stringify(retVal)}`);
+    
+                // Send result
+                res.status(httpStatusCode).json(retVal);
+            }
+        }
+    }
+}
 /**
  * @class
  * @summary UHC Api class
@@ -73,59 +194,6 @@ module.exports.RestApi = class RestApi {
         // Bind my own operations
         this._application.options(this._basePath + "/", this.options);
 
-        // This method needs to be private so we have to keep it in here :(
-        var securityMap = {
-            "/" : {
-                "options" : [ null, null ]
-            }
-        };
-
-        // This method enforces the permissions on the JWT token security map 
-        this._application.all('*', (req, res, next) => {
-            
-            var p = this._application;
-
-            // Get the security map
-            if(!req.route) return; // no route defined
-            var permissionSet = securityMap[req.route.path][req.method];
-
-            // First, is the method open?
-            if(!permissionSet || !permissionSet[0] && !permissionSet[1])
-                next();
-            else // it isn't and must be authenticated
-            {
-                var authHeader = req.get('Authorization');
-
-                // No auth header?
-                if(!authHeader) {
-                    res.setHeader("WWW-Authenticate: BEARER");
-                    // TODO: Send to auth service
-                    res.send(401).json(new uhc.Exception("UNAUTHORIZED", uhc.ErrorCodes.UNAUTHORIZED));
-                }
-                else { // Auth header is present, validate it
-                    var authParts = authHeader.split(" ");
-
-                    // Verify that the authorization is bearer based and that it is a JWT token
-                    try {
-                        if(authParts[0].trim().toLowerCase() != "bearer")
-                            res.send(403).json(new uhc.Exception("INVALID AUTHORIZATION", uhc.ErrorCodes.SECURITY_ERROR));
-                        else if(!authParts[1] || authParts[1].split(".").length != 3)
-                            res.send(403).json(new uhc.Exception("INVALID BEARER TOKEN FORMAT", uhc.ErrorCodes.SECURITY_ERROR));
-                        else { // Validate the jwt
-                            var token = jwt.verify(authParts[1], uhc.Config.security.hmac256secret);
-                            
-                            // TODO: Check the grants!
-                        }
-                    }
-                    catch(e) {
-                        console.error(`Error validting security - ${e}`);
-                        res.send(500).json(new uhc.Exception("Error validating security", uhc.ErrorCodes.SECURITY_ERROR, new uhc.Exception(e, uhc.ErrorCodes.UNKNOWN)));
-                    }
-                }
-                
-            }    
-        });
-
         // Start other resources 
         for(var r in this._resources) {
 
@@ -139,6 +207,7 @@ module.exports.RestApi = class RestApi {
             for(var rid in routesInfo.routes) {
                 
                 var route  = routesInfo.routes[rid];
+                route._instance = this._resources[r];
                 var path = uhc.Config.api.base + "/" + route.path;
                 
                 // Bind the HTTP parameters
@@ -146,55 +215,15 @@ module.exports.RestApi = class RestApi {
 
                     var fn = this._application[httpMethod];
 
-
                     if(fn && ALLOWED_OPS.indexOf(httpMethod) > -1) 
                     {
                         console.info("\t" + httpMethod + " " + path + " => " + this._resources[r].constructor.name + "." + route[httpMethod].method.name);
 
-                        // Register in the security map
-                        securityMap[route.path] = securityMap[route.path] || {};
-                        securityMap[route.path][httpMethod] = [ routesInfo.permission_group, route[httpMethod].demand ];
-
                         // This is a stub that will call the user's code, it wraps the 
                         // function from the API class in a common code which will handle
                         // exceptions and return a consistent error object to the caller
-                        this._application[httpMethod](path, async(req,res) => { 
-                            try {
-                                route[httpMethod].method(req, res);
-                            }
-                            catch(e) {
-                                if(r.onException)
-                                    r.onException(e, res);
-                                else {
-                                    // If the exception is not already an error result then we want to wrap it in one
-                                    var retVal = e;
-                                    if(retVal instanceof uhc.Exception)
-                                        retVal = e;
-                                    else
-                                        retVal = new uhc.Exception(e, uhc.ErrorCodes.UNKNOWN);
-                                    
-                                    // Set appropriate status code
-                                    var httpStatusCode = 500;
-                                    switch(retVal.code) {
-                                        case uhc.ErrorCodes.NOT_IMPLEMENTED:
-                                            httpStatusCode = 501;
-                                            break;
-                                        case uhc.ErrorCodes.SECURITY_ERROR:
-                                            httpStatusCode = 403;
-                                            break;
-                                        case uhc.ErrorCodes.UNAUTHORIZED:
-                                            httpStatusCode = 401;
-                                            break;
-                                    }
-
-                                    // Output to error log
-                                    console.error("Error executing request: " + JSON.stringify(retVal));
-                        
-                                    // Send result
-                                    res.status(httpStatusCode).json(retVal);
-                                }
-                            }
-                        });
+                        var pathHandler = new RouteHandler(route);
+                        this._application[httpMethod](path, pathHandler.exec);
                     }
                 }
             }

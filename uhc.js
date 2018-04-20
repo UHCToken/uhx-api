@@ -35,7 +35,8 @@
     MISSING_PROPERTY: "ERR_MISSING_PROPERTY",
     SECURITY_ERROR: "ERR_SECURITY_ERROR",
     UNAUTHORIZED: "ERR_UNAUTHORIZED",
-    NOT_IMPLEMENTED: "ERR_NOTIMPLEMENTED"
+    NOT_IMPLEMENTED: "ERR_NOTIMPLEMENTED",
+    RULES_VIOLATION: "ERR_BUSINESS_RULES"
  }
 
  /**
@@ -126,7 +127,48 @@
     }
  }
 
+ /**
+  * @class
+  * @summary Represents an exception where one or more business rules have been violated
+  */
+ class BusinessRuleViolationException extends Exception 
+ {
 
+    /**
+     * @constructor
+     * @param {*} violations The business rules that were violated either as a hash map or list of strings
+     */
+    constructor(violations) 
+    {
+        this._violations = violations;
+
+        // Transcribe and call super
+        if(Array.isArray(violations)) {
+            var causedBy = [];
+            for(var i in violations) {
+                if(violations[i] instanceof string)
+                    causedBy.push(new BusinessRuleViolationException(violations[i]));
+                else if(violations[i] instanceof Exception)
+                    causedBy.push(violations[i]);
+                else if(violations[i].code)
+                    causedBy.push(new Exception(violations[i].message, violations[i].code));
+            }
+            super("Business constraint failed", ErrorCodes.RULES_VIOLATION, causedBy);
+        }
+        else if(violations)
+            super(violations, ErrorCodes.RULES_VIOLATION);
+        else
+            super("Business constraint failed", Errorcodes.RULES_VIOLATION);
+    }
+ }
+
+ /**
+  * @class
+  * @summary Represents the core business logic of the UHC application
+  */
+ class BusinessLogic {
+
+ }
 
  // Exports section
  module.exports.Exception = Exception;

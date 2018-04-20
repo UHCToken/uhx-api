@@ -32,9 +32,9 @@
     pg = require('pg'),
     api = require('./api'),
     swagger = require('swagger-jsdoc'),
-    oauth = require('./api/oauth'),
-    payment = require('./api/payment'),
-    user = require('./api/user');
+    oauth = require('./controllers/oauth'),
+    payment = require('./controllers/payment'),
+    user = require('./controllers/user');
     
 
 // Startup application

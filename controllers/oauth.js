@@ -162,6 +162,15 @@
     }
     /**
      * @method
+     * @summary Overrides the underlying API authentication to use HTTP-Basic or client_id and client_secret body parameters
+     * @param {Express.Request} req The request object
+     * @param {Express.Response} res The response object
+     */
+    authorize(req, res) {
+      throw new uhc.NotImplementedException();
+    }
+    /**
+     * @method
      * @summary OAUTH 2.0 Token Service 
      * @param {*} req The request object
      * @param {*} res The response object
@@ -201,7 +210,7 @@
      * Custom exception handler for OAUTH
      * @param {*} e The exception to be handled 
      */
-    onException(e, res) {
+    error(e, res) {
       if(e instanceof uhc.Exception)
         res.status(400).json(new OAuthErrorResult(e.code, e.message));
       else
