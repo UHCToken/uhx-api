@@ -46,6 +46,7 @@
      EXECUTE : 1,
      READ : 2,
      WRITE : 4,
+     RWX : 7,
      LIST: 8,
      SELF : 16
  }

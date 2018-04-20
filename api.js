@@ -27,7 +27,8 @@
 const ALLOWED_OPS = [ 'use', 'options', 'get', 'post', 'put', 'delete' ];
 
 const uhc = require("./uhc"),
-    jwt = require('jsonwebtoken');
+    jwt = require('jsonwebtoken'),
+    express = require('express');
 
 /**
  * @class
@@ -80,11 +81,13 @@ module.exports.RestApi = class RestApi {
         };
 
         // This method enforces the permissions on the JWT token security map 
-        this._application.use((req, res, next) => {
+        this._application.all('*', (req, res, next) => {
+            
+            var p = this._application;
 
             // Get the security map
-            if(!req.route) next(); // no route defined
-            var permissionSet = securityMap[req.route][req.method];
+            if(!req.route) return; // no route defined
+            var permissionSet = securityMap[req.route.path][req.method];
 
             // First, is the method open?
             if(!permissionSet || !permissionSet[0] && !permissionSet[1])
