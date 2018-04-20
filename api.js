@@ -108,12 +108,11 @@ class RouteHandler {
     async exec(req, res) {
         try {
             // Is there custom authentication checker?
-            if(this._routeInfo._instance.authorize)
-                this._routeInfo._instance.authorize(req, res);
-            else
-                this.checkAccessCore(req, res); // use our built in one
-
+            if(this._routeInfo._instance.authorize && this._routeInfo._instance.authorize(req, res) ||
+                this.checkAccessCore(req, res))
                 this._routeInfo[req.method.toLowerCase()].method(req, res);
+            else
+                throw new uhc.Exception("Authentication failure", uhc.ErrorCodes.SECURITY_ERROR);
         }
         catch(e) {
             if(this._routeInfo._instance.error)
@@ -155,7 +154,7 @@ class RouteHandler {
  * @class
  * @summary UHC Api class
  */
-module.exports.RestApi = class RestApi {
+ class RestApi {
 
     /**
      * Constructs a new API instance and attaches it to the specified application
@@ -269,3 +268,6 @@ module.exports.RestApi = class RestApi {
         }
     }
 }
+
+// Module exports
+module.exports.RestApi = RestApi;

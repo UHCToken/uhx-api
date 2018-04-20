@@ -173,5 +173,7 @@
  // Exports section
  module.exports.Exception = Exception;
  module.exports.NotImplementedException = NotImplementedException;
+ module.exports.BusinessRuleViolationException = BusinessRuleViolationException;
  module.exports.ErrorCodes = ErrorCodes;
  module.exports.Permission = SecurityPermissions;
+ module.exports.BusinessLogic = BusinessLogic;

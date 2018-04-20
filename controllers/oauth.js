@@ -135,7 +135,7 @@
   * @class
   * @summary Represents the OAUTH2 Token Service 
   */
- module.exports.OAuthTokenService = class OAuthTokenService {
+ class OAuthTokenService {
     /**
       * @constructor
       */
@@ -175,7 +175,7 @@
      * @param {*} req The request object
      * @param {*} res The response object
      * @swagger
-     * /auth/oauth2_token
+     * /api/v1/auth/oauth2_token
      * post:
      *    description: OAUTH 2.0 token service for authentication. This service returns a JWT token
      *    tags: [OAuth]
@@ -214,6 +214,9 @@
       if(e instanceof uhc.Exception)
         res.status(400).json(new OAuthErrorResult(e.code, e.message));
       else
-        res.status(400).json(new OAuthTokenResult(uhc.ErrorCodes.SECURITY_ERROR, e));
+        res.status(400).json(new OAuthErrorResult(uhc.ErrorCodes.SECURITY_ERROR, e));
     }
  }
+
+ // Module exports
+ module.exports.OAuthTokenService = OAuthTokenService;

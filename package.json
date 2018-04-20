@@ -12,6 +12,7 @@
     "body-parser": "^1.18.2",
     "express": "^4.16.3",
     "jsonwebtoken": "^8.2.1",
+    "mocha": "^5.1.1",
     "mongodb": "^3.0.5",
     "pg": "^7.4.1",
     "request": "^2.85.0",
