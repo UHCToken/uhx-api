@@ -33,8 +33,10 @@
     api = require('./api'),
     swagger = require('swagger-jsdoc'),
     oauth = require('./controllers/oauth'),
-    payment = require('./controllers/payment'),
-    user = require('./controllers/user');
+    fiat = require('./controllers/fiat'),
+    user = require('./controllers/user'),
+    contract = require('./controllers/contract'),
+    wallet = require('./controllers/wallet');
     
 
 // Startup application
@@ -51,8 +53,10 @@ if(uhc.Config.security.enableCors)
 
 // Add OAuth token service
 restApi.addResource(new oauth.OAuthTokenService());
-restApi.addResource(new payment.UserPaymentResource());
-restApi.addResource(new user.UserResource());
+restApi.addResource(new fiat.FiatApiResource());
+restApi.addResource(new user.UserApiResource());
+restApi.addResource(new contract.ContractApiResource());
+restApi.addResource(new wallet.WalletApiResource());
 
 // Start REST API
 restApi.start();

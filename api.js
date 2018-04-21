@@ -27,6 +27,7 @@
 const ALLOWED_OPS = [ 'use', 'options', 'get', 'post', 'put', 'delete' ];
 
 const uhc = require("./uhc"),
+    security = require("./security"),
     jwt = require('jsonwebtoken'),
     express = require('express');
 
@@ -45,7 +46,6 @@ class RouteHandler {
         this.exec = this.exec.bind(this);
         this.checkAccessCore = this.checkAccessCore.bind(this);
     }
-
     /**
      * @method
      * @summary The check access core function provides a basic implementation which will use the registered access information and provide basic ACL
@@ -87,7 +87,9 @@ class RouteHandler {
                         var token = jwt.verify(authParts[1], uhc.Config.security.hmac256secret);
                         
                         // TODO: Check the grants!
-                        return true;
+                        if(new security.Permission(permissionSet[0], permissionSet[1]).demand(token)) // we have permission granted 
+                            return this._routeInfo._instance.acl ? this._routeInfo._instance.acl(token, req) : true; // if the method provides additional ACL constraints then run them 
+                            
                     }
                 }
                 catch(e) {

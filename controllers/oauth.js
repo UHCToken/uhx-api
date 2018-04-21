@@ -23,7 +23,8 @@
  * 
  */
 
- const uhc = require('../uhc');
+ const uhc = require('../uhc'),
+  security = require('../security');
 
  const TOKEN_TYPE_JWT = "urn:ietf:params:oauth:token-type:jwt";
 
@@ -153,7 +154,7 @@
           {
             "path": "auth/oauth2_token",
             "post" : {
-              "demand" : uhc.Permission.EXECUTE,
+              "demand" : security.PermissionType.EXECUTE,
               "method":this.post 
             }
           }

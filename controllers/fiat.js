@@ -23,13 +23,14 @@
  * 
  */
 
-const uhc = require('../uhc');
+const uhc = require('../uhc'),
+    security = require('../security');
 
 /**
  * @class
  * @summary Represents a user payment service
  */
-class UserPaymentResource {
+class FiatApiResource {
 
     /**
      * @constructor
@@ -43,23 +44,23 @@ class UserPaymentResource {
      */
     get routes() {
         return {
-            "permission_group": "payment",
+            "permission_group": "fiat",
             "routes" : [
                 {
-                    "path" : "user/:uid/payment",
+                    "path" : "user/:uid/fiat",
                     "post": {
-                        "demand" : uhc.Permission.WRITE,
+                        "demand" : security.PermissionType.WRITE,
                         "method" : this.post
                     },
                     "get" : {
-                        "demand":uhc.Permission.LIST,
+                        "demand":security.PermissionType.LIST,
                         "method": this.getAll
                     }
                 },
                 {
-                    "path":"user/:uid/payment/:pid",
+                    "path":"user/:uid/fiat/:pid",
                     "get" :{
-                        "demand": uhc.Permission.READ,
+                        "demand": security.PermissionType.READ,
                         "method": this.get
                     }
                 }
@@ -97,4 +98,4 @@ class UserPaymentResource {
 }
 
 // Module exports
-module.exports.UserPaymentResource = UserPaymentResource;
+module.exports.FiatApiResource = FiatApiResource;

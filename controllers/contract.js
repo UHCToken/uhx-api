@@ -19,18 +19,19 @@
  * Original Authors: Justin Fyfe (justin-fyfe), Rory Yendt (RoryYendt)
  * Original Date: 2018-04-18
  * 
- * This file contains implementation of the core /user resources on the API
+ * This file contains implementation of user wallet function
  * 
  */
 
+ 
 const uhc = require('../uhc'),
     security = require('../security');
 
 /**
  * @class
- * @summary Represents a user payment service
+ * @summary Represents a contract in the system
  */
-class UserApiResource {
+class ContractApiResource {
 
     /**
      * @constructor
@@ -44,31 +45,31 @@ class UserApiResource {
      */
     get routes() {
         return {
-            "permission_group": "users",
+            "permission_group": "contract",
             "routes" : [
                 {
-                    "path" : "user",
+                    "path" : "user/:uid/wallet/contract",
                     "post": {
                         "demand" : security.PermissionType.WRITE,
                         "method" : this.post
                     },
-                    "get": {
-                        "demand" : security.PermissionType.LIST,
-                        "method" : this.getAll
+                    "get" : {
+                        "demand": security.PermissionType.LIST,
+                        "method": this.getAll
                     }
                 },
                 {
-                    "path":"user/:uid",
+                    "path":"user/:uid/wallet/contract/:ctid",
                     "get" :{
                         "demand": security.PermissionType.READ,
                         "method": this.get
                     },
-                    "put" : {
+                    "put" :{
                         "demand": security.PermissionType.WRITE,
                         "method": this.put
                     },
                     "delete" : {
-                        "demand":security.PermissionType.WRITE,
+                        "demand": security.PermissionType.WRITE,
                         "method": this.delete
                     }
                 }
@@ -77,7 +78,7 @@ class UserApiResource {
     }
     /**
      * @method
-     * @summary Creates a new user
+     * @summary Posts a new cotract to the wallet
      * @param {Express.Request} req The request from the client
      * @param {Express.Response} res The response to send back to the client
      */
@@ -86,16 +87,16 @@ class UserApiResource {
     }
     /**
      * @method
-     * @summary Updates an existing user
+     * @summary Get all contracts in a particular user's wallet
      * @param {Express.Request} req The request from the client
      * @param {Express.Response} res The response to the client
      */
-    put(req, res) {
+    getAll(req, res) {
         throw new uhc.NotImplementedException();
     }
     /**
      * @method
-     * @summary Get a single user 
+     * @summary Get a single contract posted to a user's wallet
      * @param {Express.Reqeust} req The request from the client 
      * @param {Express.Response} res The response from the client
      */
@@ -104,36 +105,24 @@ class UserApiResource {
     }
     /**
      * @method
-     * @summary Get all users from the UHC database (optional search parameters)
-     * @param {Express.Reqeust} req The request from the client 
-     * @param {Express.Response} res The response from the client
+     * @summary Updates a contract details
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to the client
      */
-    getAll(req, res) {
+    put(req, res) {
         throw new uhc.NotImplementedException();
     }
     /**
      * @method
-     * @summary Deactivate a user account from the UHC database
-     * @param {Express.Reqeust} req The request from the client 
-     * @param {Express.Response} res The response from the client
+     * @summary Cancels a contract that is active. 
+     * @description This method is used to cancel a contract control, for example if there is a contract to withdraw 10 coins per month on the wallet then this method would cancel that 
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to the client
      */
     delete(req, res) {
         throw new uhc.NotImplementedException();
     }
-    /**
-     * 
-     * @param {*} token The JWT token data that has authorization information
-     * @param {Express.Request} req The HTTP request from the client
-     * @param {Express.Response} res The HTTP response to the client
-     */
-    acl(token, req, res) {
-
-        // if the token has OWNER set for USER permission then this user must be SELF
-        return (token.grant.user & security.PermissionType.OWNER && req.params.uid == token.sub) // the permission on the principal is for OWNER only
-                ^ !(token.grant.user & security.PermissionType.OWNER); // XOR the owner grant flag is not set.
-                
-    }
 }
 
 // Module exports
-module.exports.UserApiResource = UserApiResource;
+module.exports.ContractApiResource = ContractApiResource;

@@ -40,19 +40,6 @@
  }
 
  /**
-  * @enum UHC Permissions
-  * @description Permissions
-  */
- const SecurityPermissions = {
-     EXECUTE : 1,
-     READ : 2,
-     WRITE : 4,
-     RWX : 7,
-     LIST: 8,
-     SELF : 16
- }
-
-/**
  * @swagger
  * models:
  *  Exception:
@@ -175,5 +162,4 @@
  module.exports.NotImplementedException = NotImplementedException;
  module.exports.BusinessRuleViolationException = BusinessRuleViolationException;
  module.exports.ErrorCodes = ErrorCodes;
- module.exports.Permission = SecurityPermissions;
  module.exports.BusinessLogic = BusinessLogic;
