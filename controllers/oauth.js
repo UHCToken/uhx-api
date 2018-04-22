@@ -24,6 +24,7 @@
  */
 
  const uhc = require('../uhc'),
+  exception = require('../exception'),
   security = require('../security');
 
  const TOKEN_TYPE_JWT = "urn:ietf:params:oauth:token-type:jwt";
@@ -167,8 +168,31 @@
      * @param {Express.Request} req The request object
      * @param {Express.Response} res The response object
      */
-    authorize(req, res) {
-      throw new uhc.NotImplementedException();
+    async authorize(req, res) {
+      // Authorization is done via HTTP basic
+      var authHeader = req.get("Authorization");
+      var clientAuthentication = [];
+
+      if(authHeader) {
+        var authParts = authHeader.split(' ');
+        if(authParts.length != 2 || authParts[0].toLowerCase() != "basic")
+          throw new exception.Exception("Invalid authentication scheme used", exception.ErrorCodes.SECURITY_ERROR);
+        else { // Authorization is good
+          var clientAuthentication = Buffer(authParts[1], 'base64').toString('ascii').split(':');
+        }
+      }
+      else { // There is no authorization, is it in the body as client_id and client_secret
+        clientAuthentication = [req.param("client_id"), req.param("client_secret")];
+      }
+
+      // Authorization
+      if(!clientAuthentication[0] || !clientAuthentication[1])
+        throw new exception.Exception("Either Authorization HTTP header or client_id/client_secret must be specified. See RFC6749", exception.ErrorCodes.SECURITY_ERROR);
+
+      var principal = await uhc.BusinessLogic.establishSession(clientAuthentication[0], clientAuthentication[1], req.param("username"), req.param("password"));
+      // Now we want to check the authorization of the client
+      return true;
+
     }
     /**
      * @method
@@ -204,18 +228,18 @@
      *        required: true
      *        type: string
      */
-    post(req, res) {
-      throw new uhc.NotImplementedException();
+    async post(req, res) {
+      throw new exception.NotImplementedException();
     }
     /**
      * Custom exception handler for OAUTH
      * @param {*} e The exception to be handled 
      */
-    error(e, res) {
-      if(e instanceof uhc.Exception)
+    async error(e, res) {
+      if(e instanceof exception.Exception)
         res.status(400).json(new OAuthErrorResult(e.code, e.message));
       else
-        res.status(400).json(new OAuthErrorResult(uhc.ErrorCodes.SECURITY_ERROR, e));
+        res.status(400).json(new OAuthErrorResult(exception.ErrorCodes.SECURITY_ERROR, e));
     }
  }
 

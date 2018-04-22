@@ -24,6 +24,7 @@
  */
 
 const uhc = require('../uhc'),
+    exception = require('../exception'),
     security = require('../security');
 
 /**
@@ -81,8 +82,8 @@ class UserApiResource {
      * @param {Express.Request} req The request from the client
      * @param {Express.Response} res The response to send back to the client
      */
-    post(req, res)  {
-        throw new uhc.NotImplementedException();
+    async post(req, res)  {
+        throw new exception.NotImplementedException();
     }
     /**
      * @method
@@ -90,8 +91,8 @@ class UserApiResource {
      * @param {Express.Request} req The request from the client
      * @param {Express.Response} res The response to the client
      */
-    put(req, res) {
-        throw new uhc.NotImplementedException();
+    async put(req, res) {
+        throw new exception.NotImplementedException();
     }
     /**
      * @method
@@ -99,8 +100,8 @@ class UserApiResource {
      * @param {Express.Reqeust} req The request from the client 
      * @param {Express.Response} res The response from the client
      */
-    get(req, res) {
-        throw new uhc.NotImplementedException();
+    async get(req, res) {
+        throw new exception.NotImplementedException();
     }
     /**
      * @method
@@ -108,8 +109,8 @@ class UserApiResource {
      * @param {Express.Reqeust} req The request from the client 
      * @param {Express.Response} res The response from the client
      */
-    getAll(req, res) {
-        throw new uhc.NotImplementedException();
+    async getAll(req, res) {
+        throw new exception.NotImplementedException();
     }
     /**
      * @method
@@ -117,20 +118,25 @@ class UserApiResource {
      * @param {Express.Reqeust} req The request from the client 
      * @param {Express.Response} res The response from the client
      */
-    delete(req, res) {
-        throw new uhc.NotImplementedException();
+    async delete(req, res) {
+        throw new exception.NotImplementedException();
     }
     /**
      * 
-     * @param {*} token The JWT token data that has authorization information
+     * @param {security.Principal} principal The JWT principal data that has authorization information
      * @param {Express.Request} req The HTTP request from the client
      * @param {Express.Response} res The HTTP response to the client
      */
-    acl(token, req, res) {
+    async acl(principal, req, res) {
+
+        if(!(principal instanceof security.Principal)) {
+            console.error("ACL requires a security principal to be passed");
+            return false;
+        }
 
         // if the token has OWNER set for USER permission then this user must be SELF
-        return (token.grant.user & security.PermissionType.OWNER && req.params.uid == token.sub) // the permission on the principal is for OWNER only
-                ^ !(token.grant.user & security.PermissionType.OWNER); // XOR the owner grant flag is not set.
+        return (principal.grant.user & security.PermissionType.OWNER && req.params.uid == principal.sub) // the permission on the principal is for OWNER only
+                ^ !(principal.grant.user & security.PermissionType.OWNER); // XOR the owner grant flag is not set.
                 
     }
 }

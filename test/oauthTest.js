@@ -26,6 +26,7 @@
  const assert = require('assert'),
     oauth = require('../controllers/oauth'),
     uhc = require('../uhc'),
+    exception = require('exception'),
     express = require('express');
 
  describe('OAUTH2.0 Test Suite', function() {
@@ -38,7 +39,7 @@
         var _actual = {}, _errorCode = 200;
 
         new oauth.OAuthTokenService().error(
-            new uhc.Exception("Test","TEST"),
+            new exception.Exception("Test","TEST"),
             { status: function(code) { _errorCode = code; return { json: function(message) { _actual = message} } } }
         );
 

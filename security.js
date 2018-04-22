@@ -24,9 +24,15 @@
  */
 
  module.exports.Config = require('./config');
- const uhc = require('./uhc');
+ const uhc = require('./uhc'),
+    exception = require('./exception'),
+    crypto = require('crypto'),
+    model = require('./model/model')
 
  
+/**
+ * @namespace Security
+ */
  /**
   * @enum UHC Permissions
   * @description Permissions
@@ -44,14 +50,14 @@
   * @class
   * @summary Represents a security exception
   */
- class SecurityException extends uhc.Exception {
+ class SecurityException extends exception.Exception {
 
     /**
      * @constructor
      * @param {Permission} failedPermission Represents the permission group [0] and permission demanded that failed
      */
     constructor(failedPermission) {
-        super(`Security violation: ${failedPermission.permission} ${failedPermission.object}`, uhc.ErrorCodes.SECURITY_ERROR);
+        super(`Security violation: ${failedPermission.permission} ${failedPermission.object}`, exception.ErrorCodes.SECURITY_ERROR);
         this._permission = failedPermission;
         this.toJSON = this.toJSON.bind(this);
     }
@@ -128,18 +134,24 @@
             permission += "x";
         if(this._permissionType & PermissionType.LIST)
             permission += "l";
-        
+        if(this._permissionType & PermissionType.OWNER)
+            permission += "O";
         return permission;
     }
 
     /**
      * @method
      * @summary Demands the permission
-     * @param {*} claimPrincipal The current principal for demanding permission. This should be a claims based principal instance like JWT token
+     * @param {SecurityPrincipal} claimPrincipal The current principal for demanding permission. This should be a claims based principal instance like JWT token
      */
     demand(claimPrincipal) {
         
-        var grantedAccess = claimPrincipal.grant[this._object];
+        if(!(claimPrincipal instanceof SecurityPrincipal))
+            throw new exception.Exception("Parameter claimPrincipal expects instance of Principal", exception.ErrorCodes.ARGUMENT_EXCEPTION);
+        else if(!claimPrincipal.isAuthenticated)
+            throw new exception.Exception("Demand was made of an unauthenticated principal", exception.ErrorCodes.SECURITY_ERROR);
+            
+        var grantedAccess = claimPrincipal.claims.grant[this._object];
 
         if(!(grantedAccess & this._permissionType))
             throw new SecurityException(this);
@@ -149,7 +161,117 @@
 
  }
 
+ /**
+  * @class
+  * @summary The security principal class represents a single authenticated or non-authenticated security principal with a series of claims
+  */
+ class SecurityPrincipal {
+
+    /**
+     * 
+     * @param {data.User} user The instace of the user or session from the database
+     */
+    constructor(sessionOrUser) {
+        // "private" members
+        var _isAuthenticated = sessionOrUser instanceof model.Session;
+
+        var user = null, session = null;
+        if(sessionOrUser instanceof model.User) {
+            user = sessionOrUser;
+            session = { application: null };
+        }
+        else {
+            session = sessionOrUser;
+            user = session.user;
+        }
+
+        // "public" members
+        this._user = user;
+        this._claims = {
+            mail: user.email,
+            telephoneNumber: user.tel,
+            displayName: user.givenName + " " + user.familyName
+        };
+        this._session = session;
+
+        this.getAuthenticated = function() { return _isAuthenticated; }
+    }
+
+    /**
+     * @property
+     * @summary Gets whether the user represeneted in this principal is authenticated
+     * @type {boolean}
+     */
+    get isAuthenticated() { return this.getAuthenticated() }
+
+    /**
+     * @property
+     * @summary Gets the list of claims that this user has
+     * @type {*}
+     */
+    get claims() { return this._claims; }
+    
+    /**
+     * @property 
+     * @summary Get the user information related to the user
+     * @type {data.User} 
+     */
+    get user() { return this._user; }
+
+    /**
+     * Represent this as a token 
+     */
+    toJSON() {
+        var retVal = {};
+        
+        for(var k in Object.keys(this.claims))
+            retVal[k] = this.claims[k];
+
+        retVal.sub = this._userId;
+        retVal.app = this._session.applicationId;
+        retVal.iat = this._session.creationTime;
+        retVal.nbf = this._session.notBefore;
+        retVal.exp = this._session.notAfter;
+        retVal.jti = this._session.id;
+        retVal.grant = this._session.grant;
+
+    }
+ }
+
+ /**
+  * @class
+  * @summary Represents a principal that was constructed from a JWT token
+  */
+ class JwtPrincipal extends SecurityPrincipal {
+
+    /**
+     * @constructor
+     * @summary Constructs a new principal from a JWT token
+     * @param {*} jwtToken The JWT token data to be converted to a principal
+     * @param {boolean} isAuthenticated True if the principal is authenticated
+     */
+    constructor(jwtToken, isAuthenticated) {
+        if(!jwtToken.sub && !jwtToken.jti)
+            throw new exception.Exception("JWT token must contain SUB or JTI indicator", exception.ErrorCodes.SECURITY_ERROR);
+
+        // Load user from SUB or load session from JTI
+        var session = new model.Session();
+        session.applicationId = jwtToken.app;
+        session.audience = jwtToken.aud;
+        session.id = jwtToken.jti;
+        session.notAfter = jwtToken.exp;
+        session.notBefore = jwtToken.nbf;
+        session.userId = jwtToken.sub;
+        session.creationTime = jwtToken.iat;
+        session._grant = jwtToken.grant;
+        super(session, isAuthenticated);
+
+    }
+ }
+
  // Module exports
  module.exports.SecurityException = SecurityException;
  module.exports.PermissionType = PermissionType;
  module.exports.Permission = Permission;
+ module.exports.Principal = SecurityPrincipal;
+ module.exports.JwtPrincipal = JwtPrincipal;

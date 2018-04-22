@@ -25,6 +25,7 @@
 
  
 const uhc = require('../uhc'),
+    exception = require('../exception'),
     security = require('../security');
 
 /**
@@ -74,8 +75,8 @@ class WalletApiResource {
      * @param {Express.Request} req The request from the client
      * @param {Express.Response} res The response to send back to the client
      */
-    post(req, res)  {
-        throw new uhc.NotImplementedException();
+    async post(req, res)  {
+        throw new exception.NotImplementedException();
     }
     /**
      * @method
@@ -83,8 +84,8 @@ class WalletApiResource {
      * @param {Express.Request} req The request from the client
      * @param {Express.Response} res The response to the client
      */
-    getAll(req, res) {
-        throw new uhc.NotImplementedException();
+    async getAll(req, res) {
+        throw new exception.NotImplementedException();
     }
     /**
      * @method
@@ -92,8 +93,8 @@ class WalletApiResource {
      * @param {Express.Reqeust} req The request from the client 
      * @param {Express.Response} res The response from the client
      */
-    get(req, res) {
-        throw new uhc.NotImplementedException();
+    async get(req, res) {
+        throw new exception.NotImplementedException();
     }
 
 }

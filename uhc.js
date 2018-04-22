@@ -1,3 +1,4 @@
+/// <Reference path="./model/model.js"/>
 'use strict';
 
 /**
@@ -23,143 +24,68 @@
  * 
  */
 
- module.exports.Config = require('./config');
+ const config = require('./config'),
+    repositories = require('./repository/repository'),
+    exception = require('./exception'),
+    security = require('./security'),
+    model = require('./model/model');
 
- /**
-  * @enum UHC API Error Codes
-  * @description This is used to expose common error codes 
-  */
- const ErrorCodes = {
-    UNKNOWN : "ERR_UNKNOWN",
-    INVALID_CONFIGURATION: "ERR_CONFIGURATION",
-    MISSING_PROPERTY: "ERR_MISSING_PROPERTY",
-    SECURITY_ERROR: "ERR_SECURITY_ERROR",
-    UNAUTHORIZED: "ERR_UNAUTHORIZED",
-    NOT_IMPLEMENTED: "ERR_NOTIMPLEMENTED",
-    RULES_VIOLATION: "ERR_BUSINESS_RULES"
- }
-
- /**
- * @swagger
- * models:
- *  Exception:
- *      id: Exception
- *      properties:
- *          message:
- *              type: String
- *          cause:
- *              type: ErrorResult
- */
-  class Exception {
-     /**
-      * 
-      * @param {string} message The human readable message 
-      * @param {string} code A codified representation of the message
-      * @param {Exception} cause The root cause of this particular error result
-      */
-     constructor(message, code, cause) {
-         this._message = message;
-         this._code = code;
-
-         if(Array.isArray(cause))
-            this._cause = cause;
-        else
-            this._cause = [cause];
-     }
-     /**
-      * @property message
-      * @summary Gets the human readable message for th error result
-      * @type {string}
-      */
-     get message() {
-         return this._message;
-     }
-     /**
-      * @property cause
-      * @summary Gets a list of ErrorResults which may have caused this error to occur
-      * @type {Exception[]}
-      */
-     get cause() {
-         return this._cause;
-     }
-     /**
-      * @property code
-      * @summary Gets the codified error for this result
-      * @type {string}
-      */
-     get code() {
-         return this._code;
-     }
-     toJSON() {
-         return {
-             message:this._message,
-             code:this._code,
-             cause:this._cause
-         };
-     }
- }
-
- /**
-  * @class
-  * @summary Represents a helper class for not implemented features
-  */
- class NotImplementedException extends Exception 
- {
-     /**
-      * @constructor
-      * @summary Constructs a new not implemented exception
-      */
-    constructor() {
-        super("Not Implemented", ErrorCodes.NOT_IMPLEMENTED);
-    }
- }
-
- /**
-  * @class
-  * @summary Represents an exception where one or more business rules have been violated
-  */
- class BusinessRuleViolationException extends Exception 
- {
-
-    /**
-     * @constructor
-     * @param {*} violations The business rules that were violated either as a hash map or list of strings
-     */
-    constructor(violations) 
-    {
-        this._violations = violations;
-
-        // Transcribe and call super
-        if(Array.isArray(violations)) {
-            var causedBy = [];
-            for(var i in violations) {
-                if(violations[i] instanceof string)
-                    causedBy.push(new BusinessRuleViolationException(violations[i]));
-                else if(violations[i] instanceof Exception)
-                    causedBy.push(violations[i]);
-                else if(violations[i].code)
-                    causedBy.push(new Exception(violations[i].message, violations[i].code));
-            }
-            super("Business constraint failed", ErrorCodes.RULES_VIOLATION, causedBy);
-        }
-        else if(violations)
-            super(violations, ErrorCodes.RULES_VIOLATION);
-        else
-            super("Business constraint failed", Errorcodes.RULES_VIOLATION);
-    }
- }
-
+ const repository = new repositories.UhcRepositories(config.db.server);
  /**
   * @class
   * @summary Represents the core business logic of the UHC application
   */
  class BusinessLogic {
 
+    /**
+     * @method 
+     * @summary Performs the necessary business process of logging the user in
+     * @param {string} clientId The application or client that the user is using
+     * @param {string} clientSecret The client secret
+     * @param {string} username The username of the user wishing to login
+     * @param {string} password The password that the user entered
+     * @returns {Principal} The authenticated user principal
+     */
+    async establishSession(clientId, clientSecret, username, password) {
+
+        // Get the application and verify
+        var application = await repository.applicationRepository.getByNameSecret(clientId, clientSecret);
+        if(application.deactivationTime)
+            throw new exception.Exception("Application has been deactivated", exception.ErrorCodes.SECURITY_ERROR);
+
+        try {
+            var user = await repository.userRepository.getByNameSecret(username, password);
+            
+            // User was successful but their account is still locked
+            if(user.lockout > new Date())
+                throw new exception.Exception("Account is locked", exception.ErrorCodes.ACCOUNT_LOCKED);
+            else if(user.deactivationTime < new Date())
+                throw new exception.Exception("Account has been deactivated", exception.ErrorCodes.UNAUTHORIZED);
+                
+            // Success, reset the user invalid logins
+            user.invalidLogins = 0;
+            user.lastLogin = new Date();
+            
+            await repository.userRepository.update(user);
+
+            // Create the session object
+            var session = new model.Session(user, application, config.security.sessionLength);
+            session = await repository.sessionRepository.insert(session);
+
+            return new security.Principal(session);
+        }
+        catch(e) {
+            // Attempt to increment the invalid login count
+            var invalidUser = await repository.userRepository.incrementLoginFailure(username, config.security.maxFailedLogin);
+            if(invalidUser.lockout) 
+                throw new exception.Exception("Account is locked", exception.ErrorCodes.ACCOUNT_LOCKED, e);
+            throw e;
+        }
+    }
+
  }
 
  // Exports section
- module.exports.Exception = Exception;
- module.exports.NotImplementedException = NotImplementedException;
- module.exports.BusinessRuleViolationException = BusinessRuleViolationException;
- module.exports.ErrorCodes = ErrorCodes;
- module.exports.BusinessLogic = BusinessLogic;
+ module.exports.BusinessLogic = new BusinessLogic();
+ module.exports.Config = config;
+ module.exports.Repositories = repository;

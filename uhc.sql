@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Universal Health Coin Database
  * Copyright (C) 2018, Universal Health Coin
  * 
@@ -21,6 +21,7 @@
  * 
  */
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 CREATE TABLE IF NOT EXISTS wallets(
 	id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -35,28 +36,28 @@ CREATE TABLE IF NOT EXISTS users(
 	id uuid NOT NULL DEFAULT uuid_generate_v4(),
 	name VARCHAR(256) NOT NULL,
 	password VARCHAR(256) NOT NULL,
-	password_salt VARCHAR(256),
-    invalid_login INT NOT NULL DEFAULT 0,
-    last_login TIMESTAMPTZ,
-    lockout TIMESTAMPTZ, -- THE TIME THAT THE ACCOUNT IS LOCKED UNTIL
+	invalid_login INT NOT NULL DEFAULT 0,
+	last_login TIMESTAMPTZ,
+	lockout TIMESTAMPTZ, -- THE TIME THAT THE ACCOUNT IS LOCKED UNTIL
 	email VARCHAR(256),
 	email_verified BOOLEAN NOT NULL DEFAULT FALSE,
-    nickname VARCHAR(256),
+	given_name VARCHAR(256),
+	family_name VARCHAR(256),
 	description VARCHAR(256),
-    tel VARCHAR(256),
-    tel_verified BOOLEAN NOT NULL DEFAULT FALSE,
-    street VARCHAR(256),
-    unit_suite VARCHAR(128),
-    city VARCHAR(256),
-    state_prov VARCHAR(16),
-    country VARCHAR(2),
-    postal_zip VARCHAR(16),
+	tel VARCHAR(256),
+	tel_verified BOOLEAN NOT NULL DEFAULT FALSE,
+	street VARCHAR(256),
+	unit_suite VARCHAR(128),
+	city VARCHAR(256),
+	state_prov VARCHAR(16),
+	country VARCHAR(2),
+	postal_zip VARCHAR(16),
 	wallet_id uuid,
-    creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_time TIMESTAMPTZ,
-    deactivation_time TIMESTAMPTZ,
-    CONSTRAINT pk_users PRIMARY KEY (id),
-    CONSTRAINT fk_users_wallets FOREIGN KEY (wallet_id) REFERENCES wallets(id)
+	creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	updated_time TIMESTAMPTZ,
+	deactivation_time TIMESTAMPTZ,
+	CONSTRAINT pk_users PRIMARY KEY (id),
+	CONSTRAINT fk_users_wallets FOREIGN KEY (wallet_id) REFERENCES wallets(id)
 );
 
 -- REPRESENTS CLAIMS ABOUT A USER
@@ -155,7 +156,7 @@ CREATE TABLE IF NOT EXISTS applications (
 );
 
 -- ASSOCIATES APPLICATIONS TO THEIR PERMISSIONS
-CREATE TABLE IF NOT EXISTS application_permission (
+CREATE TABLE IF NOT EXISTS application_permissions (
     application_id UUID NOT NULL, 
     permission_set_id UUID NOT NULL, -- THE PERMISSION SET
     acl_flags INT NOT NULL DEFAULT 0, -- REPRESENTS THE ACL FLAGS (THESE ARE UNIX STYLE)
@@ -171,8 +172,59 @@ CREATE TABLE IF NOT EXISTS sessions (
     application_id UUID NOT NULL,
     not_before TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, -- THE TIME THE SESSION STARTED
     not_after TIMESTAMPTZ NOT NULL, -- THE EXPIRATION TIME (NOT AFTER) OF THE SESSION
+    scope VARCHAR(256) NOT NULL,
     refresh_token VARCHAR(256), -- IF THE SESSION CAN BE EXTENDED AUTOMATICALLY, THE REFRESH TOKEN TO USE
     CONSTRAINT pk_sessions PRIMARY KEY (id),
     CONSTRAINT fk_sessions_users FOREIGN KEY (user_id) REFERENCES users(id),
     CONSTRAINT fk_sessions_application FOREIGN KEY (application_id) REFERENCES applications(id)
 );
+
+
+-- CREATE ADMIN
+INSERT INTO users (id, name, password, email) VALUES ('3c673456-23b1-4263-9deb-df46770852c9', 'admin@test.com',crypt('UniversalHealthCoinAdmin', gen_salt('bf')), 'admin@test.com');
+
+-- CREATE GROUPS 
+INSERT INTO groups (id, name, created_by) VALUES ('044894bd-084e-47bb-9428-dbd80277614a', 'Administrators', '3c673456-23b1-4263-9deb-df46770852c9');
+INSERT INTO groups (id, name, created_by) VALUES ('330d2fb4-ba61-4b48-a0a1-8162a4708e96', 'Users', '3c673456-23b1-4263-9deb-df46770852c9');
+
+-- ASSIGN ADMIN <> ADMINISTRATORS
+INSERT INTO user_group (user_id, group_id) VALUES ('3c673456-23b1-4263-9deb-df46770852c9', '044894bd-084e-47bb-9428-dbd80277614a');
+
+-- CREATE DEFAULT PERMISSION SETS
+INSERT INTO permission_sets (id, name, description, created_by) VALUES ('29b52e3b-52d6-4108-bb6e-f4c692cb4145', 'user', 'Access to the user resource', '3c673456-23b1-4263-9deb-df46770852c9');
+INSERT INTO permission_sets (id, name, description, created_by) VALUES ('c428ff6a-0d07-424f-802b-b51a040d023b', 'wallet', 'Access to the user resource', '3c673456-23b1-4263-9deb-df46770852c9');
+INSERT INTO permission_sets (id, name, description, created_by) VALUES ('5245dff0-9b79-4ddb-b3bd-9dd733afd678', 'fiat', 'Access to the FIAT resource', '3c673456-23b1-4263-9deb-df46770852c9');
+INSERT INTO permission_sets (id, name, description, created_by) VALUES ('608844ca-b98a-47f5-b834-d7fded513945', 'application', 'Access to the APPLICATION resource', '3c673456-23b1-4263-9deb-df46770852c9');
+INSERT INTO permission_sets (id, name, description, created_by) VALUES ('20a97388-5b6a-43e7-ac07-911ceee7e0d6', 'contract', 'Access to the CONTRACT resource', '3c673456-23b1-4263-9deb-df46770852c9');
+
+-- ASSIGN DEFAULT PERMISSIONS
+
+-- ADMINS = RWXL ON ALL 
+INSERT INTO group_permissions (group_id, permission_set_id, acl_flags)
+	SELECT '044894bd-084e-47bb-9428-dbd80277614a', id, 15
+	FROM permission_sets;
+
+-- USERS 
+--	USER - RW OWNER
+--	WALLET - RWXL OWNER
+--	FIAT - RWXL OWNER	
+--	CONTRACT - RWL OWNER
+INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('330d2fb4-ba61-4b48-a0a1-8162a4708e96', '29b52e3b-52d6-4108-bb6e-f4c692cb4145', 22);
+INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('330d2fb4-ba61-4b48-a0a1-8162a4708e96', 'c428ff6a-0d07-424f-802b-b51a040d023b', 31);
+INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('330d2fb4-ba61-4b48-a0a1-8162a4708e96', '5245dff0-9b79-4ddb-b3bd-9dd733afd678', 31);
+INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('330d2fb4-ba61-4b48-a0a1-8162a4708e96', '20a97388-5b6a-43e7-ac07-911ceee7e0d6', 30);
+
+-- CREATE A TEST USER
+INSERT INTO users (name, password, email) VALUES ('bob@test.com',crypt('Test123', gen_salt('bf')), 'bob@test.com');
+INSERT INTO user_group (user_id, group_id)
+	SELECT id, '330d2fb4-ba61-4b48-a0a1-8162a4708e96' 
+	FROM users
+	WHERE name = 'bob@test.com';
+
+-- CREATE TEST APPLICATION FOR FIDDLER
+INSERT INTO applications (id, name, secret, created_by) VALUES ('4fc15664-b152-4e6b-a852-b2aab0f05e05', 'fiddler', crypt('fiddler', gen_salt('bf')), '3c673456-23b1-4263-9deb-df46770852c9');
+-- FIDDLER GRANT ALL 
+INSERT INTO application_permissions (application_id, permission_set_id, acl_flags)
+	SELECT '4fc15664-b152-4e6b-a852-b2aab0f05e05', id, 15
+	FROM permission_sets;
+

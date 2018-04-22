@@ -29,8 +29,8 @@ const ALLOWED_OPS = [ 'use', 'options', 'get', 'post', 'put', 'delete' ];
 const uhc = require("./uhc"),
     security = require("./security"),
     jwt = require('jsonwebtoken'),
-    express = require('express');
-
+    express = require('express'),
+    exception = require('./exception');
 /** 
  * @class
  * @summary This class provides a wrapper for requests allowing for consistent error messaging, and authorization controls
@@ -52,7 +52,7 @@ class RouteHandler {
      * @param {Express.Request} req The HTTP request object for authorization to be checked
      * @param {Express.Response} res The HTTP response object for writing any additional headers
      */
-    checkAccessCore(req, res) {
+    async checkAccessCore(req, res) {
             
         // Get the security map
         if(!req.route) return true; // no route defined
@@ -72,7 +72,7 @@ class RouteHandler {
             if(!authHeader) {
                 res.setHeader("WWW-Authenticate", `Bearer authorization_uri="${uhc.Config.security.tokenServiceUri}"`);
                 // TODO: Send to auth service
-                throw new uhc.Exception("Missing authorization header", uhc.ErrorCodes.UNAUTHORIZED);
+                throw new exception.Exception("Missing authorization header", exception.ErrorCodes.UNAUTHORIZED);
             }
             else { // Auth header is present, validate it
                 var authParts = authHeader.split(" ");
@@ -80,21 +80,23 @@ class RouteHandler {
                 // Verify that the authorization is bearer based and that it is a JWT token
                 try {
                     if(authParts[0].trim().toLowerCase() != "bearer")
-                        throw new uhc.Exception("Invalid type of authorization provided, this service expects Bearer", uhc.ErrorCodes.SECURITY_ERROR);
+                        throw new exception.Exception("Invalid type of authorization provided, this service expects Bearer", exception.ErrorCodes.SECURITY_ERROR);
                     else if(!authParts[1] || authParts[1].split(".").length != 3)
-                        throw new uhc.Exception("Invalid bearer token format, this service expects IETF RFC 7519 format tokens", uhc.ErrorCodes.SECURITY_ERROR);
+                        throw new exception.Exception("Invalid bearer token format, this service expects IETF RFC 7519 format tokens", exception.ErrorCodes.SECURITY_ERROR);
                     else { // Validate the jwt
                         var token = jwt.verify(authParts[1], uhc.Config.security.hmac256secret);
                         
+                        // Now we want to create a principal from the token
+                        var principal = new security.JwtPrincipal(token, true);
                         // TODO: Check the grants!
-                        if(new security.Permission(permissionSet[0], permissionSet[1]).demand(token)) // we have permission granted 
-                            return this._routeInfo._instance.acl ? this._routeInfo._instance.acl(token, req) : true; // if the method provides additional ACL constraints then run them 
+                        if(new security.Permission(permissionSet[0], permissionSet[1]).demand(principal)) // we have permission granted 
+                            return this._routeInfo._instance.acl ? this._routeInfo._instance.acl(principal, req) : true; // if the method provides additional ACL constraints then run them 
                             
                     }
                 }
                 catch(e) {
                     console.error(`Error validting security - ${e}`);
-                    throw new uhc.Exception("Error validating security", uhc.ErrorCodes.SECURITY_ERROR, new uhc.Exception(e, uhc.ErrorCodes.UNKNOWN));
+                    throw new exception.Exception("Error validating security", exception.ErrorCodes.SECURITY_ERROR, new exception.Exception(e, exception.ErrorCodes.UNKNOWN));
                 }
             }
             
@@ -110,36 +112,39 @@ class RouteHandler {
     async exec(req, res) {
         try {
             // Is there custom authentication checker?
-            if(this._routeInfo._instance.authorize && this._routeInfo._instance.authorize(req, res) ||
-                this.checkAccessCore(req, res))
-                this._routeInfo[req.method.toLowerCase()].method(req, res);
+            if(this._routeInfo._instance.authorize && await this._routeInfo._instance.authorize(req, res) ||
+                await this.checkAccessCore(req, res))
+                await this._routeInfo[req.method.toLowerCase()].method(req, res);
             else
-                throw new uhc.Exception("Authentication failure", uhc.ErrorCodes.SECURITY_ERROR);
+                throw new exception.Exception("Authentication failure", exception.ErrorCodes.SECURITY_ERROR);
         }
         catch(e) {
             if(this._routeInfo._instance.error)
-                this._routeInfo._instance.error(e, res);
+                await this._routeInfo._instance.error(e, res);
             else {
                 // If the exception is not already an error result then we want to wrap it in one
                 var retVal = e;
-                if(retVal instanceof uhc.Exception)
+                if(retVal instanceof exception.Exception)
                     retVal = e;
                 else if(e.message)
-                    retVal = new uhc.Exception(e.message, uch.ErrorCodes.UNKNOWN);
+                    retVal = new exception.Exception(e.message, exception.ErrorCodes.UNKNOWN);
                 else
-                    retVal = new uhc.Exception(e, uhc.ErrorCodes.UNKNOWN);
+                    retVal = new exception.Exception(e, exception.ErrorCodes.UNKNOWN);
                 
                 // Set appropriate status code
                 var httpStatusCode = 500;
                 switch(retVal.code) {
-                    case uhc.ErrorCodes.NOT_IMPLEMENTED:
+                    case exception.ErrorCodes.NOT_IMPLEMENTED:
                         httpStatusCode = 501;
                         break;
-                    case uhc.ErrorCodes.SECURITY_ERROR:
+                    case exception.ErrorCodes.SECURITY_ERROR:
                         httpStatusCode = 403;
                         break;
-                    case uhc.ErrorCodes.UNAUTHORIZED:
+                    case exception.ErrorCodes.UNAUTHORIZED:
                         httpStatusCode = 401;
+                        break;
+                    case exception.ErrorCodes.NOT_FOUND:
+                        httpStatusCode = 404;
                         break;
                 }
 
@@ -173,7 +178,7 @@ class RouteHandler {
      */
     enableCors() {
         // Verify configuration
-        if(!this._application) throw new uhc.Exception("Application is not specified", uhc.ErrorCodes.INVALID_CONFIGURATION);
+        if(!this._application) throw new exception.Exception("Application is not specified", exception.ErrorCodes.INVALID_CONFIGURATION);
 
         // CORS
         this._application.use((req, res, next) => {
@@ -189,8 +194,8 @@ class RouteHandler {
     start() {
 
         // Verify configuration
-        if(!this._application) throw new uhc.Exception("Application is not specified", uhc.ErrorCodes.INVALID_CONFIGURATION);
-        if(!this._basePath) throw new uhc.Exception("Base Path is not specified", uhc.ErrorCodes.INVALID_CONFIGURATION);
+        if(!this._application) throw new exception.Exception("Application is not specified", exception.ErrorCodes.INVALID_CONFIGURATION);
+        if(!this._basePath) throw new exception.Exception("Base Path is not specified", exception.ErrorCodes.INVALID_CONFIGURATION);
 
         // Bind my own operations
         this._application.options(this._basePath + "/", this.options);
@@ -256,16 +261,16 @@ class RouteHandler {
         }
         catch(e) {
             // Construct error result
-            var causedBy = e instanceof uhc.Exception ?
+            var causedBy = e instanceof exception.Exception ?
                 e : // exception is already an ErrorResult so we use it
-                new uhc.Exception(e, uhc.ErrorCodes.UNKNOWN); // exception is another class 
+                new exception.Exception(e, exception.ErrorCodes.UNKNOWN); // exception is another class 
             
             // Output to error log
             console.error("Error executing options: " + JSON.stringify(causedBy));
 
             // Send result
             res.status(500).json(
-                new uhc.Exception("Error executing OPTIONS", uhc.ErrorCodes.UNKNOWN, causedBy)
+                new exception.Exception("Error executing OPTIONS", exception.ErrorCodes.UNKNOWN, causedBy)
             );
         }
     }
