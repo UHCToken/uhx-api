@@ -1,4 +1,4 @@
-'use strict'
+'use strict';
 
 /**
  * Copyright 2018 Universal Health Coin
@@ -77,7 +77,7 @@ describe("Permission Infrastructure Tests", function() {
             assert.fail("Policy demand success even though user is not granted");
             
         }
-        catch(e) {
+        catch (e) {
         }
 
     });

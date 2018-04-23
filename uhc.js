@@ -52,6 +52,7 @@
      * @param {SecurityPrincipal} clientPrincipal The application or client that the user is using
      * @param {string} username The username of the user wishing to login
      * @param {string} password The password that the user entered
+     * @param {string} scope The scope which the session should be established for.
      * @returns {Principal} The authenticated user principal
      */
     async establishSession(clientPrincipal, username, password, scope) {
