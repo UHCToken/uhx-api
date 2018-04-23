@@ -228,7 +228,3 @@ INSERT INTO application_permissions (application_id, permission_set_id, acl_flag
 	SELECT '4fc15664-b152-4e6b-a852-b2aab0f05e05', id, 31
 	FROM permission_sets;
 
-
-
-
-UPDATE users SET invalid_login = invalid_login + 1, lockout = CASE WHEN invalid_login > 4 THEN current_timestamp + '1 DAY'::interval ELSE null END WHERE name = 'bob@test.com' RETURNING *

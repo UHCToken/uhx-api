@@ -139,14 +139,17 @@ const pg = require('pg'),
      * @method
      * @summary Insert  the specified user
      * @param {User} user The instance of the user that is to be inserted
-     * @param {Principal} runAs The principal that is inserting this user 
+     * @param {Principal} runAs The principal that is inserting this user
+     * @param {string} password The password to set on the user account   
      */
-    async insert(user, runAs) {
+    async insert(user, password, runAs) {
         const dbc = new pg.Client(this._connectionString);
         try {
             await dbc.connect();
 
-            var updateCmd = model.Utils.generateInsert(user, 'users');
+            var dbUser = user.toData();
+            dbUser.$password = password;
+            var updateCmd = model.Utils.generateInsert(dbUser, 'users');
             const rdr = await dbc.query(updateCmd.sql, updateCmd.args);
             if(rdr.rows.length == 0)
                 return null;

@@ -94,8 +94,15 @@
         for(var k in dbModel) {
             var val = dbModel[k];
             if(val) {
-                colNames += `${k},`;
-                values += `$${parmId++},`;
+
+                if(k.startsWith("$")) {
+                    colNames += `${k.substring(1)},`;
+                    values += `crypt($${parmId++}, gen_salt('bf')),`;
+                }
+                else {
+                    colNames += `${k},`;
+                    values += `$${parmId++},`;
+                }
                 parameters.push(val);
             }
         }
