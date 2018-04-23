@@ -73,7 +73,8 @@ const pg = require('pg'),
         const dbc = new pg.Client(this._connectionString);
         try {
             await dbc.connect();
-            var dbFilter = model.Utils.generateSelect(filter, "user", offset, count);
+            
+            var dbFilter = model.Utils.generateSelect(filter, "users", offset, count);
             const rdr = await dbc.query(dbFilter.sql, dbFilter.args);
             
             var retVal = [];
@@ -101,7 +102,7 @@ const pg = require('pg'),
 
             const rdr = await dbc.query("SELECT * FROM users WHERE name = $1 AND password = crypt($2, password)", [ username, password ]);
             if(rdr.rows.length == 0)
-                throw new exception.NotFoundException("user", username);
+                throw new exception.NotFoundException("users", username);
             else
                 return new model.User().fromData(rdr.rows[0]);
         }

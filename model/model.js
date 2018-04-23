@@ -33,7 +33,7 @@
         $type : instance.constructor.name
     };
 
-    for(var k in Object.keys(instance)) 
+    for(var k in instance) 
         if(!k.startsWith("_"))
             retVal[k] = instance[k];
 
@@ -91,26 +91,22 @@
      * @param {number} count The number of records to return
      */
     generateSelect(filter, tableName, offset, count) {
-        var dbModel = modelObject.toData ? modelObject.toData() : modelObject;
+        var dbModel = filter.toData ? filter.toData() : filter;
 
         var parmId = 1, parameters = [], whereClause = "";
         for(var k in dbModel) 
-            {
+            if(dbModel[k]) {
+                
                 whereClause += `${k} = $${parmId++}`;
                 parameters.push(dbModel[k]);
             }
-
-        // Append timestamp?
-        if(timestampColumn)
-            updateSet += ` ${timestampColumn} = CURRENT_TIMESTAMP`;    
-        else
-            updateSet = updateSet.substr(0, updateSet.length - 2);
             
         var control = "";
         if(offset)
             control += `OFFSET ${offset} `;
         if(count)
             control += `LIMIT ${count} `;
+
         return {
             sql: `SELECT * FROM ${tableName} WHERE ${whereClause} ${control}`,
             args : parameters
@@ -183,9 +179,24 @@ class User {
      * @constructor
      * @summary Constructs a new user instance based on the database
      */
-    constructor() {
+    constructor(copyData) {
         this.fromData = this.fromData.bind(this);
         this.toData = this.toData.bind(this);
+        this.copy = this.copy.bind(this);
+    }
+
+    /**
+     * @method
+     * @summary Copy all the values from otherUser into this user
+     * @returns {User} This user with copied fields
+     * @param {User} otherUser The user from which the values for this user should be copied
+     */
+    copy(otherUser) {
+        this.fromData({});
+        for(var p in this)
+            if(!p.startsWith("_"))
+                this[p] = otherUser[p] || this[p];
+        return this;
     }
 
     /**

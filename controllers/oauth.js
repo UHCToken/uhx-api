@@ -246,6 +246,7 @@
       var retVal = new OAuthTokenResult(jwt.sign(payload, uhc.Config.security.hmac256secret), TOKEN_TYPE_JWT,  Math.floor(payload.exp - (new Date().getTime() / 1000)), userPrincipal.session.refreshToken);
 
       res.status(200).json(retVal);
+      return true;
     }
     /**
      * Custom exception handler for OAUTH

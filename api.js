@@ -114,7 +114,11 @@ class RouteHandler {
             // Is there custom authentication checker?
             if(this._routeInfo._instance.authorize && await this._routeInfo._instance.authorize(req, res) ||
                 await this.checkAccessCore(req, res))
-                await this._routeInfo[req.method.toLowerCase()].method(req, res);
+                {
+                    var result = await this._routeInfo[req.method.toLowerCase()].method(req, res);
+                    if(!result)
+                        res.status(204).send();
+                }
             else
                 throw new exception.Exception("Authentication failure", exception.ErrorCodes.SECURITY_ERROR);
         }

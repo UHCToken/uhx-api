@@ -19,7 +19,8 @@
 
 const uhc = require('../uhc'),
     exception = require('../exception'),
-    security = require('../security');
+    security = require('../security'),
+    model = require('../model/model');
 
 /**
  * @class
@@ -95,7 +96,8 @@ class UserApiResource {
      * @param {Express.Response} res The response from the client
      */
     async get(req, res) {
-        return await uhc.Repositories.userRepository.get(req.params.uid);
+        res.status(200).json(await uhc.Repositories.userRepository.get(req.params.uid));
+        return true;
     }
     /**
      * @method
@@ -105,13 +107,15 @@ class UserApiResource {
      */
     async getAll(req, res) {
         
-        return await uhc.Repositories.userRepository.query({
+        var filterUser = new model.User().copy({
             name: req.param("name"),
             email: req.param("email"),
             givenName: req.param("givenName"),
             familyName: req.param("familyName")
-        }, req.param("_offset"), req.param("_count"));
-
+        });
+        
+        res.status(200).json(await uhc.Repositories.userRepository.query(filterUser, req.param("_offset"), req.param("_count")));
+        return true;
     }
     /**
      * @method
