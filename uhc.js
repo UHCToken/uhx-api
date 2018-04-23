@@ -35,7 +35,7 @@
   * @class
   * @summary Represents the core business logic of the UHC application
   */
- class BusinessLogic {
+ class SecurityLogic {
 
     /**
      * @method
@@ -106,6 +106,6 @@
  }
 
  // Exports section
- module.exports.BusinessLogic = new BusinessLogic();
+ module.exports.SecurityLogic = new SecurityLogic();
  module.exports.Config = config;
  module.exports.Repositories = repository;

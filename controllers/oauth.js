@@ -193,7 +193,7 @@
       if(!req.param("scope"))
         throw new exception.Exception("Missing SCOPE parameter for OAUTH session", exception.ErrorCodes.MISSING_PROPERTY);
 
-      var principal = await uhc.BusinessLogic.authenticateClientApplication(clientAuthentication[0], clientAuthentication[1]);
+      var principal = await uhc.SecurityLogic.authenticateClientApplication(clientAuthentication[0], clientAuthentication[1]);
       req.principal = principal;
 
       return principal !== undefined;
@@ -242,7 +242,7 @@
       // GRANT TYPE
       switch(req.param("grant_type")){
         case "password":
-          userPrincipal = await uhc.BusinessLogic.establishSession(principal, req.param("username"), req.param("password"), req.param("scope"));
+          userPrincipal = await uhc.SecurityLogic.establishSession(principal, req.param("username"), req.param("password"), req.param("scope"));
           break;
         default:
           throw new exception.NotSupportedException("Only password grants are supported");
