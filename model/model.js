@@ -84,6 +84,41 @@
 
     /**
      * @method
+     * @summary Generate a select statement
+     * @param {*} filter The query filter to be created
+     * @param {string} tableName The name of the database table to query
+     * @param {number} offset The starting record number
+     * @param {number} count The number of records to return
+     */
+    generateSelect(filter, tableName, offset, count) {
+        var dbModel = modelObject.toData ? modelObject.toData() : modelObject;
+
+        var parmId = 1, parameters = [], whereClause = "";
+        for(var k in dbModel) 
+            {
+                whereClause += `${k} = $${parmId++}`;
+                parameters.push(dbModel[k]);
+            }
+
+        // Append timestamp?
+        if(timestampColumn)
+            updateSet += ` ${timestampColumn} = CURRENT_TIMESTAMP`;    
+        else
+            updateSet = updateSet.substr(0, updateSet.length - 2);
+            
+        var control = "";
+        if(offset)
+            control += `OFFSET ${offset} `;
+        if(count)
+            control += `LIMIT ${count} `;
+        return {
+            sql: `SELECT * FROM ${tableName} WHERE ${whereClause} ${control}`,
+            args : parameters
+        };
+    }
+
+    /**
+     * @method
      * @summary Generate the column names and values portions of an insert statement
      * @param {*} modelObject Represents the model object to generate the insert text for
      * @param {string} tableName The name of the table to insert into

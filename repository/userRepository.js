@@ -62,6 +62,30 @@ const pg = require('pg'),
 
     }
 
+    /**
+     * @method
+     * @summary Query the database for the specified users
+     * @param {*} filter The query template to use
+     * @param {number} offset When specified indicates the offset of the query
+     * @param {number} count When specified, indicates the number of records to return
+     */
+    async query(filter, offset, count) {
+        const dbc = new pg.Client(this._connectionString);
+        try {
+            await dbc.connect();
+            var dbFilter = model.Utils.generateSelect(filter, "user", offset, count);
+            const rdr = await dbc.query(dbFilter.sql, dbFilter.args);
+            
+            var retVal = [];
+            for(var r in rdr.rows)
+                retVal.push(new model.User().fromData(rdr.rows[r]));
+            return retVal;
+        }
+        finally {
+            dbc.end();
+        }
+    }
+
      /**
      * @method
      * @summary Get the user information by using the id and secret

@@ -64,7 +64,7 @@
          /**
           * @summary Default session length for users
           */
-         sessionLength: 30000,
+         sessionLength: 3000000,
          /**
           * @summary Maximum failed login attempts
           */

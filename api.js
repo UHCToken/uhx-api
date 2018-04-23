@@ -93,7 +93,10 @@ class RouteHandler {
                 }
                 catch(e) {
                     console.error(`Error validting security - ${e}`);
-                    throw new exception.Exception("Error validating security", exception.ErrorCodes.SECURITY_ERROR, new exception.Exception(e, exception.ErrorCodes.UNKNOWN));
+                    if(e instanceof exception.Exception)
+                        throw new exception.Exception("Error validating security", exception.ErrorCodes.SECURITY_ERROR, e);
+                    else 
+                        throw new exception.Exception("Error validating security", exception.ErrorCodes.SECURITY_ERROR, new exception.Exception(e, exception.ErrorCodes.UNKNOWN));
                 }
             }
             

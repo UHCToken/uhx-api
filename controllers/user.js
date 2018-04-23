@@ -39,7 +39,7 @@ class UserApiResource {
      */
     get routes() {
         return {
-            "permission_group": "users",
+            "permission_group": "user",
             "routes" : [
                 {
                     "path" : "user",
@@ -95,7 +95,7 @@ class UserApiResource {
      * @param {Express.Response} res The response from the client
      */
     async get(req, res) {
-        throw new exception.NotImplementedException();
+        return await uhc.Repositories.userRepository.get(req.params.uid);
     }
     /**
      * @method
@@ -104,7 +104,14 @@ class UserApiResource {
      * @param {Express.Response} res The response from the client
      */
     async getAll(req, res) {
-        throw new exception.NotImplementedException();
+        
+        return await uhc.Repositories.userRepository.query({
+            name: req.param("name"),
+            email: req.param("email"),
+            givenName: req.param("givenName"),
+            familyName: req.param("familyName")
+        }, req.param("_offset"), req.param("_count"));
+
     }
     /**
      * @method

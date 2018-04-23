@@ -103,7 +103,7 @@ describe("Permission Infrastructure Tests", function() {
         }
         catch(e) {
             assert.equal(e.constructor.name, "SecurityException");
-            assert.equal(e.permission, "x");
+            assert.equal(e.permission, "execute");
             assert.equal(e.object, "user");
         }
 
