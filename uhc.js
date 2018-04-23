@@ -98,7 +98,42 @@
         }
     }
 
+    /**
+     * @method
+     * @summary Register a regular user 
+     * @param {User} user The user to be registered
+     * @param {string} password The password to set on the user
+     */
+    async registerInternalUser(user, password) {
+
+        // First we register the user in our DB
+        try {
+            var retVal = await repository.userRepository.insert(user, password);
+
+            // TODO: Add user to group USERS
+            // TODO: Initialize Stellar wallet
+            return retVal;
+        }
+        catch(e) {
+            console.error("Error finalizing authentication: " + e.message);
+            throw new exception.Exception("Error registering user", exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
+
+    /**
+     * @method
+     * @summary Registers a users from an external provider
+     * @param {*} identity Represents information about an external identity
+     * @param {string} identity.provider The provider key for the external identity
+     * @param {string} identity.username The user's identity name on the external provider
+     * @param {string} identity.password The user's identity name on the external provider
+     * @param {string} identity.key The key or token that was used to access the external provider
+     */
+    async registerExternalUser(identity) {
+        throw new exception.NotImplementedException();
+    }
  }
+
 
  // Exports section
  module.exports.SecurityLogic = new SecurityLogic();

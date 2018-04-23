@@ -147,6 +147,9 @@ class RouteHandler {
                     case exception.ErrorCodes.UNAUTHORIZED:
                         httpStatusCode = 401;
                         break;
+                    case exception.ErrorCodes.ARGUMENT_EXCEPTION:
+                    case exception.ErrorCodes.MISSING_PROPERTY:
+                        httpStatusCode = 422;
                     case exception.ErrorCodes.NOT_FOUND:
                         httpStatusCode = 404;
                         break;

@@ -40,6 +40,26 @@ const pg = require('pg'),
         this.incrementLoginFailure = this.incrementLoginFailure.bind(this);
     }
 
+
+    /**
+     * 
+     * @param {string} userId The user which external identifiers should be fetched for
+     */
+    async getExternalIds(userId) {
+        const dbc = new pg.Client(this._connectionString);
+        try {
+            await dbc.connect();
+            const rdr = await dbc.query("SELECT * FROM user_identity WHERE user_id = $1", [userId]);
+            var retVal = [];
+            for(var r in rdr.rows) 
+                retVal.push({ provider: rdr.rows[r].provider });
+            return retVal;
+        }
+        finally {
+            dbc.end();
+        }
+    }
+
     /**
      * @method
      * @summary Retrieve a specific user from the database
@@ -74,8 +94,11 @@ const pg = require('pg'),
         try {
             await dbc.connect();
             
-            var dbFilter = model.Utils.generateSelect(filter, "users", offset, count);
-            const rdr = await dbc.query(dbFilter.sql, dbFilter.args);
+            var dbFilter = filter.toData();
+            dbFilter.deactivation_time = filter.deactivationTime; // Filter for deactivation time?
+
+            var sqlCmd = model.Utils.generateSelect(dbFilter, "users", offset, count);
+            const rdr = await dbc.query(sqlCmd.sql + " ORDER BY updated_time, creation_time DESC", sqlCmd.args);
             
             var retVal = [];
             for(var r in rdr.rows)
@@ -185,6 +208,11 @@ const pg = require('pg'),
                 return null;
             else
                 return user.fromData(rdr.rows[0]);
+        }
+        catch(e) {
+            if(e.code == '23505') // duplicate key
+                throw new exception.Exception("Duplicate user name", exception.ErrorCodes.DUPLICATE_USERNAME);
+            throw e;
         }
         finally {
             dbc.end();

@@ -97,10 +97,18 @@
         for(var k in dbModel) 
             if(dbModel[k]) {
                 
-                whereClause += `${k} = $${parmId++}`;
-                parameters.push(dbModel[k]);
+                if(dbModel[k] == "null")
+                    whereClause += `${k} IS NULL AND `;
+                else {
+                    whereClause += `${k} = $${parmId++} AND `;
+                    parameters.push(dbModel[k]);
+                }
             }
             
+        // Strip last AND
+        if(whereClause.endsWith("AND "))
+            whereClause = whereClause.substring(0, whereClause.length - 4);
+
         var control = "";
         if(offset)
             control += `OFFSET ${offset} `;
@@ -183,6 +191,8 @@ class User {
         this.fromData = this.fromData.bind(this);
         this.toData = this.toData.bind(this);
         this.copy = this.copy.bind(this);
+
+        this._externIds = [];
     }
 
     /**
@@ -264,6 +274,24 @@ class User {
     }
 
     /**
+     * @property
+     * @summary Get the external identities
+     */
+    get externalIds() {
+        return this._externIds;
+    }
+
+    /**
+     * @method
+     * @summary Prefetch external identifiers if they aren't already
+     */
+    async loadExternalIds() {
+        if(!this._externIds)
+            this._externIds = await uhc.Repositories.userRepository.getExternalIdentities(this);
+        return this._externIds;
+    }
+
+    /**
      * @summary Gets the user groups for this user
      * @property
      */
@@ -280,7 +308,9 @@ class User {
      * @summary Serialize this instance to a JSON object
      */
     toJSON() {
-        return stripHiddenFields(this);
+        var retVal = stripHiddenFields(this);
+        retVal.externalIds = this._externIds;
+        return retVal;
     }
 
 }

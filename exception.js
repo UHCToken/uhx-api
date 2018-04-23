@@ -32,7 +32,23 @@
     RULES_VIOLATION: "ERR_BUSINESS_RULES",
     ARGUMENT_EXCEPTION: "ERR_ARGUMENT",
     NOT_FOUND: "ERR_NOTFOUND",
-    ACCOUNT_LOCKED : "ERR_LOCKED"
+    ACCOUNT_LOCKED : "ERR_LOCKED",
+    MISSING_PAYLOAD : "ERR_PAYLOAD_MISSING",
+    INSUFFICIENT_FUNDS : "ERR_NSF",
+    INVALID_ACCOUNT : "ERR_ACCOUNT_UNKNOWN",
+    PASSWORD_COMPLEXITY : "ERR_PASSWD_COMPLEXITY",
+    INVALID_USERNAME : "ERR_INVALID_USERNAME",
+    DUPLICATE_USERNAME : "ERR_DUPLICATE_USERNAME"
+ }
+
+ /**
+  * @enum
+  * @description Enumeration of rule severities
+  */
+ const RuleViolationSeverity = {
+     ERROR : "ERROR",
+     WARNING : "WARN",
+     INFORMATION : "INFO"
  }
 
  /**
@@ -112,6 +128,38 @@
 
  /**
   * @class
+  * @summary Represents a single instance of a rule violation
+  */
+ class RuleViolation {
+
+    /**
+     * @constructor
+     * @summary Creates a new instance of the rule violation
+     * @param {string} message The message to be shown
+     * @param {string} code A codified reason for the violation
+     * @param {string} severity The severity of the rule violation
+     */
+    constructor(message, code, severity) {
+        this._message = message;
+        this._code = code;
+        this._severity = severity;
+    }
+
+    /**
+     * @method
+     * @summary Represent as JSON
+     */
+    toJSON() {
+        return {
+            message: this._message,
+            code: this._code,
+            severity: this._severity
+        }
+    }
+ }
+
+ /**
+  * @class
   * @summary Represents an exception where one or more business rules have been violated
   */
  class BusinessRuleViolationException extends Exception 
@@ -123,18 +171,14 @@
      */
     constructor(violations) 
     {
-        this._violations = violations;
-
         // Transcribe and call super
         if(Array.isArray(violations)) {
             var causedBy = [];
             for(var i in violations) {
-                if(violations[i] instanceof string)
-                    causedBy.push(new BusinessRuleViolationException(violations[i]));
-                else if(violations[i] instanceof Exception)
+                if(violations[i] instanceof String)
+                    causedBy.push(new RuleViolation(violations[i], ErrorCodes.UNKNOWN, RuleSeverity.ERROR));
+                else if(violations[i] instanceof RuleViolation)
                     causedBy.push(violations[i]);
-                else if(violations[i].code)
-                    causedBy.push(new Exception(violations[i].message, violations[i].code));
             }
             super("Business constraint failed", ErrorCodes.RULES_VIOLATION, causedBy);
         }
@@ -142,6 +186,9 @@
             super(violations, ErrorCodes.RULES_VIOLATION);
         else
             super("Business constraint failed", ErrorCodes.RULES_VIOLATION);
+        this._violations = violations;
+
+
     }
  }
 
@@ -183,3 +230,5 @@ module.exports.BusinessRuleViolationException = BusinessRuleViolationException;
 module.exports.ErrorCodes = ErrorCodes;
 module.exports.NotFoundException = NotFoundException;
 module.exports.NotSupportedException = NotSupportedException;
+module.exports.RuleViolation = RuleViolation;
+module.exports.RuleViolationSeverity = RuleViolationSeverity;

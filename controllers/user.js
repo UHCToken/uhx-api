@@ -78,7 +78,30 @@ class UserApiResource {
      * @param {Express.Response} res The response to send back to the client
      */
     async post(req, res)  {
-        throw new exception.NotImplementedException();
+        
+        // Verify the request
+        var ruleViolations = [];
+        if(!req.body)
+            ruleViolations.push(new exception.RuleViolation("Missing body", exception.ErrorCodes.MISSING_PAYLOAD, exception.RuleViolationSeverity.ERROR));
+        if(!((!req.body.name || !req.body.password) ^ (!req.body.externalIds)))
+            ruleViolations.push(new exception.RuleViolation("Must have either username & password OR externalId", exception.ErrorCodes.MISSING_PROPERTY, exception.RuleViolationSeverity.ERROR));
+        if(req.body.name && !new RegExp(uhc.Config.security.username_regex).test(req.body.name))
+            ruleViolations.push(new exception.RuleViolation("Username format invalid", exception.ErrorCodes.INVALID_USERNAME, exception.RuleViolationSeverity.ERROR));
+        if(req.body.password && !new RegExp(uhc.Config.security.password_regex).test(req.body.password))
+            ruleViolations.push(new exception.RuleViolation("Password does not meet complexity requirements", exception.ErrorCodes.PASSWORD_COMPLEXITY, exception.RuleViolationSeverity.ERROR));
+        
+        if(ruleViolations.length > 0)
+            throw new exception.BusinessRuleViolationException(ruleViolations);
+
+        var user = new model.User().copy(req.body);
+        
+        // USE CASE 1: User has passed up a username and password
+        if(req.body.password && req.body.name) 
+            res.status(201).json(await uhc.SecurityLogic.registerInternalUser(user, req.body.password));
+        else // USE CASE 2: User is attempting to sign up with an external identifier
+            res.status(201).json(await uhc.SecurityLogic.registerExternalUser(req.body.externalIds));
+
+        return true;
     }
     /**
      * @method
@@ -111,7 +134,8 @@ class UserApiResource {
             name: req.param("name"),
             email: req.param("email"),
             givenName: req.param("givenName"),
-            familyName: req.param("familyName")
+            familyName: req.param("familyName"),
+            deactivationTime: req.param("_all") ? null : "null"
         });
         
         res.status(200).json(await uhc.Repositories.userRepository.query(filterUser, req.param("_offset"), req.param("_count")));
@@ -124,7 +148,8 @@ class UserApiResource {
      * @param {Express.Response} res The response from the client
      */
     async delete(req, res) {
-        throw new exception.NotImplementedException();
+        res.status(201).json(await uhc.Repositories.userRepository.delete(req.param("uid")));
+        return true;
     }
     /**
      * 

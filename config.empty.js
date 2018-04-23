@@ -76,11 +76,11 @@
         /**
          * @summary The validation regex for user passwords
          */
-        password_regex: /^[a-zA-Z][a-zA-Z0-9]{2,19}$/,
+        password_regex:  /^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$/,
         /**
-         * @summary The validation regex for usernames
+         * @summary The validation regex for usernames following RFC2822 regex for e-mails
          */
-        username_regex: /^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$/,
+        username_regex: /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/g,
         /**
          * @summary When true, enables cross-origin scripting
          */
