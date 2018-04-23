@@ -151,7 +151,7 @@
         else if(!claimPrincipal.isAuthenticated)
             throw new exception.Exception("Demand was made of an unauthenticated principal", exception.ErrorCodes.SECURITY_ERROR);
             
-        var grantedAccess = claimPrincipal.claims.grant[this._object];
+        var grantedAccess = claimPrincipal.grant[this._object];
 
         if(!(grantedAccess & this._permissionType))
             throw new SecurityException(this);
@@ -215,7 +215,7 @@
      * @summary Gets the list of claims that this user has
      * @type {*}
      */
-    get claims() { return this._claims; }
+    get claims() { return this._session.grant; }
     
     /**
      * @property 
@@ -231,7 +231,13 @@
      */
     get session(){ return this._session; }
 
-   
+    /**
+     * @property
+     * @summary Get the grant
+     * @type List of grants
+     */
+    get grant() { return this._session.grant; }
+
     /**
      * Represent this as a token 
      */
@@ -278,7 +284,7 @@
         session.notBefore = new Date(jwtToken.nbf);
         session.userId = jwtToken.sub;
         session.creationTime = new Date(jwtToken.iat);
-        session._grant = jwtToken.grant;
+        session._grants = jwtToken.grant;
         session._user = session._user || {}
 
         if(jwtToken.displayName) 

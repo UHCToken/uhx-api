@@ -35,14 +35,14 @@ describe("Permission Infrastructure Tests", function() {
      * @summary Ensures that when a principal is explicitly granted access that the permission object's Demand method will permit access
      */
     it("Should grant permission when permission is explicitly granted", function() {
-        var principal = {
+        var principal = new security.JwtPrincipal({
             sub: 'admin@test.com',
             grant: {
                 "user": security.PermissionType.RWX | security.PermissionType.LIST,
                 "wallet": security.PermissionType.RWX,
                 "fiat": security.PermissionType.READ
             }
-        };
+        });
 
         try {
             // Demand list only
@@ -62,14 +62,14 @@ describe("Permission Infrastructure Tests", function() {
      */
     it("Should not grant permission when permission is missing", function() {
 
-        var principal = {
+        var principal = new security.JwtPrincipal({
             sub: 'user@test.com',
             grant: {
                 "user": security.PermissionType.WRITE | security.PermissionType.READ | security.PermissionType.OWNER,
                 "wallet": security.PermissionType.RWX | security.PermissionType.OWNER,
                 "fiat": security.PermissionType.READ | security.PermissionType.LIST | security.PermissionType.WRITE | security.PermissionType.OWNER
             }
-        };
+        });
 
         try {
             new security.Permission("user", security.PermissionType.READ).demand(principal); // SHOULD SUCCEED
@@ -94,14 +94,14 @@ describe("Permission Infrastructure Tests", function() {
      */
     it("Should describe the failed permission set accurately", function() {
 
-        var principal = {
+        var principal = new security.JwtPrincipal({
             sub: 'user@test.com',
             grant: {
                 "user": security.PermissionType.WRITE | security.PermissionType.READ | security.PermissionType.OWNER,
                 "wallet": security.PermissionType.RWX | security.PermissionType.OWNER,
                 "fiat": security.PermissionType.READ | security.PermissionType.LIST | security.PermissionType.WRITE | security.PermissionType.OWNER
             }
-        };
+        });
 
         try {
             new security.Permission("user", security.PermissionType.EXECUTE).demand(principal); // SHOULD FAIL
