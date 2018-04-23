@@ -27,7 +27,7 @@
  const uhc = require('./uhc'),
     exception = require('./exception'),
     crypto = require('crypto'),
-    model = require('./model/model')
+    model = require('./model/model');
 
  
 /**
@@ -180,6 +180,11 @@
             user = sessionOrUser;
             session = { application: null };
         }
+        else if(sessionOrUser instanceof model.Application) // application principal
+        {
+            user = {};
+            session = { application: sessionOrUser, loadApplication: async () => {} };
+        }
         else {
             session = sessionOrUser;
             user = session.user;
@@ -195,6 +200,7 @@
         this._session = session;
 
         this.getAuthenticated = function() { return _isAuthenticated; }
+
     }
 
     /**
@@ -219,22 +225,31 @@
     get user() { return this._user; }
 
     /**
+     * @property 
+     * @summary Get the session associated with the session
+     * @type {Session}
+     */
+    get session(){ return this._session; }
+
+   
+    /**
      * Represent this as a token 
      */
     toJSON() {
         var retVal = {};
         
-        for(var k in Object.keys(this.claims))
+        for(var k in this.claims)
             retVal[k] = this.claims[k];
 
-        retVal.sub = this._userId;
+        retVal.sub = this._session.userId || this._session.applicationId;
         retVal.app = this._session.applicationId;
-        retVal.iat = this._session.creationTime;
-        retVal.nbf = this._session.notBefore;
-        retVal.exp = this._session.notAfter;
+        retVal.iat = this._session.notBefore.getTime();
+        retVal.nbf = this._session.notBefore.getTime();
+        retVal.exp = this._session.notAfter.getTime();
         retVal.jti = this._session.id;
         retVal.grant = this._session.grant;
 
+        return retVal;
     }
  }
 
@@ -259,11 +274,20 @@
         session.applicationId = jwtToken.app;
         session.audience = jwtToken.aud;
         session.id = jwtToken.jti;
-        session.notAfter = jwtToken.exp;
-        session.notBefore = jwtToken.nbf;
+        session.notAfter = new Date(jwtToken.exp);
+        session.notBefore = new Date(jwtToken.nbf);
         session.userId = jwtToken.sub;
-        session.creationTime = jwtToken.iat;
+        session.creationTime = new Date(jwtToken.iat);
         session._grant = jwtToken.grant;
+        session._user = session._user || {}
+
+        if(jwtToken.displayName) 
+            session._user.name = jwtToken.displayName;
+        if(jwtToken.mail)
+            session._user.email = jwtToken.mail;
+        if(jwtToken.telephone)
+            session._user.tel = jwtToken.telephone;
+
         super(session, isAuthenticated);
 
     }

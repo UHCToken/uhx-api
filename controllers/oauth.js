@@ -25,7 +25,8 @@
 
  const uhc = require('../uhc'),
   exception = require('../exception'),
-  security = require('../security');
+  security = require('../security'),
+  jwt = require('jsonwebtoken');
 
  const TOKEN_TYPE_JWT = "urn:ietf:params:oauth:token-type:jwt";
 
@@ -189,9 +190,13 @@
       if(!clientAuthentication[0] || !clientAuthentication[1])
         throw new exception.Exception("Either Authorization HTTP header or client_id/client_secret must be specified. See RFC6749", exception.ErrorCodes.SECURITY_ERROR);
 
-      var principal = await uhc.BusinessLogic.establishSession(clientAuthentication[0], clientAuthentication[1], req.param("username"), req.param("password"));
-      // Now we want to check the authorization of the client
-      return true;
+      if(!req.param("scope"))
+        throw new exception.Exception("Missing SCOPE parameter for OAUTH session", exception.ErrorCodes.MISSING_PROPERTY);
+
+      var principal = await uhc.BusinessLogic.authenticateClientApplication(clientAuthentication[0], clientAuthentication[1]);
+      req.principal = principal;
+
+      return principal !== undefined;
 
     }
     /**
@@ -229,7 +234,24 @@
      *        type: string
      */
     async post(req, res) {
-      throw new exception.NotImplementedException();
+      // HACK: The majority of work has been done on the authorization() method
+      var principal = req.principal;
+
+      var userPrincipal = null;
+    
+      // GRANT TYPE
+      switch(req.param("grant_type")){
+        case "password":
+          userPrincipal = await uhc.BusinessLogic.establishSession(principal, req.param("username"), req.param("password"), req.param("scope"));
+          break;
+        default:
+          throw new exception.NotSupportedException("Only password grants are supported");
+      }
+
+      var payload = userPrincipal.toJSON();
+      var retVal = new OAuthTokenResult(jwt.sign(payload, uhc.Config.security.hmac256secret), TOKEN_TYPE_JWT,  payload.exp - new Date().getTime(), userPrincipal.session.refreshToken);
+
+      res.status(200).json(retVal);
     }
     /**
      * Custom exception handler for OAUTH

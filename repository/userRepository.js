@@ -26,7 +26,8 @@
  
 const pg = require('pg'),
     exception = require('../exception'),
-    model = require('../model/model');
+    model = require('../model/model'),
+    security = require('../security');
 
  /**
   * @class UserRepository
@@ -104,7 +105,7 @@ const pg = require('pg'),
         try {
             await dbc.connect();
 
-            const rdr = await dbc.query("UPDATE users SET invalid_login = invalid_login + 1, lockout = CASE WHEN invalid_login > $2 THEN current_timestamptz + '1 DAY'::interval ELSE null END WHERE name = $1 RETURNING *", [ username, lockoutThreshold ]);
+            const rdr = await dbc.query("UPDATE users SET invalid_login = invalid_login + 1, lockout = CASE WHEN invalid_login > $2 THEN current_timestamp + '1 DAY'::interval ELSE null END WHERE name = $1 RETURNING *", [ username, lockoutThreshold ]);
             if(rdr.rows.length > 0) {
                 return new model.User().fromData(rdr.rows[0]);
             }
@@ -115,4 +116,76 @@ const pg = require('pg'),
             dbc.end();
         }
     }
- }
+
+    /**
+     * @method
+     * @summary Update the specified user
+     * @param {User} user The instance of the user that is to be updated
+     * @param {Principal} runAs The principal that is updating this user 
+     * @returns {User} The updated user data from the database
+     */
+    async update(user, runAs) {
+        const dbc = new pg.Client(this._connectionString);
+        try {
+            await dbc.connect();
+
+            var updateCmd = model.Utils.generateUpdate(user, 'users', 'updated_time');
+            const rdr = await dbc.query(updateCmd.sql, updateCmd.args);
+            if(rdr.rows.length == 0)
+                return null;
+            else
+                return user.fromData(rdr.rows[0]);
+        }
+        finally {
+            dbc.end();
+        }
+    }
+
+    
+    /**
+     * @method
+     * @summary Insert  the specified user
+     * @param {User} user The instance of the user that is to be inserted
+     * @param {Principal} runAs The principal that is inserting this user 
+     */
+    async insert(user, runAs) {
+        const dbc = new pg.Client(this._connectionString);
+        try {
+            await dbc.connect();
+
+            var updateCmd = model.Utils.generateInsert(user, 'users');
+            const rdr = await dbc.query(updateCmd.sql, updateCmd.args);
+            if(rdr.rows.length == 0)
+                return null;
+            else
+                return user.fromData(rdr.rows[0]);
+        }
+        finally {
+            dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Delete / de-activate a user in the system
+     * @param {string} userId The identity of the user to delete
+     * @param {Principal} runAs The identity to run the operation as (for logging)
+     */
+    async delete(userId, runAs) {
+
+        const dbc = new pg.Client(this._connectionString);
+        try {
+            await dbc.connect();
+
+            const rdr = await dbc.query("UPDATE users SET deactivation_time = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *", userId);
+            if(rdr.rows.length == 0)
+                return null;
+            else
+                return new model.User().fromData(rdr.rows[0]);
+        }
+        finally {
+            dbc.end();
+        }
+
+    }
+}

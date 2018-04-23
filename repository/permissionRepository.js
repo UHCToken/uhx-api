@@ -83,7 +83,7 @@
             
             var retVal = [];
             for(var r in rdr.rows)
-                retVal.push(new model.PermissionSetInstance(appId, "Application").fromData(rdr.rows[0]));
+                retVal.push(new model.PermissionSetInstance(appId, "Application").fromData(rdr.rows[r]));
             return retVal;
         }
         finally {
@@ -97,7 +97,7 @@
      * @param {string} uid The identification for the user to gather permissions for
      * @returns {PermissionSetInstance} The permission for the object
      */
-    async getApplicationPermission(uid) {
+    async getUserPermission(uid) {
         const dbc = new pg.Client(this._connectionString);
         try {
             await dbc.connect();
@@ -107,7 +107,7 @@
             
             var retVal = [];
             for(var r in rdr.rows)
-                retVal.push(new model.PermissionSetInstance(uid, "User").fromData(rdr.rows[0]));
+                retVal.push(new model.PermissionSetInstance(uid, "User").fromData(rdr.rows[r]));
             return retVal;
         }
         finally {

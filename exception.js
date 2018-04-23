@@ -34,6 +34,7 @@
     SECURITY_ERROR: "ERR_SECURITY_ERROR",
     UNAUTHORIZED: "ERR_UNAUTHORIZED",
     NOT_IMPLEMENTED: "ERR_NOTIMPLEMENTED",
+    NOT_SUPPORTED: "ERR_NOTSUPPORTED",
     RULES_VIOLATION: "ERR_BUSINESS_RULES",
     ARGUMENT_EXCEPTION: "ERR_ARGUMENT",
     NOT_FOUND: "ERR_NOTFOUND",
@@ -146,7 +147,7 @@
         else if(violations)
             super(violations, ErrorCodes.RULES_VIOLATION);
         else
-            super("Business constraint failed", Errorcodes.RULES_VIOLATION);
+            super("Business constraint failed", ErrorCodes.RULES_VIOLATION);
     }
  }
 
@@ -163,7 +164,21 @@
      * @param {string} objectId The identifier of the object
      */
     constructor(objectType, objectId) {
-        super(`${objectType} with id ${objectId} was not found`, Errorcodes.NOT_FOUND);
+        super(`${objectType} with id ${objectId} was not found`, ErrorCodes.NOT_FOUND);
+    }
+ }
+
+ /**
+  * @class
+  * @summary Signifies an exceptional case where the requested operation cannot be performed
+  */
+ class NotSupportedException extends Exception {
+    /**
+     * @constructor
+     * @summary Creates a new instance of the NotSupportedException
+     */
+    constructor(message) {
+        super(message || "Operation not supported", ErrorCodes.NOT_SUPPORTED);
     }
  }
 
@@ -173,3 +188,4 @@ module.exports.NotImplementedException = NotImplementedException;
 module.exports.BusinessRuleViolationException = BusinessRuleViolationException;
 module.exports.ErrorCodes = ErrorCodes;
 module.exports.NotFoundException = NotFoundException;
+module.exports.NotSupportedException = NotSupportedException;

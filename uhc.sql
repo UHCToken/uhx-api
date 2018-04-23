@@ -225,6 +225,10 @@ INSERT INTO user_group (user_id, group_id)
 INSERT INTO applications (id, name, secret, created_by) VALUES ('4fc15664-b152-4e6b-a852-b2aab0f05e05', 'fiddler', crypt('fiddler', gen_salt('bf')), '3c673456-23b1-4263-9deb-df46770852c9');
 -- FIDDLER GRANT ALL 
 INSERT INTO application_permissions (application_id, permission_set_id, acl_flags)
-	SELECT '4fc15664-b152-4e6b-a852-b2aab0f05e05', id, 15
+	SELECT '4fc15664-b152-4e6b-a852-b2aab0f05e05', id, 31
 	FROM permission_sets;
 
+
+
+
+UPDATE users SET invalid_login = invalid_login + 1, lockout = CASE WHEN invalid_login > 4 THEN current_timestamp + '1 DAY'::interval ELSE null END WHERE name = 'bob@test.com' RETURNING *

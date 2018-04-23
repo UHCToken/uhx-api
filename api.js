@@ -88,6 +88,9 @@ class RouteHandler {
                         
                         // Now we want to create a principal from the token
                         var principal = new security.JwtPrincipal(token, true);
+
+                        req.principal = principal;
+                        
                         // TODO: Check the grants!
                         if(new security.Permission(permissionSet[0], permissionSet[1]).demand(principal)) // we have permission granted 
                             return this._routeInfo._instance.acl ? this._routeInfo._instance.acl(principal, req) : true; // if the method provides additional ACL constraints then run them 

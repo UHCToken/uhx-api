@@ -43,6 +43,7 @@
         this._connectionString = connectionString;
         this.get = this.get.bind(this);
         this.getActiveUserSession = this.getActiveUserSession.bind(this);
+        this.insert = this.insert.bind(this);
     }
 
     /**
@@ -82,6 +83,29 @@
                 return null;
             else
                 return new model.Session().fromData(rdr.rows[0]);
+        }
+        finally {
+            dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Insert the specified session into the database
+     * @param {Session} session The session to insert into the database
+     * @param {Principal} runAs The identity to run as the session insertion
+     */
+    async insert(session, runAs) {
+        const dbc = new pg.Client(this._connectionString);
+        try {
+            await dbc.connect();
+            var insertCmd = model.Utils.generateInsert(session, "sessions");
+            const rdr = await dbc.query(insertCmd.sql, insertCmd.args);
+            if(rdr.rows.length == 0)
+                return null;
+            else {
+                return session.fromData(rdr.rows[0]);
+            }
         }
         finally {
             dbc.end();

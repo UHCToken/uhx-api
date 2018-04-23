@@ -26,7 +26,7 @@
  const assert = require('assert'),
     oauth = require('../controllers/oauth'),
     uhc = require('../uhc'),
-    exception = require('exception'),
+    exception = require('../exception'),
     express = require('express');
 
  describe('OAUTH2.0 Test Suite', function() {

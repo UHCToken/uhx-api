@@ -48,6 +48,73 @@
  }
 
  /**
+  * @class
+  * @summary Provides helper methods for dealing with model classes
+  */
+ class ModelUtil {
+
+    /**
+     * @method
+     * @summary Generate update SET statement
+     * @param {*} modelObject Represents the model object to generate update text for
+     * @param {string} tableName The index of parameters 
+     * @param {string} timestampColumn The name of the update timestamp column to insert
+     * @returns {Object} The SET portion of a SQL update and an array of parameters
+     */
+    generateUpdate(modelObject, tableName, timestampColumn) {
+        var dbModel = modelObject.toData ? modelObject.toData() : modelObject;
+
+        var updateSet = "", parmId = 1, parameters = [], whereClause = "";
+        for(var k in dbModel) 
+            {
+
+                if(k == "id")
+                    whereClause += `${k} = $${parmId++}`;
+                else
+                    updateSet += `${k} = $${parmId++}, `;
+                parameters.push(dbModel[k]);
+            }
+
+        // Append timestamp?
+        if(timestampColumn)
+            updateSet += ` ${timestampColumn} = CURRENT_TIMESTAMP`;    
+        else
+            updateSet = updateSet.substr(0, updateSet.length - 2);
+            
+        return {
+            sql: `UPDATE ${tableName} SET ${updateSet} WHERE ${whereClause} RETURNING *`,
+            args : parameters
+        };
+    }
+
+    /**
+     * @method
+     * @summary Generate the column names and values portions of an insert statement
+     * @param {*} modelObject Represents the model object to generate the insert text for
+     * @param {string} tableName The name of the table to insert into
+     * @returns {Object} The column and values tuple for the insert statement
+     */
+    generateInsert(modelObject, tableName) {
+
+        var dbModel = modelObject.toData ? modelObject.toData() : modelObject;
+        var parmId = 1, colNames = "", values = "", parameters = [];
+        for(var k in dbModel) {
+            var val = dbModel[k];
+            if(val) {
+                colNames += `${k},`;
+                values += `$${parmId++},`;
+                parameters.push(val);
+            }
+        }
+
+        return {
+            sql: `INSERT INTO ${tableName} (${colNames.substring(0, colNames.length - 1)}) VALUES (${values.substring(0, values.length - 1)}) RETURNING *`,
+            args: parameters
+        };
+    }
+ }
+
+ /**
   * @class User
   * @summary Represents a user instance
   * @property {string} id The identifier for the user
@@ -204,7 +271,7 @@ class Application {
         this.updatedTime = dbApplication.updated_time;
         this.updatedBy = dbApplication.updated_by;
         this.deactivationTime = dbApplication.deactivation_time;
-        this.deactivatedBy = dbApplication.deactived_by;
+        this.deactivatedBy = dbApplication.deactivated_by;
         return this;
     }
 
@@ -242,13 +309,17 @@ class Session {
      * @param {Application} application The application to construct the session from
      * @param {number} expiry The expiration time
      */
-    constructor(user, application, sessionLength) {
+    constructor(user, application, scope, sessionLength) {
+
+        if(!user && !application) return;
+
         this.userId = user.id;
         this.applicationId = application.id;
-        this.notAfter = new Date(new Date().getTime() + expiry);
+        this.notAfter = new Date(new Date().getTime() + sessionLength);
         this.notBefore = new Date();
         this._refreshToken = crypto.randomBytes(32).toString('hex');
         this._user = user;
+        this.audience = scope;
         this._application = application;
     }
 
@@ -264,52 +335,100 @@ class Session {
         this.audience = dbSession.scope;
         this.notBefore = dbSession.not_before;
         this.notAfter = dbSession.not_after;
-        this._refreshToken = dbSession._refreshToken;
+        this._refreshToken = dbSession.refresh_token;
         return this;
     }
 
     /**
-     * @property
-     * @summary Gets the user that this session belongs to
-     * @type {User}
+     * @method
+     * @summary Convert this session to data stream
      */
-    async getUser() {
-        if(!this._user)
-            this._user = uhc.Repositories.userRepository.get(id);
-        return this._user;
+    toData() {
+        return {
+            id : this.id,
+            user_id: this.userId,
+            application_id: this.applicationId,
+            scope: this.audience,
+            not_before: this.notBefore,
+            not_after: this.notAfter,
+            refresh_token: this._refreshToken
+        };
     }
 
     /**
      * @property
+     * @summary Get the refresh token
+     */
+    get refreshToken() {
+        return this._refreshToken;
+    }
+
+    /**
+     * @summary Get user proeprty 
+     * @remarks If this property returns null you can populate it by calling await getUser()
+     */
+    get user() {
+        return this._user;
+    }
+    
+    /**
+     * @summary Get user proeprty 
+     * @remarks If this property returns null you can populate it by calling await getUser()
+     */
+    get application() {
+        return this._application;
+    }
+    
+    /**
+     * @summary Get user proeprty 
+     * @remarks If this property returns null you can populate it by calling await getUser()
+     */
+    get grant() {
+        return this._grants;
+    }
+
+    /**
+     * @method
+     * @summary Gets the user that this session belongs to
+     * @type {User}
+     */
+    async loadUser() {
+        if(!this._user)
+            this._user = await uhc.Repositories.userRepository.get(id);
+        return this._user;
+    }
+
+    /**
+     * @method
      * @summary Get the application this session was granted to
      * @type {Application}
      */
-    async getApplication() {
+    async loadApplication() {
         if(!this._application)
             this._application = await uhc.Repositories.applicationRepository.get(this.applicationId);
         return this._application;
     }
 
     /**
-     * @property
+     * @method
      * @summary Gets (or computes) the grants on this session
      * @type {*}
      */
-    async getGrant() {
+    async loadGrants() {
 
         if(!this._grants) {
             this._grants = {};
 
             // Fetch from the user and application objects
-            var appPerms = await uhc.Repositories.permissionRepository.getApplicationPermission(this.applicationId);
-            for(var p in appPerms)
-                this._grants[appPerms[p].name] = appPerms[p].grant;
-            
             var usrPerms = await uhc.Repositories.permissionRepository.getUserPermission(this.userId);
-            for(var p in usrPerms) {
-                var gp = this._grants[usrPerms[p].name];
+            for(var p in usrPerms)
+                this._grants[usrPerms[p].name] = usrPerms[p].grant;
+            
+            var appPerms = await uhc.Repositories.permissionRepository.getApplicationPermission(this.applicationId);
+            for(var p in appPerms) {
+                var gp = this._grants[appPerms[p].name];
                 if(gp)
-                    gp.grant &= usrPerms[p].grant;
+                    this._grants[appPerms[p].name] &= appPerms[p].grant;
             }
         }
         return this._grants;
@@ -442,3 +561,4 @@ module.exports.Application = Application;
 module.exports.Session = Session;
 module.exports.PermissionSet = PermissionSet;
 module.exports.PermissionSetInstance = PermissionSetInstance;
+module.exports.Utils = new ModelUtil();
