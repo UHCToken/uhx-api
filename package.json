@@ -1,0 +1,25 @@
+{
+  "name": "uhc-api",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "nyc mocha"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.18.2",
+    "express": "^4.16.3",
+    "jsonwebtoken": "^8.2.1",
+    "mocha": "^5.1.1",
+    "mongodb": "^3.0.5",
+    "nyc": "^11.7.1",
+    "pg": "^7.4.1",
+    "request": "^2.85.0",
+    "request-promise": "^4.2.2",
+    "stellar-sdk": "^0.8.0",
+    "stripe": "^5.7.0",
+    "swagger-jsdoc": "^1.9.7"
+  }
+}
