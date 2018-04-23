@@ -98,7 +98,7 @@ const pg = require('pg'),
         try {
             await dbc.connect();
 
-            const rdr = await dbc.query("UPDATE users SET invalid_login = invalid_login + 1, lockout = CASE WHEN invalid_login > $2 THEN current_timestamp + '1 DAY'::interval ELSE null END WHERE name = $1 RETURNING *", [ username, lockoutThreshold ]);
+            const rdr = await dbc.query("UPDATE users SET invalid_login = invalid_login + 1, lockout = CASE WHEN invalid_login >= $2 THEN current_timestamp + '1 DAY'::interval ELSE null END WHERE name = $1 RETURNING *", [ username, lockoutThreshold ]);
             if(rdr.rows.length > 0) {
                 return new model.User().fromData(rdr.rows[0]);
             }
@@ -114,15 +114,20 @@ const pg = require('pg'),
      * @method
      * @summary Update the specified user
      * @param {User} user The instance of the user that is to be updated
+     * @param {string} password The new password to set for the user
      * @param {Principal} runAs The principal that is updating this user 
      * @returns {User} The updated user data from the database
      */
-    async update(user, runAs) {
+    async update(user, password, runAs) {
         const dbc = new pg.Client(this._connectionString);
         try {
             await dbc.connect();
 
-            var updateCmd = model.Utils.generateUpdate(user, 'users', 'updated_time');
+            var dbUser = user.toData();
+            if(password)
+                dbUser.$password = password;
+                
+            var updateCmd = model.Utils.generateUpdate(dbUser, 'users', 'updated_time');
             const rdr = await dbc.query(updateCmd.sql, updateCmd.args);
             if(rdr.rows.length == 0)
                 return null;
@@ -173,7 +178,7 @@ const pg = require('pg'),
         try {
             await dbc.connect();
 
-            const rdr = await dbc.query("UPDATE users SET deactivation_time = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *", userId);
+            const rdr = await dbc.query("UPDATE users SET deactivation_time = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *", [userId]);
             if(rdr.rows.length == 0)
                 return null;
             else

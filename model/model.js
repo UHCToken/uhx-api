@@ -63,6 +63,8 @@
 
                 if(k == "id")
                     whereClause += `${k} = $${parmId++}`;
+                else if(k.startsWith("$"))
+                    updateSet += `${k.substring(1)} = crypt($${parmId++}, gen_salt('bf')), `;
                 else
                     updateSet += `${k} = $${parmId++}, `;
                 parameters.push(dbModel[k]);

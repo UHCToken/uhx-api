@@ -55,5 +55,122 @@ describe("User Repository Test Suite", function() {
         var user = await testRepository.userRepository.insert(userUnderTest, 'test' + new Date().getTime());
         assert.ok(user.id);
         assert.equal(user.invalidLogins, 0);
+
+        // Deactivate test user
+        user = await testRepository.userRepository.delete(user.id);
+        assert.ok(user.deactivationTime, "Did not de-activate test user");
+
     });
+
+    /**
+     * @test
+     * @summary Creates and then authenticates a user
+     */
+    it("Should retrieve user by username and password", async function() {
+        var userUnderTest = new model.User().fromData({
+            name: "test" + new Date().getTime(),
+            email: "test@test.com",
+            given_name: "Test",
+            family_name: "User"
+        });
+
+        var password = 'test' + new Date().getTime();
+        var user = await testRepository.userRepository.insert(userUnderTest, password);
+        assert.ok(user.id);
+        assert.equal(user.invalidLogins, 0);
+        assert.equal(user.password, undefined); // should not disclose password
+
+        // Now attempt to auth
+        var authUser = await testRepository.userRepository.getByNameSecret(userUnderTest.name, password);
+
+        assert.equal(user.id, authUser.id);
+
+        // Deactivate test user
+        user = await testRepository.userRepository.delete(user.id);
+        assert.ok(user.deactivationTime, "Did not de-activate test user");
+
+    });
+
+    /**
+     * @test
+     * @summary Creates and then authenticates a user
+     */
+    it("Should increment user's invalid login count and then lock user", async function() {
+        var userUnderTest = new model.User().fromData({
+            name: "test" + new Date().getTime(),
+            email: "test@test.com",
+            given_name: "Test",
+            family_name: "User"
+        });
+
+        var password = 'test' + new Date().getTime();
+        var user = await testRepository.userRepository.insert(userUnderTest, password);
+        assert.ok(user.id);
+        assert.equal(user.invalidLogins, 0);
+        assert.equal(user.password, undefined); // should not disclose password
+
+        // We want to ensure that invalid logins is incremented
+        var afterUser = await testRepository.userRepository.incrementLoginFailure(userUnderTest.name, 2);
+        assert.equal(afterUser.invalidLogins, 1, "Did not increment login failures");
+
+        // Now we want to ensure that lockout occurs
+        afterUser = await testRepository.userRepository.incrementLoginFailure(userUnderTest.name, 2);
+        assert.equal(afterUser.invalidLogins, 2, "Did not increment login failures");
+
+        afterUser = await testRepository.userRepository.incrementLoginFailure(userUnderTest.name, 2);
+        assert.ok(afterUser.lockout, "Did not lock user account");
+
+        // Deactivate test user
+        user = await testRepository.userRepository.delete(user.id);
+        assert.ok(user.deactivationTime, "Did not de-activate test user");
+
+    });
+
+    /**
+     * @test
+     */
+    it("Should update user", async function() {
+
+        var userUnderTest = new model.User().fromData({
+            name: "test" + new Date().getTime(),
+            email: "test@test.com",
+            given_name: "Test",
+            family_name: "User"
+        });
+
+        var password = 'test' + new Date().getTime();
+        var user = await testRepository.userRepository.insert(userUnderTest, password);
+        assert.ok(user.id);
+        assert.equal(user.invalidLogins, 0);
+        assert.equal(user.password, undefined); // should not disclose password
+
+        // Now update user
+        user.givenName = "Bob";
+        user.familyName = "Smith";
+        user = await testRepository.userRepository.update(user);
+        assert.ok(user.updatedTime, "Updated time was not set");
+        assert.equal(user.givenName, "Bob", "User data was not updated properly");
+        assert.equal(user.familyName, "Smith", "User data was not updated properly");
+
+        // Password should remain
+        assert.ok(await testRepository.userRepository.getByNameSecret(userUnderTest.name, password), "Password was changed inappropriately");
+
+        // Change the password
+        user = await testRepository.userRepository.update(user, "password" + new Date().getTime());
+
+        try {
+            await testRepository.userRepository.getByNameSecret(userUnderTest.name, password);
+            assert.fail("Can still authenticate under old password");
+        }
+        catch(e) {
+            // pass
+        }
+
+        // Deactivate test user
+        user = await testRepository.userRepository.delete(user.id);
+        assert.ok(user.deactivationTime, "Did not de-activate test user");
+
+    });
+
+
 });
