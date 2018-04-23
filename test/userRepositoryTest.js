@@ -1,4 +1,4 @@
-'use strict'
+'use strict';
 
 /**
  * Copyright 2018 Universal Health Coin
@@ -27,7 +27,7 @@
 
 describe("User Repository Test Suite", function() {
 
-    var testRepository = new testRepo.UhcRepositories("postgres://postgres:postgres@localhost:5432/uhc");
+    var testRepository = new testRepo.UhcRepositories(uhc.Config.db.test_server);
 
     /**
      * @test

@@ -115,14 +115,14 @@
         const dbc = new pg.Client(this._connectionString);
         try {
             await dbc.connect();
-            const rdr = await dbc.query("UPDATE sessions SET not_after = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *", [id]);
+            const rdr = await dbc.query("UPDATE sessions SET not_after = CURRENT_TIMESTAMP - '1 SECOND'::INTERVAL WHERE id = $1 RETURNING *", [id]);
             if(rdr.rows.length == 0)
                 return null;
             else
                 return new model.Session().fromData(rdr.rows[0]);
         }
         finally {
-            rdr.end();
+            dbc.end();
         }
     }
  }

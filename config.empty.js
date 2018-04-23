@@ -29,7 +29,11 @@
          /**
           * @summary The location of the PostgreSQL database server
           */
-        server: 'postgres://postgres:postgres@localhost:5432/uhc'
+        server: 'postgres://postgres:postgres@localhost:5432/uhc',
+        /**
+         * @summary The location of the PostgreSQL server to run unit tests against
+         */
+        test_server: 'postgres://postgres:postgres@localhost:5432/uhc'
      },
      /**
       * @summary Groups configuration related to the STRIPE payment network
