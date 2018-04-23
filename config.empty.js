@@ -1,26 +1,20 @@
 'use strict';
 
 /**
- * Universal Health Coin API Service
- * Copyright (C) 2018, Universal Health Coin
+ * Copyright 2018 Universal Health Coin
  * 
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), 
+ * to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
  * 
- *    http://www.apache.org/licenses/LICENSE-2.0
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
  * 
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+ * IN THE SOFTWARE.
  * 
- * Original Authors: Justin Fyfe (justin-fyfe), Rory Yendt (RoryYendt)
- * Original Date: 2018-04-18
- * 
- * This file contains configuration values for the UHC API
- * 
+ * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
  /**
@@ -35,7 +29,7 @@
          /**
           * @summary The location of the PostgreSQL database server
           */
-        server: 'postgres://postgres:postgres@localhost:5432/dbname'
+        server: 'postgres://postgres:postgres@localhost:5432/uhc'
      },
      /**
       * @summary Groups configuration related to the STRIPE payment network
@@ -44,7 +38,7 @@
          /**
           * @summary The STRIPE API access key
           */
-         key: "XXXXX"
+         key: "FKFKDJFSDKAFSDJA"
      },
      /**
       * @summary Configuration parameters for the API
@@ -57,7 +51,40 @@
          /**
           * @summary The base URL on which the API will listen
           */
-         base: "api/v1"
+         base: "/api/v1"
+     },
+     /**
+      * @summary Configuration for security parameters
+      */
+     security: {
+         /**
+          * @summary Default session length for users
+          */
+         sessionLength: 30000,
+         /**
+          * @summary Maximum failed login attempts
+          */
+         maxFailedLogin: 4,
+         /**
+          * @summary The HMAC256 secret to use for signing JWT tokens (note this should be randomly generated)
+          */
+        hmac256secret: "ThisIsASecretKey",
+        /**
+         * @summary The validation regex for user passwords
+         */
+        password_regex: /^[a-zA-Z][a-zA-Z0-9]{2,19}$/,
+        /**
+         * @summary The validation regex for usernames
+         */
+        username_regex: /^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$/,
+        /**
+         * @summary When true, enables cross-origin scripting
+         */
+        enable_cors: true,
+        /**
+         * @summary The URI of the token service when sending WWW-Authenticate headers
+         */
+        tokenServiceUri: "http://localhost:4001/api/v1/auth/oauth2_token"
      },
      /**
       * @summary Configuration settings related to interaction with the stellar network
@@ -66,6 +93,10 @@
          /**
           * @summary The issuer public key
           */
-         issuer: "GXXXXXX"
+         issuer: "GBXXXXXX",
+         /**
+          * @summary The wallet / username from which tokens are issued
+          */
+         distribution_wallet: "Dist"
      }
  }
