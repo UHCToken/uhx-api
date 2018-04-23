@@ -165,7 +165,7 @@ class UserApiResource {
         }
 
         // if the token has OWNER set for USER permission then this user must be SELF
-        return (principal.grant.user & security.PermissionType.OWNER && req.params.uid == principal.sub) // the permission on the principal is for OWNER only
+        return (principal.grant.user & security.PermissionType.OWNER && req.params.uid == principal.session.userId) // the permission on the principal is for OWNER only
                 ^ !(principal.grant.user & security.PermissionType.OWNER); // XOR the owner grant flag is not set.
                 
     }

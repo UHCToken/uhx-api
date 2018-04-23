@@ -184,9 +184,6 @@
       if(!clientAuthentication[0] || !clientAuthentication[1])
         throw new exception.Exception("Either Authorization HTTP header or client_id/client_secret must be specified. See RFC6749", exception.ErrorCodes.SECURITY_ERROR);
 
-      if(!req.param("scope"))
-        throw new exception.Exception("Missing SCOPE parameter for OAUTH session", exception.ErrorCodes.MISSING_PROPERTY);
-
       var principal = await uhc.SecurityLogic.authenticateClientApplication(clientAuthentication[0], clientAuthentication[1]);
       req.principal = principal;
 
@@ -236,7 +233,13 @@
       // GRANT TYPE
       switch(req.param("grant_type")){
         case "password":
+          if(!req.param("scope"))
+            throw new exception.Exception("Missing SCOPE parameter for OAUTH session", exception.ErrorCodes.MISSING_PROPERTY);
+
           userPrincipal = await uhc.SecurityLogic.establishSession(principal, req.param("username"), req.param("password"), req.param("scope"));
+          break;
+        case "refresh_token":
+          userPrincipal = await uhc.SecurityLogic.refreshSession(principal, req.param("refresh_token"));
           break;
         default:
           throw new exception.NotSupportedException("Only password grants are supported");

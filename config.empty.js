@@ -66,6 +66,10 @@
           */
          sessionLength: 3000000,
          /**
+          * @summary Refresh vailidity in ms
+          */
+         refreshValidity: 3000,
+         /**
           * @summary Maximum failed login attempts
           */
          maxFailedLogin: 4,

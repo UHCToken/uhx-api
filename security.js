@@ -189,8 +189,9 @@
         this._claims = {
             mail: user.email,
             telephoneNumber: user.tel,
-            displayName: user.givenName + " " + user.familyName
+            displayName: user.givenName || user.email
         };
+
         this._session = session;
 
         this.getAuthenticated = function() { return _isAuthenticated; }
@@ -209,7 +210,7 @@
      * @summary Gets the list of claims that this user has
      * @type {*}
      */
-    get claims() { return this._session.grant; }
+    get claims() { return this._claims; }
     
     /**
      * @property 

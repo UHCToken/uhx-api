@@ -100,6 +100,48 @@
 
     /**
      * @method
+     * @summary Refreshes the specified session to which the refreshToken belongs
+     * @param {SecurityPrincipal} clientPrincipal The principal of the application (must match the original application which the session was given to)
+     * @param {string} refreshToken The refresh token
+     */
+    async refreshSession(clientPrincipal, refreshToken) {
+
+        // Ensure that the application information is loaded
+        await clientPrincipal.session.loadApplication();
+        var application = clientPrincipal.session.application;
+    
+        try {
+            var session = await repository.sessionRepository.transact(async (_tx) => {
+
+                // Get session
+                var session = await repository.sessionRepository.getByRefreshToken(refreshToken, config.security.refreshValidity, _tx);
+                if(session == null)
+                    throw new exception.Exception("Invalid refresh token", exception.ErrorCodes.SECURITY_ERROR);
+                else if(session.applicationId != application.id)
+                    throw new exception.Exception("Refresh must be performed by originator", exception.ErrorCodes.SECURITY_ERROR);
+                // Abandon the existing session
+                await repository.sessionRepository.abandon(session.id, _tx);
+
+                // Establish a new session
+                return await repository.sessionRepository.insert(
+                    new model.Session(session.userId, session.applicationId, session.audience, config.security.sessionLength),
+                    null,
+                    _tx
+                );
+                
+            }); 
+
+            await session.loadGrants();
+            await session.loadUser();
+            return new security.Principal(session);
+        }
+        catch(e) {
+            console.error("Error refreshing session: " + e.message);
+            throw new exception.Exception("Error refreshing session", exception.ErrorCodes.SECURITY_ERROR, e);
+        }
+    }
+    /**
+     * @method
      * @summary Register a regular user 
      * @param {User} user The user to be registered
      * @param {string} password The password to set on the user

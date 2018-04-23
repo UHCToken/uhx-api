@@ -40,15 +40,41 @@
     }
 
     /**
+     * @summary Executes the functions in fntx within a transaction
+     * @method 
+     * @param {*} fntx A function to be executed in the transaction
+     */
+    async transact(fntx) {
+        const dbc = new pg.Client(this._connectionString);
+        try {
+
+            await dbc.connect();
+            await dbc.query("BEGIN TRANSACTION");
+
+            var retVal = await fntx(dbc);
+
+            await dbc.query("COMMIT");
+            return retVal;
+        }
+        catch(e) {
+            await dbc.query("ROLLBACK");
+            throw e;
+        }
+        finally {
+            dbc.end();
+        }
+    }
+
+    /**
      * @method
      * @summary Retrieve a specific user from the database
      * @param {uuid} id Gets the specified session
+     * @param {Client} _tx A database connection within a transaction to execute this
      */
-    async get(id) {
-
-        const dbc = new pg.Client(this._connectionString);
+    async get(id, _tx) {
+        const dbc = _tx || new pg.Client(this._connectionString);
         try {
-            await dbc.connect();
+            if(!_tx) await dbc.connect();
             const rdr = await dbc.query("SELECT * FROM sessions WHERE id = $1", [id]);
             if(rdr.rows.length == 0)
                 throw new exception.NotFoundException('session', id);
@@ -56,7 +82,7 @@
                 return new model.Session().fromData(rdr.rows[0]);
         }
         finally {
-            dbc.end();
+            if(!_tx) dbc.end();
         }
 
     }
@@ -66,11 +92,12 @@
      * @summary Retrieve a specific user session
      * @returns {Session} The active session if one exists
      * @param {uuid} userId The key (user subject) of the user to retrieve the active session for
+     * @param {Client} _tx A database connection within a transaction to execute this
      */
-    async getActiveUserSession(userId) {
-        const dbc = new pg.Client(this._connectionString);
+    async getActiveUserSession(userId, _tx) {
+        const dbc = _tx || new pg.Client(this._connectionString);
         try {
-            await dbc.connect();
+            if(!_tx) await dbc.connect();
             const rdr = await dbc.query("SELECT * FROM sessions WHERE user_id = $1 AND CURRENT_TIMESTAMP BETWEEN not_before AND not_after", [userId]);
             if(rdr.rows.length == 0)
                 return null;
@@ -78,7 +105,7 @@
                 return new model.Session().fromData(rdr.rows[0]);
         }
         finally {
-            dbc.end();
+            if(!_tx) dbc.end();
         }
     }
 
@@ -87,11 +114,12 @@
      * @summary Insert the specified session into the database
      * @param {Session} session The session to insert into the database
      * @param {Principal} runAs The identity to run as the session insertion
+     * @param {Client} _tx A database connection within a transaction to execute this
      */
-    async insert(session, runAs) {
-        const dbc = new pg.Client(this._connectionString);
+    async insert(session, runAs, _tx) {
+        const dbc = _tx || new pg.Client(this._connectionString);
         try {
-            await dbc.connect();
+            if(!_tx) await dbc.connect();
             var insertCmd = model.Utils.generateInsert(session, "sessions");
             const rdr = await dbc.query(insertCmd.sql, insertCmd.args);
             if(rdr.rows.length == 0)
@@ -101,7 +129,31 @@
             }
         }
         finally {
-            dbc.end();
+            if(!_tx) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Gets a session by refresh token
+     * @param {uuid} token The refresh token to fetch the session by
+     * @param {Client} _tx A database connection within a transaction to execute this
+     * @returns {Session} The session that was abandoned
+     */
+    async getByRefreshToken(token, maxAge, _tx) {
+        const dbc = _tx || new pg.Client(this._connectionString);
+        try {
+            if(!_tx) await dbc.connect();
+            maxAge = maxAge + ' MILLISECONDS'
+            const rdr = await dbc.query('SELECT * FROM sessions WHERE refresh_token = crypt($1, refresh_token) AND CURRENT_TIMESTAMP BETWEEN not_before AND not_after + $2::INTERVAL', [token, maxAge]);
+            if(rdr.rows.length == 0)
+                return null;
+            else
+                return new model.Session().fromData(rdr.rows[0]);
+        }
+        finally {
+            if(!_tx) 
+                dbc.end();
         }
     }
 
@@ -110,19 +162,20 @@
      * @summary Abandons a session
      * @param {uuid} sessionId The identification of the session to abandon
      * @returns {Session} The session that was abandoned
+     * @param {Client} _tx A database connection within a transaction to execute this
      */
-    async abandon(id) {
-        const dbc = new pg.Client(this._connectionString);
+    async abandon(id, _tx) {
+        const dbc = _tx || new pg.Client(this._connectionString);
         try {
-            await dbc.connect();
-            const rdr = await dbc.query("UPDATE sessions SET not_after = CURRENT_TIMESTAMP - '1 SECOND'::INTERVAL WHERE id = $1 RETURNING *", [id]);
+            if(!_tx) await dbc.connect();
+            const rdr = await dbc.query("UPDATE sessions SET not_after = CURRENT_TIMESTAMP - '1 SECOND'::INTERVAL, refresh_token = null WHERE id = $1 RETURNING *;", [id]);
             if(rdr.rows.length == 0)
                 return null;
             else
                 return new model.Session().fromData(rdr.rows[0]);
         }
         finally {
-            dbc.end();
+            if(!_tx) dbc.end();
         }
     }
  }

@@ -383,22 +383,22 @@ class Session {
     /**
      * @constructor
      * @summary Creates a new session between the user and application
-     * @param {User} user The user to construct the session from
-     * @param {Application} application The application to construct the session from
+     * @param {User} user The user to construct the session from (or the id of the user)
+     * @param {Application} application The application to construct the session from (or the id of application)
      * @param {number} expiry The expiration time
      */
     constructor(user, application, scope, sessionLength) {
 
         if(!user && !application) return;
 
-        this.userId = user.id;
-        this.applicationId = application.id;
+        this.userId = user.id || user;
+        this.applicationId = application.id || application;
         this.notAfter = new Date(new Date().getTime() + sessionLength);
         this.notBefore = new Date();
         this._refreshToken = crypto.randomBytes(32).toString('hex');
-        this._user = user;
+        this._user = user.id ? user : null;
         this.audience = scope;
-        this._application = application;
+        this._application = application.id ? application : null;
     }
 
     /**
@@ -413,7 +413,6 @@ class Session {
         this.audience = dbSession.scope;
         this.notBefore = dbSession.not_before;
         this.notAfter = dbSession.not_after;
-        this._refreshToken = dbSession.refresh_token;
         return this;
     }
 
@@ -429,7 +428,7 @@ class Session {
             scope: this.audience,
             not_before: this.notBefore,
             not_after: this.notAfter,
-            refresh_token: this._refreshToken
+            $refresh_token: this._refreshToken
         };
     }
 
@@ -472,7 +471,7 @@ class Session {
      */
     async loadUser() {
         if(!this._user)
-            this._user = await uhc.Repositories.userRepository.get(id);
+            this._user = await uhc.Repositories.userRepository.get(this.userId);
         return this._user;
     }
 
