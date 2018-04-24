@@ -632,6 +632,171 @@ class PermissionSetInstance extends PermissionSet {
 
 }
 
+/**
+ * @class
+ * @summary Represents a wallet balance 
+ */
+class MonetaryAmount {
+
+    /**
+     * @constructor
+     * @summary Instantiates the monetary amount object 
+     * @param {string} code The code of the monetary amount (example: USD)
+     * @param {number} amount The amount
+     */
+    constructor(value, code) {
+        this.code = code;
+        this.value = value;
+    }
+
+}
+
+/**
+ * @class
+ * @summary Represents a common class for transactions (fiat, onchain, offchain etc.)
+ */
+class Transaction {
+
+    /**
+     * 
+     * @param {string} id The primary identifier of the transaction in whatever the source system is
+     * @param {Date} postingDate The date that the transaction was posted (completed) on the account
+     * @param {User} payor The user or userId of the user which paid the fee
+     * @param {User} payee The user or userId of the user which received the fee
+     * @param {MonetaryAmount} amount The amount of the transaction
+     * @param {MonetaryAmount} fee The fee collected or processed on the transaction
+     * @param {*} ref A reference object
+     */
+    constructor(id, postingDate, payor, payee, amount, fee, ref) {
+        this.id = id;
+        this.postingDate = postingDate;
+        this._payor = payor instanceof User ? payor : null;
+        this.payorId = payor instanceof User ? payor.id : payor;
+        this._payee = payee instanceof User ? payee : null;
+        this.payeeId = payee instanceof User ? payee.id : payee;
+        this.amount = amount;
+        this.fee = fee;
+        this.ref = ref;
+    }
+
+    /**
+     * @property
+     * @type {User}
+     * @summary Gets the payor. Note you should call await loadPayor()
+     */
+    get payor() { return this._payor; }
+
+    /**
+     * @property 
+     * @type {User}
+     * @summary Gets the payee. Note you should call await loadPayee() 
+     */
+    get payee() { return this._payee; }
+
+    /**
+     * @method
+     * @returns {User} The payor of the transaction
+     * @summary Loads the payor from the UHC database
+     */
+    async loadPayor() {
+        if(!this._payor)
+            this._payor = uhc.Repositories.userRepository.get(this.payorId);
+        return this._payor;
+    }
+
+    /**
+     * @method
+     * @returns {User} The payee of the transaction
+     * @summary Loads the payee from the UHC database
+     */
+    async loadPayee() {
+        if(!this._payee)
+            this._payee = uhc.Repositories.userRepository.get(this.payeeId);
+        return this._payee;
+    }
+
+    /**
+     * @summary Represent the object in JSON
+     * @method
+     */
+    toJSON() {
+        var retVal = stripHiddenFields(this);
+        retVal.payor = this.payor;
+        retVal.payee = this.payee;
+        return retVal;
+    }
+
+}
+/**
+ * @class
+ * @summary Represents a wallet in the UHC data store
+ */
+class Wallet {
+
+    /**
+     * @constructor
+     */
+    constructor() {
+        this.fromData = this.fromData.bind(this);
+        this.toData = this.toData.bind(this);
+        this.copy = this.copy.bind(this);
+        this.balances = [];
+        this.transactions = [];
+    }
+
+    /**
+     * @method
+     * @summary Parses the specified dbWallet into a Wallet instance
+     * @param {*} dbWallet The wallet instance as represented in the database
+     * @return {Wallet} The updated wallet instance
+     */
+    fromData(dbWallet) {
+        this.address = dbWallet.address;
+        this.seed = dbWallet.seed;
+        this.id = dbWallet.id;
+        return this;
+    }
+
+    /**
+     * @method
+     * @summary Converts this wallet into a data model wallet
+     */
+    toData() {
+        return {
+            address : this.address,
+            seed : this.seed,
+            id : this.id
+        };
+    }
+
+    /**
+     * @method
+     * @summary Copies data from otherWallet into this wallet
+     * @param {Wallet} otherWallet The wallet to copy data from
+     * @return {Wallet} The updated wallet instance
+     */
+    copy(otherWallet) {
+        this.address = otherWallet.address;
+        this.seed = otherWallet.seed;
+        this.id = otherWallet.id;
+        this.balances = otherWallet.balances;
+        this.transactions = otherWallet.transactions;
+    }
+
+    /**
+     * @method
+     * @summary Represents this object as JSON
+     */
+    toJSON() {
+        return {
+            address: this.address,
+            id: this.id,
+            balances: this.balances,
+            transactions: this.transactions
+        }
+    }
+}
+
 // Module exports
 module.exports.User = User;
 module.exports.Application = Application;
@@ -639,3 +804,4 @@ module.exports.Session = Session;
 module.exports.PermissionSet = PermissionSet;
 module.exports.PermissionSetInstance = PermissionSetInstance;
 module.exports.Utils = new ModelUtil();
+module.exports.Wallet = Wallet;
