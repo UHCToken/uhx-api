@@ -111,12 +111,16 @@
       * @summary Swagger configuration
       */
      swagger: {
-         info: {
+         swaggerDefinition: {
+             info: {
              title: "Universal Health Coin API",
              version: "1",
              description: "The Universal Health Coin API"
-         }, 
-         apis: [ './controllers/*.js' ],
+         },
+         basePath: "/api/v1",
+         swagger: "2.0"
+        },
+         apis: [ './controllers/*.js', './model/model.js', './exception.js' ],
          enabled: true
      }
  }
