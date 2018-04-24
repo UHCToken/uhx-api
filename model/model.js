@@ -700,7 +700,7 @@ class Transaction {
      */
     async loadPayor() {
         if(!this._payor)
-            this._payor = uhc.Repositories.userRepository.get(this.payorId);
+            this._payor = await uhc.Repositories.userRepository.get(this.payorId);
         return this._payor;
     }
 
@@ -711,7 +711,7 @@ class Transaction {
      */
     async loadPayee() {
         if(!this._payee)
-            this._payee = uhc.Repositories.userRepository.get(this.payeeId);
+            this._payee = await uhc.Repositories.userRepository.get(this.payeeId);
         return this._payee;
     }
 
@@ -742,6 +742,16 @@ class Wallet {
         this.copy = this.copy.bind(this);
         this.balances = [];
         this.transactions = [];
+    }
+
+    /**
+     * @method
+     * @summary Loads the user associated with this wallet
+     */
+    async loadUser() {
+        if(!this._user)
+            this._user = await uhc.Repositories.userRepository.getByWalletId(this.id);
+        return this._user;
     }
 
     /**
@@ -805,3 +815,5 @@ module.exports.PermissionSet = PermissionSet;
 module.exports.PermissionSetInstance = PermissionSetInstance;
 module.exports.Utils = new ModelUtil();
 module.exports.Wallet = Wallet;
+module.exports.MonetaryAmount = MonetaryAmount;
+module.exports.Transaction = Transaction;

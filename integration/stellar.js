@@ -49,7 +49,7 @@ module.exports = class StellarClient {
      * @constructor
      * @summary Creates a new stellar client with the specified base API
      * @param {string} horizonApiBase The horizon API server to use
-     * @param {Stellar.Asset} stellarAsset The asset on which this client will operate
+     * @param {Stellar.Asset} stellarAsset The asset(s) on which this client will operate
      * @param {Wallet} distAccount The account from which the asset is distributed
      */
     constructor(horizonApiBase, stellarAsset, distWallet) {
@@ -82,16 +82,18 @@ module.exports = class StellarClient {
 
     /**
      * @property
-     * @summary Gets the stellar asset
+     * @summary Gets the stellar asset(s) this client operates with
      * @type {Stellar.Asset}
      */
-    get asset() { return this._getAsset(); }
+    get assets() { 
+        return !Array.isArray(this._getAsset()) ? [this._getAsset()] : this._getAsset(); 
+    }
 
     /**
      * @method
      * @summary Creates a new account on the stellar network
      * @return {Wallet} The constructed wallet instance 
-     * @param {number} startingBalance The starting balance of the account
+     * @param {number} startingBalance The starting balance of the account in lumens
      */
     async instantiateAccount(startingBalance) {
 
@@ -108,6 +110,7 @@ module.exports = class StellarClient {
                 .addOperation(Stellar.Operation.createAccount({
                     destination: kp.publicKey(),
                     startingBalance: startingBalance // Initial lumen balance from the central distributor ... 
+                    // TODO: If we're doing this through a payment gateway, would the fee be used to replenish the distributor account to deposit the lumens?
                 })).build();
             
             // Get the source key to create a trust
@@ -143,11 +146,17 @@ module.exports = class StellarClient {
             var stellarAcct = await this.server.loadAccount(userWallet.address);
 
             // Create change trust account transaction
-            var changeTrustTx = new Stellar.TransactionBuilder(stellarAcct)
-                .addOperation(Stellar.Operation.changeTrust({
-                    asset: this.asset,
+            var changeTrustTx = new Stellar.TransactionBuilder(stellarAcct);
+
+            // Add trust operations
+            for(var i in this.assets)
+                changeTrustTx.addOperation(Stellar.Operation.changeTrust({
+                    asset: this.assets[i],
                     source: userWallet.address
-                })).build();
+                }));
+
+            // Build the transaction
+            changeTrustTx.build();
 
             // Load signing key
             changeTrustTx.sign(Stellar.Keypair.fromSecret(userWallet.seed));
@@ -167,25 +176,105 @@ module.exports = class StellarClient {
      * @method
      * @summary Gets account information from stellar
      * @param {Wallet} userWallet The user wallet from which account information should be retrieved
-     * @returns {Stellar.Account} The account information
+     * @returns {Wallet} The wallet with account information
+     * @description This operation will fetch the account data, returning the updated wallet information
      */
     async getAccount(userWallet) {
         try {
             // Load stellar user acct
             var stellarAcct = await this.server.loadAccount(userWallet.address);
 
-            // Round the balances 
-            for(var b in stellarAcct.balances)
-                stellarAcct.balances[b].balance = this.round(stellarAcct.balances[b].balance);
-            
+            userWallet.balances = [];
+            // Round the balances and wrap them
+            stellarAcct.balances.forEach((o) => {
+                userWallet.balances.push(new model.MonetaryAmount(
+                    this.round(o.balance),
+                    o.asset_type
+                ));
+            });
+
             console.info(`Account ${userWallet.address} has been loaded`);
             
             // TODO: Should we wrap this?
-            return stellarAcct;
+            return userWallet;
         }
         catch(e) {
             console.error(`Account changeTrust has failed: ${JSON.stringify(e)}`);
             throw new StellarException(e);
         }
     }
+
+    /**
+     * 
+     * @param {Wallet} payorWallet The wallet from which the payment should be made
+     * @param {Wallet} payeeWallet The wallet to which the payment should be made
+     * @param {MonetaryAmount} amount The amount of the payment
+     * @param {MonetaryAmount} fee A fee to assess to the distribution wallet for performing the transaction. Null if none
+     * @param {string} memo A memo to add to the transaction
+     * @returns {Transaction} The transaction information for the operation
+     */
+    async createPayment(payorWallet, payeeWallet, amount, fee, memo) {
+
+        try {
+
+            // Load payor stellar account
+            var payorStellarAcct = await this.server.loadAccount(payorWallet.address);
+
+            // Find the asset type
+            var assetType = null;
+            this.assets.foreach((o)=> { if(o.code == amount.code) assetType = o; });
+
+            // Asset type not found
+            if(!assetType)
+                throw new exception.NotFoundException("asset", amount.code);
+
+            // Create payment transaction
+            var paymentTx = new Stellar.TransactionBuilder(payorStellarAcct)
+                .addOperation(Stellar.Operation.payment({
+                    destination: payeeWallet.address, 
+                    asset: assetType,
+                    amount: amount.value
+                }));
+
+            // Assess a fee for this transaction?
+            if(fee) {
+                var feeAssetType = null;
+                this.assets.foreach((o)=> { if(o.code == amount.code) feeAssetType = o; });
+
+                // Asset type not found
+                if(!feeAssetType)
+                    throw new exception.NotFoundException("asset", fee.code);
+
+                paymentTx.addOperation(Stellar.Operation.payment({
+                    destination: this._getDistWallet().address,
+                    asset: feeAssetType,
+                    amount: fee.value
+                }));
+            }
+
+            // Memo field if memo is present
+            if(memo)
+                paymentTx.addMemo(Stellar.Memo.text(memo));
+
+            // Sign the transaction
+            paymentTx.build();
+
+            // Load signing key
+            paymentTx.sign(Stellar.Keypair.fromSecret(payorWallet.seed));
+
+            // Submit transaction
+            var paymentResult = await this.server.submitTransaction(paymentTx);
+            
+            // TODO: Handle errors (i.e. NSF, etc.)
+            console.info(`Payment ${payorWallet.address} > ${payeeWallet.address} (${amount.value} ${amount.code}) success`);
+
+            // Build transaction 
+            return new model.Transaction(null, new Date(), await payorWallet.loadUser(), await payeeWallet.loadUser(), amount, fee, transactionResult._links.transaction.href);
+        }
+        catch(e) {
+            console.error(`Account payment has failed: ${JSON.stringify(e)}`);
+            throw new StellarException(e);
+        }
+    }
+
 }

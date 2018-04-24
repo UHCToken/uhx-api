@@ -221,6 +221,27 @@ const pg = require('pg'),
 
     /**
      * @method
+     * @summary Retrieves a user from the database given their wallet ID
+     * @param {string} walletId The identifier of the wallet to retrieve the user by
+     * @returns {User} The user whom the wallet belongs to
+     */
+    async getByWalletId(walletId) {
+        const dbc = new pg.Client(this._connectionString);
+        try {
+            await dbc.connect();
+            const rdr = await dbc.query("SELECT users.* FROM users WHERE wallet_id = $1", [walletId]);
+            if(rdr.rows.length == 0)
+                throw new exception.NotFoundException("wallet", walletId);
+            else
+                return new model.User().fromData(rdr.rows[0]);
+        }
+        finally {
+            dbc.end();
+        }
+    }
+
+    /**
+     * @method
      * @summary Delete / de-activate a user in the system
      * @param {string} userId The identity of the user to delete
      * @param {Principal} runAs The identity to run the operation as (for logging)
