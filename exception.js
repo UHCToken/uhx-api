@@ -53,15 +53,20 @@
  }
 
  /**
+  * @class
+  * @summary Represents an exceptional case
  * @swagger
- * models:
+ * definitions:
  *  Exception:
- *      id: Exception
  *      properties:
  *          message:
- *              type: String
+ *              description: The human readable description of the error
+ *              type: string
  *          cause:
- *              type: ErrorResult
+ *              $ref: "#/definitions/Exception"
+ *          code: 
+ *              description: "A codified error message"
+ *              type: string
  */
   class Exception {
      /**

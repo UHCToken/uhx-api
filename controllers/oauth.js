@@ -196,8 +196,8 @@
      * @param {*} req The request object
      * @param {*} res The response object
      * @swagger
-     * /api/v1/auth/oauth2_token
-     * post:
+     * /auth/oauth2_token:
+     *  post:
      *    description: OAUTH 2.0 token service for authentication. This service returns a JWT token
      *    tags: [OAuth]
      *    produces:
@@ -221,6 +221,16 @@
      *      - name: scope
      *        description: The requested scope of the token
      *        in: formData
+     *        required: false
+     *        type: string
+     *      - name: client_id
+     *        description: The client application which is requesting the token
+     *        in: formData
+     *        required: true
+     *        type: string
+     *      - name: client_secret
+     *        description: The client application secret which is requesting the token
+     *        in: formData
      *        required: true
      *        type: string
      */
@@ -233,9 +243,6 @@
       // GRANT TYPE
       switch(req.param("grant_type")){
         case "password":
-          if(!req.param("scope"))
-            throw new exception.Exception("Missing SCOPE parameter for OAUTH session", exception.ErrorCodes.MISSING_PROPERTY);
-
           userPrincipal = await uhc.SecurityLogic.establishSession(principal, req.param("username"), req.param("password"), req.param("scope"));
           break;
         case "refresh_token":

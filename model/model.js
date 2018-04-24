@@ -19,7 +19,8 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
  const uhc = require('../uhc'),
-    crypto = require('crypto');
+    crypto = require('crypto'),
+    security = require('../security');
 
  /**
   * @private
@@ -180,6 +181,79 @@
   * @property {Date} creationTime The time that the user was created
   * @property {Date} updatedTime The time that the user was updated
   * @property {Date} deactivatedTime The time that the user was deactivated
+  * @swagger
+  * definitions:
+  *     User: 
+  *         properties:
+  *             id: 
+  *                 type: string
+  *                 description: The unique identifier for the user
+  *             name:
+  *                 type: string
+  *                 description: The user name for the user
+  *             invalidLogins:
+  *                 type: int
+  *                 description: The number of times that the user has invalid logins
+  *             lastLogin:
+  *                 type: Date
+  *                 description: The last moment in time that the user successfully logged in
+  *             lockout:
+  *                 type: Date
+  *                 description: When populated, indicates that time that the user's account is locked out until
+  *             email: 
+  *                 type: string
+  *                 description: Identifies the e-mail address of the user
+  *             emailVerified:
+  *                 type: boolean
+  *                 description: Identifies whether the user has confirmed their e-mail address
+  *             givenName:
+  *                 type: string
+  *                 description: The user's given name
+  *             familyName:
+  *                 type: string
+  *                 description: The user's family name
+  *             profileText:
+  *                 type: string
+  *                 description: Descriptive text which the user has set (their profile)
+  *             tel:
+  *                 type: string
+  *                 description: The user's primary telephone number
+  *             telVerified:
+  *                 type: boolean
+  *                 description: True if the user has verified their telephone number
+  *             address:
+  *                 description: The user's primary addrss
+  *                 $ref: "#/definitions/Address"
+  *             creationTime:
+  *                 type: Date
+  *                 description: The time that this user account was created
+  *             updatedTime:
+  *                 type: Date
+  *                 description: The time that the user account was last updated
+  *             deactivatedTime:
+  *                 type: Date
+  *                 description: The time that the user account did or will become deactivated
+  *     Address:
+  *         properties:
+  *             street:
+  *                 type: string
+  *                 description: The primary street address (Example; 123 Main Street West)
+  *             unitOrSuite:
+  *                 type: string
+  *                 description: The unit or suite number (Example; Apt 100)
+  *             city:
+  *                 type: string        
+  *                 description: The city for the address (Example; Las Vegas)
+  *             stateOrProvince:
+  *                 type: string
+  *                 description: The state or province of the address in a 2 digit ISO code (Example; NV)
+  *             country:
+  *                 type: string
+  *                 description: The two digit country code for the address (Example; US)
+  *             postalOrZip:
+  *                 type: string
+  *                 description: The postal or zip code for the address
+  *     
   */
 class User {
 
@@ -237,6 +311,7 @@ class User {
         this.creationTime = dbUser.creation_time;
         this.updatedTime = dbUser.updated_time;
         this.deactivationTime = dbUser.deactivation_time;
+        this.walletId = dbUser.wallet_id;
         return this;
     }
 
@@ -292,6 +367,16 @@ class User {
     }
 
     /**
+     * @method
+     * @summary Prefetch user's wallet information
+     */
+    async loadWallet() {
+//      if(!this._wallet)
+//            this._wallet = await uhc.Repositories.walletRepository.get(this.walletId);
+        return this._wallet;
+    }
+
+    /**
      * @summary Gets the user groups for this user
      * @property
      */
@@ -310,6 +395,7 @@ class User {
     toJSON() {
         var retVal = stripHiddenFields(this);
         retVal.externalIds = this._externIds;
+        retVal.wallet = this._wallet;
         return retVal;
     }
 
@@ -506,6 +592,21 @@ class Session {
                 var gp = this._grants[appPerms[p].name];
                 if(gp)
                     this._grants[appPerms[p].name] &= appPerms[p].grant;
+            }
+
+            // Now we XRef with scope
+            if(this.audience && this.audience != "*") {
+                var scopedParms = {};
+                this.audience.split(' ').forEach((a) => { 
+                    var splt = a.split(':');
+                    var aprm = security.PermissionType[splt[0].toUpperCase()];
+                    scopedParms[splt[1]] = (scopedParms[splt[1]] | 0) | aprm | (this._grants[splt[1]] & security.PermissionType.OWNER);
+                });
+
+                // Now and 
+                Object.keys(this._grants).forEach((k) => {
+                    this._grants[k] &= (scopedParms[k] | 0)
+                });
             }
         }
         return this._grants;

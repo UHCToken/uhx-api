@@ -73,7 +73,8 @@ class RouteHandler {
 
                 // Verify that the authorization is bearer based and that it is a JWT token
                 try {
-                    if(authParts[0].trim().toLowerCase() != "bearer")
+                    if(authParts[0].trim().toLowerCase() != "bearer" &&
+                        authParts[0].trim().toLowerCase() != "urn:ietf:params:oauth:token-type:jwt")
                         throw new exception.Exception("Invalid type of authorization provided, this service expects Bearer", exception.ErrorCodes.SECURITY_ERROR);
                     else if(!authParts[1] || authParts[1].split(".").length != 3)
                         throw new exception.Exception("Invalid bearer token format, this service expects IETF RFC 7519 format tokens", exception.ErrorCodes.SECURITY_ERROR);

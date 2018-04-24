@@ -106,5 +106,17 @@
           * @summary The wallet / username from which tokens are issued
           */
          distribution_wallet: "Dist"
+     },
+     /**
+      * @summary Swagger configuration
+      */
+     swagger: {
+         info: {
+             title: "Universal Health Coin API",
+             version: "1",
+             description: "The Universal Health Coin API"
+         }, 
+         apis: [ './controllers/*.js' ],
+         enabled: true
      }
  }
