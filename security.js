@@ -123,7 +123,7 @@
         if(this._permissionType & PermissionType.READ) 
             permission.push("read");
         if(this._permissionType & PermissionType.WRITE)
-            ermission.push("write");
+            permission.push("write");
         if(this._permissionType & PermissionType.EXECUTE)
             permission.push("execute");
         if(this._permissionType & PermissionType.LIST)

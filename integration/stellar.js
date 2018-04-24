@@ -18,7 +18,7 @@
  */
 
  const Stellar = require('stellar-sdk'),
-    uhc = require("./uhc"),
+    uhc = require("../uhc"),
     model = require("../model/model"),
     exception = require('../exception');
 
@@ -49,13 +49,20 @@ module.exports = class StellarClient {
      * @constructor
      * @summary Creates a new stellar client with the specified base API
      * @param {string} horizonApiBase The horizon API server to use
-     * @param {Stellar.Asset} stellarAsset The asset(s) on which this client will operate
+     * @param {*} stellarAsset The asset(s) on which this client will operate
+     * @param {string} stellarAsset.code The asset code on which the client will operate
+     * @param {string} stellarAsset.issuer The issuer account
      * @param {Wallet} distAccount The account from which the asset is distributed
      */
     constructor(horizonApiBase, stellarAsset, distWallet) {
         // "private" members
         var _server = new Stellar.Server(horizonApiBase);
-        var _asset = stellarAsset;
+        var _asset = [];
+        
+        if(!array.isArray(stellarAsset))
+            stellarAsset = [stellarAsset];
+        stellarAsset.forEach((o)=>{ _asset.push(new Stellar.Asset(o.code, o.issuer))});
+        
         var _distWallet = distWallet;
         this._getAsset = function() { return _asset; }
         this._getServer = function() { return _server; }
@@ -277,4 +284,34 @@ module.exports = class StellarClient {
         }
     }
 
+
+    /**
+     * @method
+     * @summary Fetches the transaction history for the specified wallet on the stellar network
+     * @param {Wallet} userWallet The user wallet to fetch transaction history for
+     * @param {*} filter The filter to use on the history
+     * @param {number} filter._count The number of transaction items to fetch
+     * @param {string} filter.asset Filter only those asset types which are specified
+     * @return {Wallet} An array of the transaction history
+     */
+    async getTransactionHistory(userWallet, filter) {
+
+        try {
+            // Load the user's stellar account balances
+            userWallet = this.getAccount(userWallet);
+
+            // Gather transactions
+            var ledgerTx = await this.server.transactions()
+                .forAccount(userWallet.address)
+                .cursor()
+                .order("desc")
+                .limit(_count)
+                .call();
+
+        }
+        catch(e) {
+            console.error(`Fetch transaction history has failed: ${JSON.stringify(e)}`);
+            throw new StellarException(e);
+        }
+    }
 }

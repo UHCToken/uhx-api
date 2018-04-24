@@ -180,6 +180,7 @@ class RouteHandler {
         this._application = app;
         this._basePath = basePath;
         this._resources = [];
+        this.options = this.options.bind(this);
     }
     /**
      * @summary When called, will attach the CORS handler to the api application
@@ -265,7 +266,28 @@ class RouteHandler {
      */
     async options(req, res) {
         try {
-            res.status(501).send("Not Implemented");
+            // Get the routes on this service
+
+            var retVal = {
+                api_version: "1.0",
+                routes: []
+            };
+            this._resources.forEach((o)=>{
+                o.routes.routes.forEach((r) => {
+                    
+                    retVal.routes.push({
+                        path: r.path, 
+                        permission_group: o.permission_group,
+                        get: r.get,
+                        delete: r.delete,
+                        options: r.options,
+                        put: r.put,
+                        post: r.post
+                    });
+                })
+            });
+            res.status(200).json(retVal);
+            return true;
         }
         catch(e) {
             // Construct error result

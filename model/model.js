@@ -753,6 +753,16 @@ class MonetaryAmount {
 }
 
 /**
+ * @enum
+ * @summary Identifies type of transaction
+ */
+const TransactionType = {
+    Payment : 1,
+    Trust : 2, 
+    Refund : 3
+};
+
+/**
  * @class
  * @summary Represents a common class for transactions (fiat, onchain, offchain etc.)
  */
@@ -761,6 +771,8 @@ class Transaction {
     /**
      * 
      * @param {string} id The primary identifier of the transaction in whatever the source system is
+     * @param {TransactionType} type The type of the transaction
+     * @param {string} memo The memo on the transaction
      * @param {Date} postingDate The date that the transaction was posted (completed) on the account
      * @param {User} payor The user or userId of the user which paid the fee
      * @param {User} payee The user or userId of the user which received the fee
@@ -768,9 +780,12 @@ class Transaction {
      * @param {MonetaryAmount} fee The fee collected or processed on the transaction
      * @param {*} ref A reference object
      */
-    constructor(id, postingDate, payor, payee, amount, fee, ref) {
+    constructor(id, type, memo, postingDate, payor, payee, amount, fee, ref) {
+        
         this.id = id;
         this.postingDate = postingDate;
+        this.type = type;
+        this.memo = memo;
         this._payor = payor instanceof User ? payor : null;
         this.payorId = payor instanceof User ? payor.id : payor;
         this._payee = payee instanceof User ? payee : null;
@@ -918,3 +933,4 @@ module.exports.Utils = new ModelUtil();
 module.exports.Wallet = Wallet;
 module.exports.MonetaryAmount = MonetaryAmount;
 module.exports.Transaction = Transaction;
+module.exports.TransactionType = TransactionType;
