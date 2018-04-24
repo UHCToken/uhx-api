@@ -71,7 +71,7 @@ class TransactionApiResource {
      * @param {Express.Response} res The HTTP response being sent back to the client
      */
     async get(req, res) {
-
+        throw new exception.NotImplementedException();
     }
 
     /**
@@ -81,7 +81,7 @@ class TransactionApiResource {
      * @param {Express.Response} res The HTTP response being sent back to the client
      */
     async getAll(req, res) {
-
+        throw new exception.NotImplementedException();
     }
 
     /**
@@ -91,7 +91,7 @@ class TransactionApiResource {
      * @param {Express.Response} res The HTTP response being sent back to the client
      */
     async post(req, res) {
-
+        throw new exception.NotImplementedException();
     }
 }
 
