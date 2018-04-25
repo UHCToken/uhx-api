@@ -19,11 +19,16 @@
 
 const uhc = require('../uhc'),
     exception = require('../exception'),
-    security = require('../security');
+    security = require('../security'),
+    model = require('../model/model');
 
 /**
  * @class
  * @summary Represents a user payment service
+ * @swagger
+ * tags:
+ *  - name: "user"
+ *    description: "The user resource represents a single user (client, provider, etc.) which is a member of UHC"
  */
 class UserApiResource {
 
@@ -75,15 +80,115 @@ class UserApiResource {
      * @summary Creates a new user
      * @param {Express.Request} req The request from the client
      * @param {Express.Response} res The response to send back to the client
+     * @swagger
+     * /user:
+     *  post:
+     *      tags:
+     *      - "user"
+     *      summary: "Registers a new user in the UHC API"
+     *      description: "This method will register a new user in the UHC API and create the necessary accounts and trust transactions"
+     *      consumes: 
+     *      - "application/json"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - in: "body"
+     *        name: "body"
+     *        description: "The user that is to be created"
+     *        required: true
+     *        schema:
+     *          $ref: "#/definitions/User"
+     *      responses:
+     *          201: 
+     *             description: "The requested resource was created successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/User"
+     *          422:
+     *              description: "The user object sent by the client was rejected"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhc_auth:
+     *          - "write:user"
      */
     async post(req, res)  {
-        throw new exception.NotImplementedException();
+        
+        // Verify the request
+        var ruleViolations = [];
+        if(!req.body)
+            ruleViolations.push(new exception.RuleViolation("Missing body", exception.ErrorCodes.MISSING_PAYLOAD, exception.RuleViolationSeverity.ERROR));
+        if(!((!req.body.name || !req.body.password) ^ (!req.body.externalIds)))
+            ruleViolations.push(new exception.RuleViolation("Must have either username & password OR externalId", exception.ErrorCodes.MISSING_PROPERTY, exception.RuleViolationSeverity.ERROR));
+        if(req.body.name && !new RegExp(uhc.Config.security.username_regex).test(req.body.name))
+            ruleViolations.push(new exception.RuleViolation("Username format invalid", exception.ErrorCodes.INVALID_USERNAME, exception.RuleViolationSeverity.ERROR));
+        if(req.body.password && !new RegExp(uhc.Config.security.password_regex).test(req.body.password))
+            ruleViolations.push(new exception.RuleViolation("Password does not meet complexity requirements", exception.ErrorCodes.PASSWORD_COMPLEXITY, exception.RuleViolationSeverity.ERROR));
+        
+        if(ruleViolations.length > 0)
+            throw new exception.BusinessRuleViolationException(ruleViolations);
+
+        var user = new model.User().copy(req.body);
+        
+        // USE CASE 1: User has passed up a username and password
+        if(req.body.password && req.body.name) 
+            res.status(201).json(await uhc.SecurityLogic.registerInternalUser(user, req.body.password));
+        else // USE CASE 2: User is attempting to sign up with an external identifier
+            res.status(201).json(await uhc.SecurityLogic.registerExternalUser(req.body.externalIds));
+
+        return true;
     }
     /**
      * @method
      * @summary Updates an existing user
      * @param {Express.Request} req The request from the client
      * @param {Express.Response} res The response to the client
+     * @swagger
+     * /user/{userid}:
+     *  put:
+     *      tags:
+     *      - "user"
+     *      summary: "Updates an existing user in the UHC API"
+     *      description: "This method will update an existing  user in the UHC API"
+     *      consumes: 
+     *      - "application/json"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "userid"
+     *        in: "path"
+     *        description: "The ID of the user being updated"
+     *        required: true
+     *        type: "string"
+     *      - in: "body"
+     *        name: "body"
+     *        description: "The user that is to be updated"
+     *        required: true
+     *        schema:
+     *          $ref: "#/definitions/User"
+     *      responses:
+     *          200: 
+     *             description: "The requested resource was updated successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/User"
+     *          404:
+     *              description: "The specified user cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          422:
+     *              description: "The user object sent by the client was rejected"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhc_auth:
+     *          - "write:user"
      */
     async put(req, res) {
         throw new exception.NotImplementedException();
@@ -93,34 +198,163 @@ class UserApiResource {
      * @summary Get a single user 
      * @param {Express.Reqeust} req The request from the client 
      * @param {Express.Response} res The response from the client
+     * @swagger
+     * /user/{userid}:
+     *  get:
+     *      tags:
+     *      - "user"
+     *      summary: "Gets an existing user from the UHC member database"
+     *      description: "This method will fetch an existing user from the UHC member database"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "userid"
+     *        in: "path"
+     *        description: "The ID of the user being updated"
+     *        required: true
+     *        type: "string"
+     *      responses:
+     *          200: 
+     *             description: "The requested resource was fetched successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/User"
+     *          404:
+     *              description: "The specified user cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhc_auth:
+     *          - "read:user"
      */
     async get(req, res) {
-        return await uhc.Repositories.userRepository.get(req.params.uid);
+        var user = await uhc.Repositories.userRepository.get(req.params.uid);
+        await user.loadWallet();
+        await user.loadExternalIds();
+        res.status(200).json(user);
+        return true;
     }
     /**
      * @method
      * @summary Get all users from the UHC database (optional search parameters)
      * @param {Express.Reqeust} req The request from the client 
      * @param {Express.Response} res The response from the client
+     * @swagger
+     * /user/:
+     *  get:
+     *      tags:
+     *      - "user"
+     *      summary: "Queries the UHC member database for users matching the specified parameters"
+     *      description: "This method performs a query against the UHC user's database. This method will return additional information about the specified user including any external identities and wallet"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "name"
+     *        in: "query"
+     *        description: "The username to filter on"
+     *        required: false
+     *        type: "string"
+     *      - name: "email"
+     *        in: "query"
+     *        description: "The email address to filter on"
+     *        required: false
+     *        type: "string"
+     *      - name: "givenName"
+     *        in: "query"
+     *        description: "The user given names to filter on"
+     *        required: false
+     *        type: "string"
+     *      - name: "familyName"
+     *        in: "query"
+     *        description: "The user family names to filter on"
+     *        required: false
+     *        type: "string"
+     *      - name: "_all"
+     *        in: "query"
+     *        description: "When specified and set to true, instructs the query to return all users (even those who are deactivated)"
+     *        required: false
+     *        type: "boolean"
+     *      - name: "_count"
+     *        in: "query"
+     *        description: "When specified, indicates the number of results the requesting service is asking for"
+     *        required: false
+     *        type: "number"
+     *      - name: "_offset"
+     *        in: "query"
+     *        description: "When specified, indicates the offset in the result set"
+     *        required: false
+     *        type: "string"
+     *      responses:
+     *          200: 
+     *             description: "The requested resource was queried successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/User"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhc_auth:
+     *          - "list:user"
      */
     async getAll(req, res) {
         
-        return await uhc.Repositories.userRepository.query({
+        var filterUser = new model.User().copy({
             name: req.param("name"),
             email: req.param("email"),
             givenName: req.param("givenName"),
-            familyName: req.param("familyName")
-        }, req.param("_offset"), req.param("_count"));
-
+            familyName: req.param("familyName"),
+            deactivationTime: req.param("_all") ? null : "null"
+        });
+        
+        var results = await uhc.Repositories.userRepository.query(filterUser, req.param("_offset"), req.param("_count"));
+        results.forEach((o)=>{ o.externalIds = null;});
+        res.status(200).json(results);
+        return true;
     }
     /**
      * @method
      * @summary Deactivate a user account from the UHC database
      * @param {Express.Reqeust} req The request from the client 
      * @param {Express.Response} res The response from the client
+     * @swagger
+     * /user/{userid}:
+     *  delete:
+     *      tags:
+     *      - "user"
+     *      summary: "Deactivates a user in the UHC member database"
+     *      description: "This method will set the deactivation time of the specified user account so they no longer can login or appear in searches."
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "userid"
+     *        in: "path"
+     *        description: "The ID of the user being deactivated"
+     *        required: true
+     *        type: "string"
+     *      responses:
+     *          201: 
+     *             description: "The requested resource was fetched successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/User"
+     *          404:
+     *              description: "The specified user cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhc_auth:
+     *          - "read:user"
      */
     async delete(req, res) {
-        throw new exception.NotImplementedException();
+        res.status(201).json(await uhc.Repositories.userRepository.delete(req.param("uid")));
+        return true;
     }
     /**
      * 
@@ -136,7 +370,7 @@ class UserApiResource {
         }
 
         // if the token has OWNER set for USER permission then this user must be SELF
-        return (principal.grant.user & security.PermissionType.OWNER && req.params.uid == principal.sub) // the permission on the principal is for OWNER only
+        return (principal.grant.user & security.PermissionType.OWNER && req.params.uid == principal.session.userId) // the permission on the principal is for OWNER only
                 ^ !(principal.grant.user & security.PermissionType.OWNER); // XOR the owner grant flag is not set.
                 
     }

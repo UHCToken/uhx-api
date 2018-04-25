@@ -19,8 +19,9 @@
  
 const pg = require('pg'),
     exception = require('../exception'),
-    model = require('../model/model'),
-    security = require('../security');
+    User = require('../model/User'),
+    security = require('../security'),
+    model = require('../model/model');
 
  /**
   * @class UserRepository
@@ -40,10 +41,31 @@ const pg = require('pg'),
         this.incrementLoginFailure = this.incrementLoginFailure.bind(this);
     }
 
+
+    /**
+     * 
+     * @param {string} userId The user which external identifiers should be fetched for
+     */
+    async getExternalIds(userId) {
+        const dbc = new pg.Client(this._connectionString);
+        try {
+            await dbc.connect();
+            const rdr = await dbc.query("SELECT * FROM user_identity WHERE user_id = $1", [userId]);
+            var retVal = [];
+            for(var r in rdr.rows) 
+                retVal.push({ provider: rdr.rows[r].provider });
+            return retVal;
+        }
+        finally {
+            dbc.end();
+        }
+    }
+
     /**
      * @method
      * @summary Retrieve a specific user from the database
      * @param {uuid} id Gets the specified session
+     * @returns {User} The retrieved user
      */
     async get(id) {
 
@@ -54,7 +76,7 @@ const pg = require('pg'),
             if(rdr.rows.length == 0)
                 throw new exception.NotFoundException('user', id);
             else
-                return new model.User().fromData(rdr.rows[0]);
+                return new User().fromData(rdr.rows[0]);
         }
         finally {
             dbc.end();
@@ -68,17 +90,22 @@ const pg = require('pg'),
      * @param {*} filter The query template to use
      * @param {number} offset When specified indicates the offset of the query
      * @param {number} count When specified, indicates the number of records to return
+     * @returns {User} The matching users
      */
     async query(filter, offset, count) {
         const dbc = new pg.Client(this._connectionString);
         try {
             await dbc.connect();
-            var dbFilter = model.Utils.generateSelect(filter, "user", offset, count);
-            const rdr = await dbc.query(dbFilter.sql, dbFilter.args);
+            
+            var dbFilter = filter.toData();
+            dbFilter.deactivation_time = filter.deactivationTime; // Filter for deactivation time?
+
+            var sqlCmd = model.Utils.generateSelect(dbFilter, "users", offset, count);
+            const rdr = await dbc.query(sqlCmd.sql + " ORDER BY updated_time, creation_time DESC", sqlCmd.args);
             
             var retVal = [];
             for(var r in rdr.rows)
-                retVal.push(new model.User().fromData(rdr.rows[r]));
+                retVal.push(new User().fromData(rdr.rows[r]));
             return retVal;
         }
         finally {
@@ -101,9 +128,9 @@ const pg = require('pg'),
 
             const rdr = await dbc.query("SELECT * FROM users WHERE name = $1 AND password = crypt($2, password)", [ username, password ]);
             if(rdr.rows.length == 0)
-                throw new exception.NotFoundException("user", username);
+                throw new exception.NotFoundException("users", username);
             else
-                return new model.User().fromData(rdr.rows[0]);
+                return new User().fromData(rdr.rows[0]);
         }
         finally {
             dbc.end();
@@ -124,7 +151,7 @@ const pg = require('pg'),
 
             const rdr = await dbc.query("UPDATE users SET invalid_login = invalid_login + 1, lockout = CASE WHEN invalid_login >= $2 THEN current_timestamp + '1 DAY'::interval ELSE null END WHERE name = $1 RETURNING *", [ username, lockoutThreshold ]);
             if(rdr.rows.length > 0) {
-                return new model.User().fromData(rdr.rows[0]);
+                return new User().fromData(rdr.rows[0]);
             }
             else 
                 return null;
@@ -169,7 +196,8 @@ const pg = require('pg'),
      * @summary Insert  the specified user
      * @param {User} user The instance of the user that is to be inserted
      * @param {Principal} runAs The principal that is inserting this user
-     * @param {string} password The password to set on the user account   
+     * @param {string} password The password to set on the user account  
+     * @returns {User} The inserted user
      */
     async insert(user, password, runAs) {
         const dbc = new pg.Client(this._connectionString);
@@ -185,6 +213,32 @@ const pg = require('pg'),
             else
                 return user.fromData(rdr.rows[0]);
         }
+        catch(e) {
+            if(e.code == '23505') // duplicate key
+                throw new exception.Exception("Duplicate user name", exception.ErrorCodes.DUPLICATE_USERNAME);
+            throw e;
+        }
+        finally {
+            dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Retrieves a user from the database given their wallet ID
+     * @param {string} walletId The identifier of the wallet to retrieve the user by
+     * @returns {User} The user whom the wallet belongs to
+     */
+    async getByWalletId(walletId) {
+        const dbc = new pg.Client(this._connectionString);
+        try {
+            await dbc.connect();
+            const rdr = await dbc.query("SELECT users.* FROM users WHERE wallet_id = $1", [walletId]);
+            if(rdr.rows.length == 0)
+                throw new exception.NotFoundException("wallet", walletId);
+            else
+                return new User().fromData(rdr.rows[0]);
+        }
         finally {
             dbc.end();
         }
@@ -195,6 +249,7 @@ const pg = require('pg'),
      * @summary Delete / de-activate a user in the system
      * @param {string} userId The identity of the user to delete
      * @param {Principal} runAs The identity to run the operation as (for logging)
+     * @returns {User} The deactivated user instance
      */
     async delete(userId, runAs) {
 
@@ -206,7 +261,7 @@ const pg = require('pg'),
             if(rdr.rows.length == 0)
                 return null;
             else
-                return new model.User().fromData(rdr.rows[0]);
+                return new User().fromData(rdr.rows[0]);
         }
         finally {
             dbc.end();

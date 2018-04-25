@@ -66,6 +66,10 @@
           */
          sessionLength: 3000000,
          /**
+          * @summary Refresh vailidity in ms
+          */
+         refreshValidity: 3000,
+         /**
           * @summary Maximum failed login attempts
           */
          maxFailedLogin: 4,
@@ -76,11 +80,11 @@
         /**
          * @summary The validation regex for user passwords
          */
-        password_regex: /^[a-zA-Z][a-zA-Z0-9]{2,19}$/,
+        password_regex:  /^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$/,
         /**
-         * @summary The validation regex for usernames
+         * @summary The validation regex for usernames following RFC2822 regex for e-mails
          */
-        username_regex: /^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$/,
+        username_regex: /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/g,
         /**
          * @summary When true, enables cross-origin scripting
          */
@@ -102,5 +106,21 @@
           * @summary The wallet / username from which tokens are issued
           */
          distribution_wallet: "Dist"
+     },
+     /**
+      * @summary Swagger configuration
+      */
+     swagger: {
+         swaggerDefinition: {
+             info: {
+             title: "Universal Health Coin API",
+             version: "1",
+             description: "The Universal Health Coin API"
+         },
+         basePath: "/api/v1",
+         swagger: "2.0"
+        },
+         apis: [ './controllers/*.js', './model/*.js', './exception.js' ],
+         enabled: true
      }
  }

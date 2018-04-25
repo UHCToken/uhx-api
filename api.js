@@ -73,7 +73,8 @@ class RouteHandler {
 
                 // Verify that the authorization is bearer based and that it is a JWT token
                 try {
-                    if(authParts[0].trim().toLowerCase() != "bearer")
+                    if(authParts[0].trim().toLowerCase() != "bearer" &&
+                        authParts[0].trim().toLowerCase() != "urn:ietf:params:oauth:token-type:jwt")
                         throw new exception.Exception("Invalid type of authorization provided, this service expects Bearer", exception.ErrorCodes.SECURITY_ERROR);
                     else if(!authParts[1] || authParts[1].split(".").length != 3)
                         throw new exception.Exception("Invalid bearer token format, this service expects IETF RFC 7519 format tokens", exception.ErrorCodes.SECURITY_ERROR);
@@ -114,7 +115,11 @@ class RouteHandler {
             // Is there custom authentication checker?
             if(this._routeInfo._instance.authorize && await this._routeInfo._instance.authorize(req, res) ||
                 await this.checkAccessCore(req, res))
-                await this._routeInfo[req.method.toLowerCase()].method(req, res);
+                {
+                    var result = await this._routeInfo[req.method.toLowerCase()].method(req, res);
+                    if(!result)
+                        res.status(204).send();
+                }
             else
                 throw new exception.Exception("Authentication failure", exception.ErrorCodes.SECURITY_ERROR);
         }
@@ -143,8 +148,14 @@ class RouteHandler {
                     case exception.ErrorCodes.UNAUTHORIZED:
                         httpStatusCode = 401;
                         break;
+                    case exception.ErrorCodes.ARGUMENT_EXCEPTION:
+                    case exception.ErrorCodes.MISSING_PROPERTY:
+                        httpStatusCode = 422;
                     case exception.ErrorCodes.NOT_FOUND:
                         httpStatusCode = 404;
+                        break;
+                    case exception.ErrorCodes.API_RATE_EXCEEDED:
+                        httpStatusCode = 429;
                         break;
                 }
 
@@ -172,6 +183,7 @@ class RouteHandler {
         this._application = app;
         this._basePath = basePath;
         this._resources = [];
+        this.options = this.options.bind(this);
     }
     /**
      * @summary When called, will attach the CORS handler to the api application
@@ -257,7 +269,28 @@ class RouteHandler {
      */
     async options(req, res) {
         try {
-            res.status(501).send("Not Implemented");
+            // Get the routes on this service
+
+            var retVal = {
+                api_version: "1.0",
+                routes: []
+            };
+            this._resources.forEach((o)=>{
+                o.routes.routes.forEach((r) => {
+                    
+                    retVal.routes.push({
+                        path: r.path, 
+                        permission_group: o.permission_group,
+                        get: r.get,
+                        delete: r.delete,
+                        options: r.options,
+                        put: r.put,
+                        post: r.post
+                    });
+                })
+            });
+            res.status(200).json(retVal);
+            return true;
         }
         catch(e) {
             // Construct error result

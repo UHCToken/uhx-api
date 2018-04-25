@@ -184,9 +184,6 @@
       if(!clientAuthentication[0] || !clientAuthentication[1])
         throw new exception.Exception("Either Authorization HTTP header or client_id/client_secret must be specified. See RFC6749", exception.ErrorCodes.SECURITY_ERROR);
 
-      if(!req.param("scope"))
-        throw new exception.Exception("Missing SCOPE parameter for OAUTH session", exception.ErrorCodes.MISSING_PROPERTY);
-
       var principal = await uhc.SecurityLogic.authenticateClientApplication(clientAuthentication[0], clientAuthentication[1]);
       req.principal = principal;
 
@@ -199,8 +196,8 @@
      * @param {*} req The request object
      * @param {*} res The response object
      * @swagger
-     * /api/v1/auth/oauth2_token
-     * post:
+     * /auth/oauth2_token:
+     *  post:
      *    description: OAUTH 2.0 token service for authentication. This service returns a JWT token
      *    tags: [OAuth]
      *    produces:
@@ -224,6 +221,16 @@
      *      - name: scope
      *        description: The requested scope of the token
      *        in: formData
+     *        required: false
+     *        type: string
+     *      - name: client_id
+     *        description: The client application which is requesting the token
+     *        in: formData
+     *        required: true
+     *        type: string
+     *      - name: client_secret
+     *        description: The client application secret which is requesting the token
+     *        in: formData
      *        required: true
      *        type: string
      */
@@ -238,14 +245,19 @@
         case "password":
           userPrincipal = await uhc.SecurityLogic.establishSession(principal, req.param("username"), req.param("password"), req.param("scope"));
           break;
+        case "refresh_token":
+          userPrincipal = await uhc.SecurityLogic.refreshSession(principal, req.param("refresh_token"));
+          break;
         default:
           throw new exception.NotSupportedException("Only password grants are supported");
       }
 
       var payload = userPrincipal.toJSON();
+      payload.iss = uhc.Config.security.tokenServiceUri;
       var retVal = new OAuthTokenResult(jwt.sign(payload, uhc.Config.security.hmac256secret), TOKEN_TYPE_JWT,  Math.floor(payload.exp - (new Date().getTime() / 1000)), userPrincipal.session.refreshToken);
 
       res.status(200).json(retVal);
+      return true;
     }
     /**
      * Custom exception handler for OAUTH

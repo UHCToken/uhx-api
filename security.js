@@ -123,7 +123,7 @@
         if(this._permissionType & PermissionType.READ) 
             permission.push("read");
         if(this._permissionType & PermissionType.WRITE)
-            ermission.push("write");
+            permission.push("write");
         if(this._permissionType & PermissionType.EXECUTE)
             permission.push("execute");
         if(this._permissionType & PermissionType.LIST)
@@ -189,8 +189,9 @@
         this._claims = {
             mail: user.email,
             telephoneNumber: user.tel,
-            displayName: user.givenName + " " + user.familyName
+            displayName: user.givenName || user.email
         };
+
         this._session = session;
 
         this.getAuthenticated = function() { return _isAuthenticated; }
@@ -209,7 +210,7 @@
      * @summary Gets the list of claims that this user has
      * @type {*}
      */
-    get claims() { return this._session.grant; }
+    get claims() { return this._claims; }
     
     /**
      * @property 
@@ -248,6 +249,15 @@
         retVal.exp = Math.floor(this._session.notAfter.getTime() / 1000);
         retVal.jti = this._session.id;
         retVal.grant = this._session.grant;
+
+        // Scopes = Grant translated to non bitmap for other users
+        retVal.scope = [];
+        Object.keys(retVal.grant).forEach((g) => {
+            Object.keys(PermissionType).forEach((pt) => {
+                if(retVal.grant[g] & PermissionType[pt] && pt != "RWX" && pt != "OWNER")
+                    retVal.scope.push(pt.toLowerCase() + ":" + g)
+            });
+        });
 
         return retVal;
     }
