@@ -763,6 +763,16 @@ const TransactionType = {
 };
 
 /**
+ * @enum
+ * @summary Identifies the status of the transaction
+ */
+const TransactionStatus = {
+    Pending: 0,
+    Complete: 1,
+    Failed: 2
+}
+
+/**
  * @class
  * @summary Represents a common class for transactions (fiat, onchain, offchain etc.)
  */
@@ -778,9 +788,10 @@ class Transaction {
      * @param {User} payee The user or userId of the user which received the fee
      * @param {MonetaryAmount} amount The amount of the transaction
      * @param {MonetaryAmount} fee The fee collected or processed on the transaction
+     * @param {TransactionStatus} status The status of the transaction
      * @param {*} ref A reference object
      */
-    constructor(id, type, memo, postingDate, payor, payee, amount, fee, ref) {
+    constructor(id, type, memo, postingDate, payor, payee, amount, fee, ref, status) {
         
         this.id = id;
         this.postingDate = postingDate;
@@ -934,3 +945,4 @@ module.exports.Wallet = Wallet;
 module.exports.MonetaryAmount = MonetaryAmount;
 module.exports.Transaction = Transaction;
 module.exports.TransactionType = TransactionType;
+module.exports.TransactionStatus = TransactionStatus;

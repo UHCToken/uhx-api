@@ -154,6 +154,9 @@ class RouteHandler {
                     case exception.ErrorCodes.NOT_FOUND:
                         httpStatusCode = 404;
                         break;
+                    case exception.ErrorCodes.API_RATE_EXCEEDED:
+                        httpStatusCode = 429;
+                        break;
                 }
 
                 // Output to error log
