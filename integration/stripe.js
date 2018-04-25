@@ -69,7 +69,7 @@ module.exports = class StripeClient {
      * @summary Creates a new instance of the stripe client
      */
     constructor() {
-        this.charge = this.charge.bind(this);
+        this.singleCharge = this.singleCharge.bind(this);
     }
 
     /**
@@ -101,7 +101,18 @@ module.exports = class StripeClient {
                     }
                 }, function (err, charges) {
                     if (charges)
-                        fulfill(new model.Transaction());
+                        fulfill(new model.Transaction(
+                            null, 
+                            model.TransactionType.Deposit,
+                            description,
+                            new Date(charges.created),
+                            user, 
+                            null, // TODO: Set UHC as the payee
+                            amount,
+                            fee, 
+                            charges.id,
+                            model.TransactionStatus.Complete
+                        ));
                     else if (err)
                         reject(new StripeException(err));
                 });
@@ -112,4 +123,8 @@ module.exports = class StripeClient {
             }
         });
     }
+
+    // TODO: Add subscription charge method here
+    // TODO: Add refund method here
+    // TODO: Add 
 }

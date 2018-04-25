@@ -42,10 +42,28 @@ describe("User Repository Test Suite", function() {
 
     /**
      * @test
+     * @summary Ensures that hidden fields are stripped from the instance
+     */
+    it("Should strip hidden fields from JSON", function() {
+
+        var userUnderTest = new model.User().copy({
+            name: "test",
+            email: "test@test.com",
+            _wallet: { "test":"test" }
+        });
+
+        var jsonObject = userUnderTest.toJSON();
+        assert.equal(jsonObject.$type, 'User');
+        assert.ok(!jsonObject._wallet);
+    });
+
+    /**
+     * @test
      * @summary Test that a user is created
      */
     it("Should create a user testXXXXXXX@test.com", async function() {
 
+        
         var userUnderTest = new model.User().fromData({
             name: "test" + new Date().getTime(),
             email: "test@test.com",
@@ -53,6 +71,7 @@ describe("User Repository Test Suite", function() {
             family_name: "User"
         });
         var user = await testRepository.userRepository.insert(userUnderTest, 'test' + new Date().getTime());
+        
         assert.ok(user.id);
         assert.equal(user.invalidLogins, 0);
 

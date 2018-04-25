@@ -120,7 +120,7 @@
          basePath: "/api/v1",
          swagger: "2.0"
         },
-         apis: [ './controllers/*.js', './model/model.js', './exception.js' ],
+         apis: [ './controllers/*.js', './model/*.js', './exception.js' ],
          enabled: true
      }
  }
