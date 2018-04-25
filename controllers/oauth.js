@@ -243,6 +243,8 @@
       }
 
       var payload = userPrincipal.toJSON();
+      payload.iss = uhc.Config.security.tokenServiceUri;
+      
       var retVal = new OAuthTokenResult(jwt.sign(payload, uhc.Config.security.hmac256secret), TOKEN_TYPE_JWT,  payload.exp - new Date().getTime(), userPrincipal.session.refreshToken);
 
       res.status(200).json(retVal);
