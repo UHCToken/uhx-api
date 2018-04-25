@@ -119,6 +119,7 @@ class UserApiResource {
         
         // Verify the request
         var ruleViolations = [];
+        console.log(req.body)
         if(!req.body)
             ruleViolations.push(new exception.RuleViolation("Missing body", exception.ErrorCodes.MISSING_PAYLOAD, exception.RuleViolationSeverity.ERROR));
         if(!((!req.body.name || !req.body.password) ^ (!req.body.externalIds)))

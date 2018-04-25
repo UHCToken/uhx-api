@@ -1,5 +1,5 @@
-/// <Reference path="../repository/userRepository.js" />
-/// <Reference path="../repository/applicationRepository.js" />
+// <Reference path="../repository/userRepository.js" />
+// <Reference path="../repository/applicationRepository.js" />
 'use strict';
 
 /**
@@ -132,6 +132,7 @@
     generateInsert(modelObject, tableName) {
 
         var dbModel = modelObject.toData ? modelObject.toData() : modelObject;
+        console.log(dbModel)
         var parmId = 1, colNames = "", values = "", parameters = [];
         for(var k in dbModel) {
             var val = dbModel[k];
@@ -148,7 +149,7 @@
                 parameters.push(val);
             }
         }
-
+        console.log(`INSERT INTO ${tableName} (${colNames.substring(0, colNames.length - 1)}) VALUES (${values.substring(0, values.length - 1)}) RETURNING *`)
         return {
             sql: `INSERT INTO ${tableName} (${colNames.substring(0, colNames.length - 1)}) VALUES (${values.substring(0, values.length - 1)}) RETURNING *`,
             args: parameters
@@ -333,6 +334,7 @@ class User {
             description: this.profileText,
             tel: this.tel,
             tel_verified: this.telVerified,
+            wallet_id: this.walletId
             // creation timestamp properites are skipped beecause they are set by repo
         };
 
@@ -907,6 +909,7 @@ class Wallet {
         this.id = otherWallet.id;
         this.balances = otherWallet.balances;
         this.transactions = otherWallet.transactions;
+        return this;
     }
 
     /**
@@ -929,6 +932,7 @@ module.exports.Application = Application;
 module.exports.Session = Session;
 module.exports.PermissionSet = PermissionSet;
 module.exports.PermissionSetInstance = PermissionSetInstance;
+module.exports.Wallet = Wallet
 module.exports.Utils = new ModelUtil();
 module.exports.Wallet = Wallet;
 module.exports.MonetaryAmount = MonetaryAmount;

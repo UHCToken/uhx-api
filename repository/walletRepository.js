@@ -16,16 +16,17 @@
  * 
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
-
- const pg = require('pg'),
+ 
+const pg = require('pg'),
     exception = require('../exception'),
-    model = require('../model/model');
+    model = require('../model/model'),
+    security = require('../security');
 
  /**
-  * @class
-  * @summary Represents the user repository logic
+  * @class WalletRepository
+  * @summary Represents the wallet repository logic
   */
- module.exports = class SessionRepository {
+ module.exports = class WalletRepository {
 
     /**
      * @constructor
@@ -35,95 +36,100 @@
     constructor(connectionString) {
         this._connectionString = connectionString;
         this.get = this.get.bind(this);
-        this.getActiveUserSession = this.getActiveUserSession.bind(this);
-        this.insert = this.insert.bind(this);
     }
 
     /**
      * @method
-     * @summary Retrieve a specific user from the database
-     * @param {uuid} id Gets the specified session
+     * @summary Retrieve a specific wallet from the database
+     * @param {uuid} id Gets the specified wallet
      */
     async get(id) {
 
         const dbc = new pg.Client(this._connectionString);
         try {
             await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM sessions WHERE id = $1", [id]);
+            const rdr = await dbc.query("SELECT * FROM wallets WHERE id = $1", [id]);
             if(rdr.rows.length == 0)
-                throw new exception.NotFoundException('session', id);
+                throw new exception.NotFoundException('wallet', id);
             else
-                return new model.Session().fromData(rdr.rows[0]);
+                return new model.Wallet().fromData(rdr.rows[0]);
         }
         finally {
             dbc.end();
         }
 
+    }
+
+
+    /**
+     * @method
+     * @summary Update the specified wallet
+     * @param {Wallet} wallet The instance of the wallet that is to be updated
+     * @param {Principal} runAs The principal that is updating this wallet 
+     * @returns {Wallet} The updated wallet data from the database
+     */
+    async update(wallet, runAs) {
+        const dbc = new pg.Client(this._connectionString);
+        try {
+            await dbc.connect();
+
+            var updateCmd = model.Utils.generateUpdate(wallet, 'wallets', 'updated_time');
+            const rdr = await dbc.query(updateCmd.sql, updateCmd.args);
+            if(rdr.rows.length == 0)
+                return null;
+            else
+                return wallet.fromData(rdr.rows[0]);
+        }
+        finally {
+            dbc.end();
+        }
+    }
+
+    
+    /**
+     * @method
+     * @summary Insert  the specified wallet
+     * @param {Wallet} wallet The instance of the wallet that is to be inserted
+     * @param {Principal} runAs The principal that is inserting this wallet 
+     */
+    async insert(wallet, runAs) {
+        const dbc = new pg.Client(this._connectionString);
+        try {
+            await dbc.connect();
+            var dbWallet = wallet.toData();
+            var updateCmd = model.Utils.generateInsert(dbWallet, 'wallets');
+            const rdr = await dbc.query(updateCmd.sql, updateCmd.args);
+            if(rdr.rows.length == 0)
+                return null;
+            else
+                return wallet.fromData(rdr.rows[0]);
+        }
+        finally {
+            dbc.end();
+        }
     }
 
     /**
      * @method
-     * @summary Retrieve a specific user session
-     * @returns {Session} The active session if one exists
-     * @param {uuid} userId The key (user subject) of the user to retrieve the active session for
+     * @summary Delete / de-activate a wallet in the system
+     * @param {string} walletId The identity of the wallet to delete
+     * @param {Principal} runAs The identity to run the operation as (for logging)
      */
-    async getActiveUserSession(userId) {
+    async delete(walletId, runAs) {
+
         const dbc = new pg.Client(this._connectionString);
         try {
             await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM sessions WHERE user_id = $1 AND CURRENT_TIMESTAMP BETWEEN not_before AND not_after", [userId]);
+
+            const rdr = await dbc.query("UPDATE wallet SET deactivation_time = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *", walletId);
             if(rdr.rows.length == 0)
                 return null;
             else
-                return new model.Session().fromData(rdr.rows[0]);
+                return new model.Wallet().fromData(rdr.rows[0]);
         }
         finally {
             dbc.end();
         }
-    }
 
-    /**
-     * @method
-     * @summary Insert the specified session into the database
-     * @param {Session} session The session to insert into the database
-     * @param {Principal} runAs The identity to run as the session insertion
-     * @returns {Session} The active session if one exists
-     */
-    async insert(session, runAs) {
-        const dbc = new pg.Client(this._connectionString);
-        try {
-            await dbc.connect();
-            var insertCmd = model.Utils.generateInsert(session, "sessions");
-            const rdr = await dbc.query(insertCmd.sql, insertCmd.args);
-            if(rdr.rows.length == 0)
-                return null;
-            else {
-                return session.fromData(rdr.rows[0]);
-            }
-        }
-        finally {
-            dbc.end();
-        }
     }
-
-    /**
-     * @method
-     * @summary Abandons a session
-     * @param {uuid} sessionId The identification of the session to abandon
-     * @returns {Session} The session that was abandoned
-     */
-    async abandon(id) {
-        const dbc = new pg.Client(this._connectionString);
-        try {
-            await dbc.connect();
-            const rdr = await dbc.query("UPDATE sessions SET not_after = CURRENT_TIMESTAMP - '1 SECOND'::INTERVAL WHERE id = $1 RETURNING *", [id]);
-            if(rdr.rows.length == 0)
-                return null;
-            else
-                return new model.Session().fromData(rdr.rows[0]);
-        }
-        finally {
-            dbc.end();
-        }
-    }
- }
+}

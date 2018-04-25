@@ -105,7 +105,19 @@
          /**
           * @summary The wallet / username from which tokens are issued
           */
-         distribution_wallet: "Dist"
+         distribution_wallet: "Dist",
+        /**
+          * @summary The wallet id from which tokens are issued
+          */
+         distribution_wallet_id: "XXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX",
+         /**
+          * @summary The determine if this is part of a testnet
+          */
+        testnet_use: true,
+        /**
+          * @summary The horizon endpoint
+          */
+         horizon_server: "https://horizon-testnet.stellar.org"
      },
      /**
       * @summary Swagger configuration

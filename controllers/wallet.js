@@ -19,7 +19,9 @@
  
 const uhc = require('../uhc'),
     exception = require('../exception'),
-    security = require('../security');
+    security = require('../security'),
+    walletRepository = require('../repository/walletRepository'),
+    model = require('../model/model');
 
 /**
  * @class
@@ -47,18 +49,15 @@ class WalletApiResource {
                         "demand" : security.PermissionType.WRITE,
                         "method" : this.post
                     },
-                    "get" : {
-                        "demand":security.PermissionType.LIST,
-                        "method": this.getAll
-                    }
-                },
-                {
-                    "path":"user/:uid/wallet/:txid",
                     "get" :{
                         "demand": security.PermissionType.READ,
                         "method": this.get
+                    },
+                    "delete" : {
+                        "demand":security.PermissionType.WRITE,
+                        "method": this.delete
                     }
-                }
+                },
             ]
         };
     }
@@ -69,7 +68,8 @@ class WalletApiResource {
      * @param {Express.Response} res The response to send back to the client
      */
     async post(req, res)  {
-        throw new exception.NotImplementedException();
+        res.status(201).json(await uhc.SecurityLogic.createStellarWallet())
+        return true;
     }
     /**
      * @method
@@ -87,7 +87,12 @@ class WalletApiResource {
      * @param {Express.Response} res The response from the client
      */
     async get(req, res) {
-        throw new exception.NotImplementedException();
+        res.status(200).json(await uhc.Repositories.walletRepository.get(req.params.wid));
+    }
+
+    async delete(req, res) {
+        res.status(201).json(await uhc.Repositories.walletRepository.delete(req.param("wid")));
+        return true;
     }
 
 }
