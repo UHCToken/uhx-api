@@ -63,6 +63,27 @@
 
     /**
      * @method
+     * @summary Retrieve all permission sets from the database
+     */
+    async getAll() {
+
+        const dbc = new pg.Client(this._connectionString);
+        try {
+            await dbc.connect();
+            const rdr = await dbc.query("SELECT * FROM permission_sets");
+            var retVal = [];
+            for(var r in rdr.rows)
+                retVal.push(new model.PermissionSet().fromData(rdr.rows[r]));
+            return retVal;
+        }
+        finally {
+            dbc.end();
+        }
+
+    }
+
+    /**
+     * @method
      * @summary Constructs the application permission information
      * @param {string} appId The identification for the application to gather permissions for
      * @returns {PermissionSetInstance} The permission for the object

@@ -19,7 +19,8 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
  const uhc = require('../uhc'),
-    crypto = require('crypto');
+    crypto = require('crypto'),
+    security = require('../security');
 
  /**
   * @private
@@ -33,7 +34,7 @@
         $type : instance.constructor.name
     };
 
-    for(var k in Object.keys(instance)) 
+    for(var k in instance) 
         if(!k.startsWith("_"))
             retVal[k] = instance[k];
 
@@ -78,6 +79,45 @@
             
         return {
             sql: `UPDATE ${tableName} SET ${updateSet} WHERE ${whereClause} RETURNING *`,
+            args : parameters
+        };
+    }
+
+    /**
+     * @method
+     * @summary Generate a select statement
+     * @param {*} filter The query filter to be created
+     * @param {string} tableName The name of the database table to query
+     * @param {number} offset The starting record number
+     * @param {number} count The number of records to return
+     */
+    generateSelect(filter, tableName, offset, count) {
+        var dbModel = filter.toData ? filter.toData() : filter;
+
+        var parmId = 1, parameters = [], whereClause = "";
+        for(var k in dbModel) 
+            if(dbModel[k]) {
+                
+                if(dbModel[k] == "null")
+                    whereClause += `${k} IS NULL AND `;
+                else {
+                    whereClause += `${k} = $${parmId++} AND `;
+                    parameters.push(dbModel[k]);
+                }
+            }
+            
+        // Strip last AND
+        if(whereClause.endsWith("AND "))
+            whereClause = whereClause.substring(0, whereClause.length - 4);
+
+        var control = "";
+        if(offset)
+            control += `OFFSET ${offset} `;
+        if(count)
+            control += `LIMIT ${count} `;
+
+        return {
+            sql: `SELECT * FROM ${tableName} WHERE ${whereClause} ${control}`,
             args : parameters
         };
     }
@@ -141,6 +181,79 @@
   * @property {Date} creationTime The time that the user was created
   * @property {Date} updatedTime The time that the user was updated
   * @property {Date} deactivatedTime The time that the user was deactivated
+  * @swagger
+  * definitions:
+  *     User: 
+  *         properties:
+  *             id: 
+  *                 type: string
+  *                 description: The unique identifier for the user
+  *             name:
+  *                 type: string
+  *                 description: The user name for the user
+  *             invalidLogins:
+  *                 type: int
+  *                 description: The number of times that the user has invalid logins
+  *             lastLogin:
+  *                 type: Date
+  *                 description: The last moment in time that the user successfully logged in
+  *             lockout:
+  *                 type: Date
+  *                 description: When populated, indicates that time that the user's account is locked out until
+  *             email: 
+  *                 type: string
+  *                 description: Identifies the e-mail address of the user
+  *             emailVerified:
+  *                 type: boolean
+  *                 description: Identifies whether the user has confirmed their e-mail address
+  *             givenName:
+  *                 type: string
+  *                 description: The user's given name
+  *             familyName:
+  *                 type: string
+  *                 description: The user's family name
+  *             profileText:
+  *                 type: string
+  *                 description: Descriptive text which the user has set (their profile)
+  *             tel:
+  *                 type: string
+  *                 description: The user's primary telephone number
+  *             telVerified:
+  *                 type: boolean
+  *                 description: True if the user has verified their telephone number
+  *             address:
+  *                 description: The user's primary addrss
+  *                 $ref: "#/definitions/Address"
+  *             creationTime:
+  *                 type: Date
+  *                 description: The time that this user account was created
+  *             updatedTime:
+  *                 type: Date
+  *                 description: The time that the user account was last updated
+  *             deactivatedTime:
+  *                 type: Date
+  *                 description: The time that the user account did or will become deactivated
+  *     Address:
+  *         properties:
+  *             street:
+  *                 type: string
+  *                 description: The primary street address (Example; 123 Main Street West)
+  *             unitOrSuite:
+  *                 type: string
+  *                 description: The unit or suite number (Example; Apt 100)
+  *             city:
+  *                 type: string        
+  *                 description: The city for the address (Example; Las Vegas)
+  *             stateOrProvince:
+  *                 type: string
+  *                 description: The state or province of the address in a 2 digit ISO code (Example; NV)
+  *             country:
+  *                 type: string
+  *                 description: The two digit country code for the address (Example; US)
+  *             postalOrZip:
+  *                 type: string
+  *                 description: The postal or zip code for the address
+  *     
   */
 class User {
 
@@ -148,9 +261,26 @@ class User {
      * @constructor
      * @summary Constructs a new user instance based on the database
      */
-    constructor() {
+    constructor(copyData) {
         this.fromData = this.fromData.bind(this);
         this.toData = this.toData.bind(this);
+        this.copy = this.copy.bind(this);
+
+        this._externIds = [];
+    }
+
+    /**
+     * @method
+     * @summary Copy all the values from otherUser into this user
+     * @returns {User} This user with copied fields
+     * @param {User} otherUser The user from which the values for this user should be copied
+     */
+    copy(otherUser) {
+        this.fromData({});
+        for(var p in this)
+            if(!p.startsWith("_"))
+                this[p] = otherUser[p] || this[p];
+        return this;
     }
 
     /**
@@ -181,6 +311,7 @@ class User {
         this.creationTime = dbUser.creation_time;
         this.updatedTime = dbUser.updated_time;
         this.deactivationTime = dbUser.deactivation_time;
+        this.walletId = dbUser.wallet_id;
         return this;
     }
 
@@ -218,6 +349,34 @@ class User {
     }
 
     /**
+     * @property
+     * @summary Get the external identities
+     */
+    get externalIds() {
+        return this._externIds;
+    }
+
+    /**
+     * @method
+     * @summary Prefetch external identifiers if they aren't already
+     */
+    async loadExternalIds() {
+        if(!this._externIds)
+            this._externIds = await uhc.Repositories.userRepository.getExternalIdentities(this);
+        return this._externIds;
+    }
+
+    /**
+     * @method
+     * @summary Prefetch user's wallet information
+     */
+    async loadWallet() {
+//      if(!this._wallet)
+//            this._wallet = await uhc.Repositories.walletRepository.get(this.walletId);
+        return this._wallet;
+    }
+
+    /**
      * @summary Gets the user groups for this user
      * @property
      */
@@ -234,7 +393,10 @@ class User {
      * @summary Serialize this instance to a JSON object
      */
     toJSON() {
-        return stripHiddenFields(this);
+        var retVal = stripHiddenFields(this);
+        retVal.externalIds = this._externIds;
+        retVal.wallet = this._wallet;
+        return retVal;
     }
 
 }
@@ -307,22 +469,22 @@ class Session {
     /**
      * @constructor
      * @summary Creates a new session between the user and application
-     * @param {User} user The user to construct the session from
-     * @param {Application} application The application to construct the session from
+     * @param {User} user The user to construct the session from (or the id of the user)
+     * @param {Application} application The application to construct the session from (or the id of application)
      * @param {number} expiry The expiration time
      */
     constructor(user, application, scope, sessionLength) {
 
         if(!user && !application) return;
 
-        this.userId = user.id;
-        this.applicationId = application.id;
+        this.userId = user.id || user;
+        this.applicationId = application.id || application;
         this.notAfter = new Date(new Date().getTime() + sessionLength);
         this.notBefore = new Date();
         this._refreshToken = crypto.randomBytes(32).toString('hex');
-        this._user = user;
+        this._user = user.id ? user : null;
         this.audience = scope;
-        this._application = application;
+        this._application = application.id ? application : null;
     }
 
     /**
@@ -337,7 +499,6 @@ class Session {
         this.audience = dbSession.scope;
         this.notBefore = dbSession.not_before;
         this.notAfter = dbSession.not_after;
-        this._refreshToken = dbSession.refresh_token;
         return this;
     }
 
@@ -353,7 +514,7 @@ class Session {
             scope: this.audience,
             not_before: this.notBefore,
             not_after: this.notAfter,
-            refresh_token: this._refreshToken
+            $refresh_token: this._refreshToken
         };
     }
 
@@ -396,7 +557,7 @@ class Session {
      */
     async loadUser() {
         if(!this._user)
-            this._user = await uhc.Repositories.userRepository.get(id);
+            this._user = await uhc.Repositories.userRepository.get(this.userId);
         return this._user;
     }
 
@@ -431,6 +592,21 @@ class Session {
                 var gp = this._grants[appPerms[p].name];
                 if(gp)
                     this._grants[appPerms[p].name] &= appPerms[p].grant;
+            }
+
+            // Now we XRef with scope
+            if(this.audience && this.audience != "*") {
+                var scopedParms = {};
+                this.audience.split(' ').forEach((a) => { 
+                    var splt = a.split(':');
+                    var aprm = security.PermissionType[splt[0].toUpperCase()];
+                    scopedParms[splt[1]] = (scopedParms[splt[1]] | 0) | aprm | (this._grants[splt[1]] & security.PermissionType.OWNER);
+                });
+
+                // Now and 
+                Object.keys(this._grants).forEach((k) => {
+                    this._grants[k] &= (scopedParms[k] | 0)
+                });
             }
         }
         return this._grants;
@@ -557,6 +733,196 @@ class PermissionSetInstance extends PermissionSet {
 
 }
 
+/**
+ * @class
+ * @summary Represents a wallet balance 
+ */
+class MonetaryAmount {
+
+    /**
+     * @constructor
+     * @summary Instantiates the monetary amount object 
+     * @param {string} code The code of the monetary amount (example: USD)
+     * @param {number} amount The amount
+     */
+    constructor(value, code) {
+        this.code = code;
+        this.value = value;
+    }
+
+}
+
+/**
+ * @enum
+ * @summary Identifies type of transaction
+ */
+const TransactionType = {
+    Payment : 1,
+    Trust : 2, 
+    Refund : 3
+};
+
+/**
+ * @class
+ * @summary Represents a common class for transactions (fiat, onchain, offchain etc.)
+ */
+class Transaction {
+
+    /**
+     * 
+     * @param {string} id The primary identifier of the transaction in whatever the source system is
+     * @param {TransactionType} type The type of the transaction
+     * @param {string} memo The memo on the transaction
+     * @param {Date} postingDate The date that the transaction was posted (completed) on the account
+     * @param {User} payor The user or userId of the user which paid the fee
+     * @param {User} payee The user or userId of the user which received the fee
+     * @param {MonetaryAmount} amount The amount of the transaction
+     * @param {MonetaryAmount} fee The fee collected or processed on the transaction
+     * @param {*} ref A reference object
+     */
+    constructor(id, type, memo, postingDate, payor, payee, amount, fee, ref) {
+        
+        this.id = id;
+        this.postingDate = postingDate;
+        this.type = type;
+        this.memo = memo;
+        this._payor = payor instanceof User ? payor : null;
+        this.payorId = payor instanceof User ? payor.id : payor;
+        this._payee = payee instanceof User ? payee : null;
+        this.payeeId = payee instanceof User ? payee.id : payee;
+        this.amount = amount;
+        this.fee = fee;
+        this.ref = ref;
+    }
+
+    /**
+     * @property
+     * @type {User}
+     * @summary Gets the payor. Note you should call await loadPayor()
+     */
+    get payor() { return this._payor; }
+
+    /**
+     * @property 
+     * @type {User}
+     * @summary Gets the payee. Note you should call await loadPayee() 
+     */
+    get payee() { return this._payee; }
+
+    /**
+     * @method
+     * @returns {User} The payor of the transaction
+     * @summary Loads the payor from the UHC database
+     */
+    async loadPayor() {
+        if(!this._payor)
+            this._payor = await uhc.Repositories.userRepository.get(this.payorId);
+        return this._payor;
+    }
+
+    /**
+     * @method
+     * @returns {User} The payee of the transaction
+     * @summary Loads the payee from the UHC database
+     */
+    async loadPayee() {
+        if(!this._payee)
+            this._payee = await uhc.Repositories.userRepository.get(this.payeeId);
+        return this._payee;
+    }
+
+    /**
+     * @summary Represent the object in JSON
+     * @method
+     */
+    toJSON() {
+        var retVal = stripHiddenFields(this);
+        retVal.payor = this.payor;
+        retVal.payee = this.payee;
+        return retVal;
+    }
+
+}
+/**
+ * @class
+ * @summary Represents a wallet in the UHC data store
+ */
+class Wallet {
+
+    /**
+     * @constructor
+     */
+    constructor() {
+        this.fromData = this.fromData.bind(this);
+        this.toData = this.toData.bind(this);
+        this.copy = this.copy.bind(this);
+        this.balances = [];
+        this.transactions = [];
+    }
+
+    /**
+     * @method
+     * @summary Loads the user associated with this wallet
+     */
+    async loadUser() {
+        if(!this._user)
+            this._user = await uhc.Repositories.userRepository.getByWalletId(this.id);
+        return this._user;
+    }
+
+    /**
+     * @method
+     * @summary Parses the specified dbWallet into a Wallet instance
+     * @param {*} dbWallet The wallet instance as represented in the database
+     * @return {Wallet} The updated wallet instance
+     */
+    fromData(dbWallet) {
+        this.address = dbWallet.address;
+        this.seed = dbWallet.seed;
+        this.id = dbWallet.id;
+        return this;
+    }
+
+    /**
+     * @method
+     * @summary Converts this wallet into a data model wallet
+     */
+    toData() {
+        return {
+            address : this.address,
+            seed : this.seed,
+            id : this.id
+        };
+    }
+
+    /**
+     * @method
+     * @summary Copies data from otherWallet into this wallet
+     * @param {Wallet} otherWallet The wallet to copy data from
+     * @return {Wallet} The updated wallet instance
+     */
+    copy(otherWallet) {
+        this.address = otherWallet.address;
+        this.seed = otherWallet.seed;
+        this.id = otherWallet.id;
+        this.balances = otherWallet.balances;
+        this.transactions = otherWallet.transactions;
+    }
+
+    /**
+     * @method
+     * @summary Represents this object as JSON
+     */
+    toJSON() {
+        return {
+            address: this.address,
+            id: this.id,
+            balances: this.balances,
+            transactions: this.transactions
+        }
+    }
+}
+
 // Module exports
 module.exports.User = User;
 module.exports.Application = Application;
@@ -564,3 +930,7 @@ module.exports.Session = Session;
 module.exports.PermissionSet = PermissionSet;
 module.exports.PermissionSetInstance = PermissionSetInstance;
 module.exports.Utils = new ModelUtil();
+module.exports.Wallet = Wallet;
+module.exports.MonetaryAmount = MonetaryAmount;
+module.exports.Transaction = Transaction;
+module.exports.TransactionType = TransactionType;

@@ -26,12 +26,12 @@
     jwt = require('jsonwebtoken'),
     pg = require('pg'),
     api = require('./api'),
-    swagger = require('swagger-jsdoc'),
     oauth = require('./controllers/oauth'),
     fiat = require('./controllers/fiat'),
     user = require('./controllers/user'),
     contract = require('./controllers/contract'),
-    wallet = require('./controllers/wallet');
+    wallet = require('./controllers/wallet'),
+    swagger = require('./controllers/js-doc');
     
 
 // Startup application
@@ -45,6 +45,11 @@ var restApi = new api.RestApi(uhc.Config.api.base, app);
 // Add resources to rest API
 if(uhc.Config.security.enableCors) 
     restApi.enableCors();
+
+if(uhc.Config.swagger.enabled) {
+    restApi.addResource(new swagger.SwaggerMetadataResource());
+    app.use('/api-docs', express.static('api-docs'));
+}
 
 // Add OAuth token service
 restApi.addResource(new oauth.OAuthTokenService());

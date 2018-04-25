@@ -40,6 +40,26 @@ const pg = require('pg'),
         this.incrementLoginFailure = this.incrementLoginFailure.bind(this);
     }
 
+
+    /**
+     * 
+     * @param {string} userId The user which external identifiers should be fetched for
+     */
+    async getExternalIds(userId) {
+        const dbc = new pg.Client(this._connectionString);
+        try {
+            await dbc.connect();
+            const rdr = await dbc.query("SELECT * FROM user_identity WHERE user_id = $1", [userId]);
+            var retVal = [];
+            for(var r in rdr.rows) 
+                retVal.push({ provider: rdr.rows[r].provider });
+            return retVal;
+        }
+        finally {
+            dbc.end();
+        }
+    }
+
     /**
      * @method
      * @summary Retrieve a specific user from the database
@@ -62,6 +82,34 @@ const pg = require('pg'),
 
     }
 
+    /**
+     * @method
+     * @summary Query the database for the specified users
+     * @param {*} filter The query template to use
+     * @param {number} offset When specified indicates the offset of the query
+     * @param {number} count When specified, indicates the number of records to return
+     */
+    async query(filter, offset, count) {
+        const dbc = new pg.Client(this._connectionString);
+        try {
+            await dbc.connect();
+            
+            var dbFilter = filter.toData();
+            dbFilter.deactivation_time = filter.deactivationTime; // Filter for deactivation time?
+
+            var sqlCmd = model.Utils.generateSelect(dbFilter, "users", offset, count);
+            const rdr = await dbc.query(sqlCmd.sql + " ORDER BY updated_time, creation_time DESC", sqlCmd.args);
+            
+            var retVal = [];
+            for(var r in rdr.rows)
+                retVal.push(new model.User().fromData(rdr.rows[r]));
+            return retVal;
+        }
+        finally {
+            dbc.end();
+        }
+    }
+
      /**
      * @method
      * @summary Get the user information by using the id and secret
@@ -77,7 +125,7 @@ const pg = require('pg'),
 
             const rdr = await dbc.query("SELECT * FROM users WHERE name = $1 AND password = crypt($2, password)", [ username, password ]);
             if(rdr.rows.length == 0)
-                throw new exception.NotFoundException("user", username);
+                throw new exception.NotFoundException("users", username);
             else
                 return new model.User().fromData(rdr.rows[0]);
         }
@@ -160,6 +208,32 @@ const pg = require('pg'),
                 return null;
             else
                 return user.fromData(rdr.rows[0]);
+        }
+        catch(e) {
+            if(e.code == '23505') // duplicate key
+                throw new exception.Exception("Duplicate user name", exception.ErrorCodes.DUPLICATE_USERNAME);
+            throw e;
+        }
+        finally {
+            dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Retrieves a user from the database given their wallet ID
+     * @param {string} walletId The identifier of the wallet to retrieve the user by
+     * @returns {User} The user whom the wallet belongs to
+     */
+    async getByWalletId(walletId) {
+        const dbc = new pg.Client(this._connectionString);
+        try {
+            await dbc.connect();
+            const rdr = await dbc.query("SELECT users.* FROM users WHERE wallet_id = $1", [walletId]);
+            if(rdr.rows.length == 0)
+                throw new exception.NotFoundException("wallet", walletId);
+            else
+                return new model.User().fromData(rdr.rows[0]);
         }
         finally {
             dbc.end();
