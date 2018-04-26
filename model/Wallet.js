@@ -24,6 +24,22 @@ const ModelBase = require('./ModelBase'),
 /**
  * @class
  * @summary Represents a wallet in the UHC data store
+ * @swagger
+ * definitions:
+ *  Wallet:
+ *      properties:
+ *          address:
+ *              type: string
+ *              description: The public address of the stellar account this UHC wallet represents
+ *          id:
+ *              type: string
+ *              description: The unique identifier for the wallet in the UHC user database
+ *          balances:
+ *              $ref: "#/definitions/MonetaryAmount"
+ *              description: The balance of assets held within the account
+ *          transactions:
+ *              $ref: "#/definitions/Transaction"
+ *              description: The transactions that have been executed on the specified wallet
  */
 module.exports = class Wallet extends ModelBase {
 

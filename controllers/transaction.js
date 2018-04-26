@@ -24,6 +24,10 @@ const uhc = require('../uhc'),
 /**
  * @class
  * @summary Represents a user payment service
+ * @swagger
+ * tags:
+ *  - name: "transaction"
+ *    description: "The transaction resource represents a single blockchain based (cryptocurrency) transaction from the blockchain"
  */
 class TransactionApiResource {
 
@@ -69,6 +73,42 @@ class TransactionApiResource {
      * @summary Retrieves a specific transaction
      * @param {Express.Request} req The HTTP request made by the client
      * @param {Express.Response} res The HTTP response being sent back to the client
+     * @swagger
+     * /user/{userid}/wallet/transaction/{txid}:
+     *  get:
+     *      tags:
+     *      - "transaction"
+     *      summary: "Gets a specific transaction from the user's wallet"
+     *      description: "This method will request the server to produce a detailed transaction result for a single transaction"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "userid"
+     *        in: "path"
+     *        description: "The ID of the user whose wallet this transaction should be posed to"
+     *        required: true
+     *        type: "string"
+     *      - in: "path"
+     *        name: "txid"
+     *        description: "The identifier of the transaction to fetch"
+     *        required: true
+     *        type: string
+     *      responses:
+     *          200: 
+     *             description: "The query completed successfully and the result is in the payload"
+     *             schema: 
+     *                  $ref: "#/definitions/Transaction"
+     *          404:
+     *              description: "The specified user cannot be found or the specified user does not have an active wallet, or the specified transaction could not be found on the user's wallet"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhc_auth:
+     *          - "read:transaction"
      */
     async get(req, res) {
         throw new exception.NotImplementedException();
@@ -79,6 +119,47 @@ class TransactionApiResource {
      * @summary Retrieves all transactions for the specified user's wallet
      * @param {Express.Request} req The HTTP request made by the client
      * @param {Express.Response} res The HTTP response being sent back to the client
+     * @swagger
+     * /user/{userid}/wallet/transaction:
+     *  get:
+     *      tags:
+     *      - "transaction"
+     *      summary: "Gets all transactions posted to the user's wallet"
+     *      description: "This method will request the server to produce a complete list of transactions executed on the blockchain against the user's wallet"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "userid"
+     *        in: "path"
+     *        description: "The ID of the user whose wallet this transaction should be posed to"
+     *        required: true
+     *        type: "string"
+     *      - in: "query"
+     *        name: "asset"
+     *        description: "The type of asset to filter"
+     *        required: false
+     *        type: string
+     *      - in: "query"
+     *        name: "_count"
+     *        description: "Limit the number of results to the provided number"
+     *        required: false
+     *        type: number
+     *      responses:
+     *          200: 
+     *             description: "The query completed successfully and the results are in the payload"
+     *             schema: 
+     *                  $ref: "#/definitions/Transaction"
+     *          404:
+     *              description: "The specified user cannot be found or the specified user does not have an active wallet"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhc_auth:
+     *          - "list:transaction"
      */
     async getAll(req, res) {
         throw new exception.NotImplementedException();
@@ -89,6 +170,49 @@ class TransactionApiResource {
      * @summary Posts a new transaction to the user's wallet
      * @param {Express.Request} req The HTTP request made by the client
      * @param {Express.Response} res The HTTP response being sent back to the client
+     * @swagger
+     * /user/{userid}/wallet/transaction:
+     *  post:
+     *      tags:
+     *      - "transaction"
+     *      summary: "Posts a new transaction to the user's wallet"
+     *      description: "This method will request that a transaction be posted to the user's wallet. Note: All requests to this resource require that the token presented be for the {userid} of this wallet. All other requests will fail. To request a payment from another user, use the /contract mechanism"
+     *      consumes: 
+     *      - "application/json"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "userid"
+     *        in: "path"
+     *        description: "The ID of the user whose wallet this transaction should be posed to"
+     *        required: true
+     *        type: "string"
+     *      - in: "body"
+     *        name: "body"
+     *        description: "The transaction details"
+     *        required: true
+     *        schema:
+     *          $ref: "#/definitions/Transaction"
+     *      responses:
+     *          201: 
+     *             description: "The requested resource was created successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/Transaction"
+     *          404:
+     *              description: "The specified user cannot be found or the specified user does not have an active wallet"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          422:
+     *              description: "The transaction object sent by the client was rejected due to a business rule violation"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhc_auth:
+     *          - "write:transaction"
      */
     async post(req, res) {
         throw new exception.NotImplementedException();

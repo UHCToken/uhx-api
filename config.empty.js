@@ -114,7 +114,7 @@
          swaggerDefinition: {
              info: {
              title: "Universal Health Coin API",
-             version: "1",
+             version: "1.0-alpha",
              description: "The Universal Health Coin API"
          },
          basePath: "/api/v1",
