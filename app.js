@@ -19,7 +19,7 @@
 
  const express = require('express'),
     bodyParser = require('body-parser'),
-    rp = require('request-promise'),
+
     Stellar = require('stellar-sdk'),
     uhc = require("./uhc"),
     stripe = require('stripe')(uhc.Config.stripe.key),

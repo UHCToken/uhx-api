@@ -126,13 +126,13 @@
          swaggerDefinition: {
              info: {
              title: "Universal Health Coin API",
-             version: "1",
+             version: "1.0-alpha",
              description: "The Universal Health Coin API"
          },
          basePath: "/api/v1",
          swagger: "2.0"
         },
-         apis: [ './controllers/*.js', './model/model.js', './exception.js' ],
+         apis: [ './controllers/*.js', './model/*.js', './exception.js' ],
          enabled: true
      }
  }

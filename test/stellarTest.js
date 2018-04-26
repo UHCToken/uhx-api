@@ -30,7 +30,7 @@ describe("Stellar API Wrapper", async function() {
     var testRepository = new testRepo.UhcRepositories(uhc.Config.db.test_server);
 
     // Stellar client
-    var sClient = new StellarClient(uhc.Config.stellar.test_server, uhc.Config.stellar.assets, await testRepository.walletRepository.get(uhc.Config.stellar.distribution_wallet));
+    //var sClient = new StellarClient(uhc.Config.stellar.test_server, uhc.Config.stellar.assets, await testRepository.walletRepository.get(uhc.Config.stellar.distribution_wallet));
 
     /**
      * @test
