@@ -118,19 +118,11 @@ class UserApiResource {
     async post(req, res)  {
         
         // Verify the request
-        var ruleViolations = [];
         if(!req.body)
-            ruleViolations.push(new exception.RuleViolation("Missing body", exception.ErrorCodes.MISSING_PAYLOAD, exception.RuleViolationSeverity.ERROR));
+            throw new exception.Exception("Missing body", exception.ErrorCodes.MISSING_PAYLOAD);
         if(!((!req.body.name || !req.body.password) ^ (!req.body.externalIds)))
-            ruleViolations.push(new exception.RuleViolation("Must have either username & password OR externalId", exception.ErrorCodes.MISSING_PROPERTY, exception.RuleViolationSeverity.ERROR));
-        if(req.body.name && !new RegExp(uhc.Config.security.username_regex).test(req.body.name))
-            ruleViolations.push(new exception.RuleViolation("Username format invalid", exception.ErrorCodes.INVALID_USERNAME, exception.RuleViolationSeverity.ERROR));
-        if(req.body.password && !new RegExp(uhc.Config.security.password_regex).test(req.body.password))
-            ruleViolations.push(new exception.RuleViolation("Password does not meet complexity requirements", exception.ErrorCodes.PASSWORD_COMPLEXITY, exception.RuleViolationSeverity.ERROR));
+            throw new exception.Exception("Must have either username & password OR externalId", exception.ErrorCodes.MISSING_PROPERTY);
         
-        if(ruleViolations.length > 0)
-            throw new exception.BusinessRuleViolationException(ruleViolations);
-
         var user = new model.User().copy(req.body);
         
         // USE CASE 1: User has passed up a username and password
@@ -170,7 +162,7 @@ class UserApiResource {
      *        schema:
      *          $ref: "#/definitions/User"
      *      responses:
-     *          200: 
+     *          201: 
      *             description: "The requested resource was updated successfully"
      *             schema: 
      *                  $ref: "#/definitions/User"
@@ -191,7 +183,10 @@ class UserApiResource {
      *          - "write:user"
      */
     async put(req, res) {
-        throw new exception.NotImplementedException();
+        
+        // does the request have a password if so we want to ensure that get's passed
+        res.status(201).json(await uhc.SecurityLogic.updateUser(new model.User().copy(req.body), req.body.password));
+        return true;
     }
     /**
      * @method

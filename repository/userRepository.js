@@ -177,7 +177,9 @@ const pg = require('pg'),
             var dbUser = user.toData();
             if(password)
                 dbUser.$password = password;
-                
+            
+            delete(dbUser.name); // <-- Constraint : Cannot update name
+
             var updateCmd = model.Utils.generateUpdate(dbUser, 'users', 'updated_time');
             const rdr = await dbc.query(updateCmd.sql, updateCmd.args);
             if(rdr.rows.length == 0)
