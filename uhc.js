@@ -23,7 +23,7 @@
     exception = require('./exception'),
     security = require('./security'),
     stellarClient = require('./integration/stellar'),
-    model = require('./model/model');
+    model = require('./model/model'),
     User = require('./model/User');
 
  const repository = new repositories.UhcRepositories(config.db.server);
