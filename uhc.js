@@ -161,6 +161,7 @@
             var wallet = await this.createStellarWallet();
             user.walletId = wallet.id;
             var retVal = await repository.userRepository.insert(user, password);
+            // TODO: Add user to group
             return retVal;
         }
         catch(e) {

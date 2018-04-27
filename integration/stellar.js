@@ -52,11 +52,12 @@ module.exports = class StellarClient {
      * @param {string} stellarAsset.code The asset code on which the client will operate
      * @param {string} stellarAsset.issuer The issuer account
      * @param {Wallet} distAccount The account from which the asset is distributed
+     * @param {boolean} useTestNetwork When true, instructs the client to use the test network
      */
-    constructor(horizonApiBase, stellarAsset, distWallet, testnetUse) {
+    constructor(horizonApiBase, stellarAsset, distWallet, useTestNetwork) {
         // "private" members
         var _server = new Stellar.Server(horizonApiBase);
-        if(testnetUse){
+        if (useTestNetwork){
             Stellar.Network.useTestNetwork()
         }
         var _asset = [];
@@ -122,9 +123,7 @@ module.exports = class StellarClient {
                 })).build();
             // Get the source key to create a trust
             var sourceKey = await Stellar.Keypair.fromSecret(this._getDistWallet().seed);
-            console.log('SOURCE')
             newAcctTx.sign(sourceKey);
-            console.log('NEW TX')
             // Submit transaction
             var distResult = await this.server.submitTransaction(newAcctTx);
 
