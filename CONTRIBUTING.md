@@ -9,8 +9,10 @@ The architecture of this project is documented in detail here. Note that all UHC
 
 1. Any service that interacts with clients should go in the /controllers folder and should be registered via the routes property.
 2. Don't call the database directly from any code in the /controllers folder, you should only interact with the database using the code in the repositories module.
-3. Try not to place business logic in teh /controllers folder, the controllers are for controlling. Any business logic should be implemented separately.
-4. Try to use the uhc.Exception() class to report errors. You can simply throw this exception from your controller or function and it will be caught and handled appropriately.
+3. Try not to place business logic in the /controllers folder, the controllers are for controlling. Any business logic should be implemented separately.
+4. Try to use the exception.Exception() class to report errors. You can simply throw this exception from your controller or function and it will be caught and handled appropriately.
+5. Try to wrap what you return from the /controllers folder in a model class rather than exposing the database tables directly. This will allow
+you to filter incoming data to only those properties which are known to be supported.
 
 ### Check out the roadmap
 
@@ -24,14 +26,15 @@ Contributing to a project on Github is pretty straight forward. If this is you'r
 
 And that's it! Read the code available and change the part you don't like! You're change should not break the existing code and should pass the tests.
 
-If you're adding a new functionality, start from the branch **develop**. It would be a better practice to create a new branch and work in there.
+If you're adding a new functionality, start from the branch **develop**. It would be a better practice to create a new branch and work in there and then submit a PR from your branch into **develop**.
 
 When you're done, submit a pull request and for one of the maintainers to check it out. We would let you know if there is any problem or any changes that should be considered.
 
 ### Tests
 
-In order for your contribution to be accepted, we prefer that you provide either unit tests, test scripts, or a document describing how the expected functionality works. This ensures that the person merging your pull request
-has sufficient information to diagnose whether your code should be merged.
+In order for your contribution to be accepted, we prefer that you provide either unit tests, test scripts, or a document describing how the expected functionality works. This ensures that the person merging your pull request has sufficient information to diagnose whether your code should be merged. 
+
+We will also run our regression tests to ensure that there are no breaking changes to the API that you've made.
 
 ### Documentation
 
@@ -45,4 +48,29 @@ An example of how you might do this while attributing yourself is:
 // End - Justin Fyfe
 ```
 
-But we understand coding standards are sometimes hard to maintain, especially across multiple developers and platforms.
+It is also imperative that you use proper JSDoc comments on all your methods. If you change an existing method signature, please update the method's JSDoc. This ensures we understand what the method and parameters are trying to do. For example, if we see code like this:
+
+```
+/**
+ * @method
+ * @summary Some function
+ */
+ async someFunc(parm1, parm2, parm3) {
+
+ }
+```
+
+We probably won't accept your pull request, instead try to document in some form what the parameters do:
+
+```
+/**
+ * @method
+ * @summary Some function
+ * @param {string} thing The name of the thing you want done
+ * @param {number} times The number of times you want the thing done
+ * @param {User} user The user you want the thing done to
+ */
+ async someFunc(thing, times, user) {
+
+ }
+```
