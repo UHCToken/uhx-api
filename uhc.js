@@ -34,6 +34,19 @@
  class SecurityLogic {
 
     /**
+     * @constructor
+     * @summary Binds methods to "this"
+     */
+    constructor() {
+        this.authenticateClientApplication = this.authenticateClientApplication.bind(this);
+        this.establishSession = this.establishSession.bind(this);
+        this.refreshSession = this.refreshSession.bind(this);
+        this.registerInternalUser = this.registerInternalUser.bind(this);
+        this.createStellarWallet = this.createStellarWallet.bind(this);
+        this.updateUser = this.updateUser.bind(this);
+        this.validateUser = this.validateUser.bind(this);
+    }
+    /**
      * @method
      * @summary Authenticates the application
      * @param {string} clientId The identity of the client
