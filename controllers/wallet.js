@@ -19,7 +19,9 @@
  
 const uhc = require('../uhc'),
     exception = require('../exception'),
-    security = require('../security');
+    security = require('../security'),
+    walletRepository = require('../repository/walletRepository'),
+    model = require('../model/model');
 
 /**
  * @class
@@ -54,8 +56,12 @@ class WalletApiResource {
                     "get" : {
                         "demand":security.PermissionType.LIST,
                         "method": this.get
+                    },
+                    "delete" : {
+                        "demand":security.PermissionType.WRITE,
+                        "method": this.delete
                     }
-                }
+                },
             ]
         };
     }
@@ -105,7 +111,8 @@ class WalletApiResource {
      *          - "write:wallet"
      */
     async post(req, res)  {
-        throw new exception.NotImplementedException();
+        res.status(201).json(await uhc.SecurityLogic.createStellarWallet())
+        return true;
     }
     /**
      * @method
@@ -145,7 +152,12 @@ class WalletApiResource {
      *          - "read:wallet"
      */
     async get(req, res) {
-        throw new exception.NotImplementedException();
+        res.status(200).json(await uhc.Repositories.walletRepository.get(req.params.wid));
+    }
+
+    async delete(req, res) {
+        res.status(201).json(await uhc.Repositories.walletRepository.delete(req.param("wid")));
+        return true;
     }
 
 }

@@ -1,4 +1,4 @@
-/// <Reference path="./model/model.js"/>
+// <Reference path="./model/model.js"/>
 'use strict';
 
 /**
@@ -22,7 +22,8 @@
     repositories = require('./repository/repository'),
     exception = require('./exception'),
     security = require('./security'),
-    model = require('./model/model'),
+    stellarClient = require('./integration/stellar'),
+    model = require('./model/model');
     User = require('./model/User');
 
  const repository = new repositories.UhcRepositories(config.db.server);
@@ -157,15 +158,33 @@
             this.validateUser(user, password);
 
             // Insert the user
+            var wallet = await this.createStellarWallet();
+            user.walletId = wallet.id;
             var retVal = await repository.userRepository.insert(user, password);
-
-            // TODO: Add user to group USERS
-            // TODO: Initialize Stellar wallet
             return retVal;
         }
         catch(e) {
             console.error("Error finalizing authentication: " + e.message);
             throw new exception.Exception("Error registering user", exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
+
+    /**
+     * @method
+     * @summary Register a wallet on the stellar network
+     */
+    async createStellarWallet() {
+
+        try {
+            var dist = await repository.walletRepository.get(config.stellar.distribution_wallet_id)
+            var client = await new stellarClient(config.stellar.horizon_server, {code: 'UHC', issuer: config.stellar.issuer}, dist, config.stellar.testnet_use)
+            var created = await client.instantiateAccount("2")
+            var newWallet = await new model.Wallet().copy(created)
+            return repository.walletRepository.insert(newWallet);
+        }
+        catch(e) {
+            console.error("Error finalizing authentication: " + e.message);
+            throw new exception.Exception("Error creating waller user", exception.ErrorCodes.UNKNOWN, e);
         }
     }
 

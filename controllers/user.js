@@ -118,6 +118,8 @@ class UserApiResource {
     async post(req, res)  {
         
         // Verify the request
+        var ruleViolations = [];
+
         if(!req.body)
             throw new exception.Exception("Missing body", exception.ErrorCodes.MISSING_PAYLOAD);
         if(!((!req.body.name || !req.body.password) ^ (!req.body.externalIds)))
