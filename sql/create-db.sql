@@ -26,10 +26,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE TABLE IF NOT EXISTS wallets(
 	id uuid NOT NULL DEFAULT uuid_generate_v4(),
 	address varchar(256) NOT NULL,
-	seed varchar(256) NOT NULL,
-	creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	updated_time TIMESTAMPTZ,
-	deactivation_time TIMESTAMPTZ,
+	seed varchar(256) NOT NULL,	
     CONSTRAINT pk_wallets PRIMARY KEY (id)
 );
 
