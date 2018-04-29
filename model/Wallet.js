@@ -47,6 +47,7 @@ module.exports = class Wallet extends ModelBase {
      * @constructor
      */
     constructor() {
+        super();
         this.fromData = this.fromData.bind(this);
         this.toData = this.toData.bind(this);
         this.copy = this.copy.bind(this);

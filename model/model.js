@@ -1,5 +1,5 @@
-/// <Reference path="../repository/userRepository.js" />
-/// <Reference path="../repository/applicationRepository.js" />
+// <Reference path="../repository/userRepository.js" />
+// <Reference path="../repository/applicationRepository.js" />
 'use strict';
 
 /**
@@ -58,6 +58,7 @@ module.exports.Application = Application;
 module.exports.Session = Session;
 module.exports.PermissionSet = PermissionSet;
 module.exports.PermissionSetInstance = PermissionSetInstance;
+module.exports.Wallet = Wallet
 module.exports.Utils = new ModelUtil();
 module.exports.Wallet = Wallet;
 module.exports.MonetaryAmount = MonetaryAmount;

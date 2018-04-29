@@ -21,7 +21,6 @@
     uhc = require("../uhc"),
     model = require("../model/model"),
     exception = require('../exception');
-
 /**
  * @class
  * @summary Represents a stellar exception
@@ -53,13 +52,17 @@ module.exports = class StellarClient {
      * @param {string} stellarAsset.code The asset code on which the client will operate
      * @param {string} stellarAsset.issuer The issuer account
      * @param {Wallet} distAccount The account from which the asset is distributed
+     * @param {boolean} useTestNetwork When true, instructs the client to use the test network
      */
-    constructor(horizonApiBase, stellarAsset, distWallet) {
+    constructor(horizonApiBase, stellarAsset, distWallet, useTestNetwork) {
         // "private" members
         var _server = new Stellar.Server(horizonApiBase);
+        if (useTestNetwork){
+            Stellar.Network.useTestNetwork()
+        }
         var _asset = [];
         
-        if(!array.isArray(stellarAsset))
+        if(!Array.isArray(stellarAsset))
             stellarAsset = [stellarAsset];
         stellarAsset.forEach((o)=>{ _asset.push(new Stellar.Asset(o.code, o.issuer))});
         
@@ -106,12 +109,11 @@ module.exports = class StellarClient {
 
         try {
             // Generate the random KP
+
             var kp = Stellar.Keypair.random();
-            
             // Load distribution account from stellar
             // TODO: Perhaps this can be cached?
             var distAcct = await this.server.loadAccount(this._getDistWallet().address);
-
             // Create the new account
             var newAcctTx = new Stellar.TransactionBuilder(distAcct)
                 .addOperation(Stellar.Operation.createAccount({
@@ -119,11 +121,9 @@ module.exports = class StellarClient {
                     startingBalance: startingBalance // Initial lumen balance from the central distributor ... 
                     // TODO: If we're doing this through a payment gateway, would the fee be used to replenish the distributor account to deposit the lumens?
                 })).build();
-            
             // Get the source key to create a trust
-            var sourceKey = Stellar.Keypair.fromSecret(this._getDistWallet().secret);
+            var sourceKey = await Stellar.Keypair.fromSecret(this._getDistWallet().seed);
             newAcctTx.sign(sourceKey);
-
             // Submit transaction
             var distResult = await this.server.submitTransaction(newAcctTx);
 

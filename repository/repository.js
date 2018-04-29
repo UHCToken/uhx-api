@@ -20,6 +20,7 @@
 const UserRepository = require('./userRepository'),
     ApplicationRepository = require("./applicationRepository"),
     SessionRepository = require('./sessionRepository'),
+    WalletRepository = require('./walletRepository'),
     PermissionRepository = require('./permissionRepository');
 
 /**
@@ -79,6 +80,17 @@ class UhcRepositories {
         if(!this._permissionRepository)
             this._permissionRepository = new PermissionRepository(this.connectionString);
         return this._permissionRepository;
+    }
+
+        /**
+     * @property 
+     * @summary Get the wallet repository
+     * @type {WalletRepository}
+     */
+    get walletRepository() {
+        if(!this._walletRepository)
+            this._walletRepository = new WalletRepository(this.connectionString);
+        return this._walletRepository;
     }
 }
 

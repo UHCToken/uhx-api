@@ -1,4 +1,4 @@
-/// <Reference path="./model/model.js"/>
+// <Reference path="./model/model.js"/>
 'use strict';
 
 /**
@@ -22,7 +22,9 @@
     repositories = require('./repository/repository'),
     exception = require('./exception'),
     security = require('./security'),
-    model = require('./model/model');
+    stellarClient = require('./integration/stellar'),
+    model = require('./model/model'),
+    User = require('./model/User');
 
  const repository = new repositories.UhcRepositories(config.db.server);
  /**
@@ -31,6 +33,19 @@
   */
  class SecurityLogic {
 
+    /**
+     * @constructor
+     * @summary Binds methods to "this"
+     */
+    constructor() {
+        this.authenticateClientApplication = this.authenticateClientApplication.bind(this);
+        this.establishSession = this.establishSession.bind(this);
+        this.refreshSession = this.refreshSession.bind(this);
+        this.registerInternalUser = this.registerInternalUser.bind(this);
+        this.createStellarWallet = this.createStellarWallet.bind(this);
+        this.updateUser = this.updateUser.bind(this);
+        this.validateUser = this.validateUser.bind(this);
+    }
     /**
      * @method
      * @summary Authenticates the application
@@ -140,6 +155,7 @@
             throw new exception.Exception("Error refreshing session", exception.ErrorCodes.SECURITY_ERROR, e);
         }
     }
+
     /**
      * @method
      * @summary Register a regular user 
@@ -150,15 +166,39 @@
 
         // First we register the user in our DB
         try {
-            var retVal = await repository.userRepository.insert(user, password);
 
-            // TODO: Add user to group USERS
-            // TODO: Initialize Stellar wallet
+            // Validate the user
+            this.validateUser(user, password);
+
+            // Insert the user
+            var wallet = await this.createStellarWallet();
+            user.walletId = wallet.id;
+            var retVal = await repository.userRepository.insert(user, password);
+            // TODO: Add user to group
             return retVal;
         }
         catch(e) {
             console.error("Error finalizing authentication: " + e.message);
             throw new exception.Exception("Error registering user", exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
+
+    /**
+     * @method
+     * @summary Register a wallet on the stellar network
+     */
+    async createStellarWallet() {
+
+        try {
+            var dist = await repository.walletRepository.get(config.stellar.distribution_wallet_id)
+            var client = await new stellarClient(config.stellar.horizon_server, {code: 'UHC', issuer: config.stellar.issuer}, dist, config.stellar.testnet_use)
+            var created = await client.instantiateAccount("2")
+            var newWallet = await new model.Wallet().copy(created)
+            return repository.walletRepository.insert(newWallet);
+        }
+        catch(e) {
+            console.error("Error finalizing authentication: " + e.message);
+            throw new exception.Exception("Error creating waller user", exception.ErrorCodes.UNKNOWN, e);
         }
     }
 
@@ -173,6 +213,50 @@
      */
     async registerExternalUser(identity) {
         throw new exception.NotImplementedException();
+    }
+
+    /**
+     * @method
+     * @summary Updates the specified user setting their new password if necessary
+     * @param {User} user The user to be updated
+     * @param {string} newPassword The new password to set the user account to
+     * @returns {User} The updated user
+     */
+    async updateUser(user, newPassword) {
+        try {
+
+            // Validate the user
+            this.validateUser(user, newPassword);
+
+            // Update the user
+            return await repository.userRepository.update(user, newPassword);
+        }
+        catch(e) {
+            console.error("Error updating user: " + e.message);
+            throw new exception.Exception("Error updating user", exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
+
+    /**
+     * @method
+     * @summary Ensures that the user object is valid
+     * @param {User} user The user to be validated
+     * @param {string} password The password the user is attempting to set
+     * @returns {boolean} True if the user passed validation
+     * @throws {BusinessRuleViolationException} When there are problems with the user
+     */
+    validateUser(user, password) {
+
+        var ruleViolations = [];
+        if(user.name && !new RegExp(config.security.username_regex).test(user.name))
+            ruleViolations.push(new exception.RuleViolation("Username format invalid", exception.ErrorCodes.INVALID_USERNAME, exception.RuleViolationSeverity.ERROR));
+        if(password && !new RegExp(config.security.password_regex).test(password))
+            ruleViolations.push(new exception.RuleViolation("Password does not meet complexity requirements", exception.ErrorCodes.PASSWORD_COMPLEXITY, exception.RuleViolationSeverity.ERROR));
+
+        if(ruleViolations.length > 0)
+            throw new exception.BusinessRuleViolationException(ruleViolations);
+        
+        return true;
     }
  }
 

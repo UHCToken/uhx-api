@@ -60,4 +60,14 @@ To setup / run:
    ```
    $ node app.js
    ```
-   
+8. Verify the service is running by navigating to [the swagger documentation](http://localhost:4001/api-docs)
+
+## Git Workflow Used
+
+If you're interested in contributing, see the [CONTRIBUTING.md](CONTRIBUTING.md) notes. You'll see several branches in this repository:
+
+ * master - The **master** branch contains the latest stable release of the UHC API
+ * develop - The **develop** branch contains the latest unstable development code for the UHC API
+ * release/XXX - The **release** branches are branches which are used for maintenance of older releases of the UHC API. We tag each release as well.
+ * feature/XXX - The **feature** branches are branches where third party developers typically stage new features to the UHC API. The UHC team typically prunes these once the feature is merged into **develop**
+ * issue/XXXX - The **issue** branches are branches where third party developers typically stage bug fixes to reported issues on the UHC API. The UHC team typically prunes these once the bug fix is merged into **develop**

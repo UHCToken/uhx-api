@@ -27,6 +27,9 @@ CREATE TABLE IF NOT EXISTS wallets(
 	id uuid NOT NULL DEFAULT uuid_generate_v4(),
 	address varchar(256) NOT NULL,
 	seed varchar(256) NOT NULL,
+	creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	updated_time TIMESTAMPTZ,
+	deactivation_time TIMESTAMPTZ,
     CONSTRAINT pk_wallets PRIMARY KEY (id)
 );
 
@@ -216,6 +219,9 @@ INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('
 
 -- CREATE A TEST USER
 INSERT INTO users (name, password, email) VALUES ('bob@test.com',crypt('Test123', gen_salt('bf')), 'bob@test.com');
+
+-- INSERT INTO wallets (id, address, seed) VALUES ('61b2c165-15b2-4bc7-9bf1-d94ee390c38c', 'address', 'seed') Address and seed of distributer account
+
 INSERT INTO user_group (user_id, group_id)
 	SELECT id, '330d2fb4-ba61-4b48-a0a1-8162a4708e96' 
 	FROM users
