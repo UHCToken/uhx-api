@@ -92,7 +92,14 @@
         /**
          * @summary The URI of the token service when sending WWW-Authenticate headers
          */
-        tokenServiceUri: "http://localhost:4001/api/v1/auth/oauth2_token"
+        tokenServiceUri: "http://localhost:4001/api/v1/auth/oauth2_token",
+        /**
+         * @summary Specifies the constants for system groups
+         */
+        sysgroups: {
+            "administrators" : "044894bd-084e-47bb-9428-dbd80277614a",
+            "users": "330d2fb4-ba61-4b48-a0a1-8162a4708e96"
+        }
      },
      /**
       * @summary Configuration settings related to interaction with the stellar network

@@ -21,7 +21,10 @@ const UserRepository = require('./userRepository'),
     ApplicationRepository = require("./applicationRepository"),
     SessionRepository = require('./sessionRepository'),
     WalletRepository = require('./walletRepository'),
-    PermissionRepository = require('./permissionRepository');
+    PermissionRepository = require('./permissionRepository'),
+    GroupRepository = require('./groupRepository'),
+    pg = require('pg'),
+    exception = require('../exception');
 
 /**
  * @class
@@ -36,8 +39,43 @@ class UhcRepositories {
      */
     constructor(connectionString) {
         this.connectionString = connectionString;
+        this.transact = this.transaction.bind(this);
     }
 
+    /**
+     * @method
+     * @summary Executes transactionFn in a database transaction
+     * @param {*} transactionFn An asynchronous function which is used to execute as the transaction
+     * @example Insert a user and add them to a group in a transaction
+     * await repository.transact(async (_txc) => {
+     *      user = repository.userRepository.insert(user, null, _txc);
+     *      var group = repository.groupRepository.getByName("users");
+     *      repository.groupReposiotry.addUser(group.id, user.id, null, _txc);
+     * });
+     */
+    async transaction(transactionFn) {
+
+        var dbc = new pg.Client(this.connectionString);
+        try {
+            await dbc.connect();
+            await dbc.query("BEGIN TRANSACTION");
+
+            var retVal = await transactionFn(dbc);
+            
+            await dbc.query("COMMIT");
+
+            return retVal;
+        }
+        catch(e) {
+            await dbc.query("ROLLBACK");
+            console.error(`Rolling back transaction due to: ${e.message}`);
+            throw new exception.Exception("Database transaction failed", exception.ErrorCodes.DATA_ERROR, e);
+        }
+        finally {
+            dbc.end();
+        }
+
+    }
     /**
      * @property
      * @summary Gets the user repository
@@ -82,7 +120,7 @@ class UhcRepositories {
         return this._permissionRepository;
     }
 
-        /**
+    /**
      * @property 
      * @summary Get the wallet repository
      * @type {WalletRepository}
@@ -91,6 +129,17 @@ class UhcRepositories {
         if(!this._walletRepository)
             this._walletRepository = new WalletRepository(this.connectionString);
         return this._walletRepository;
+    }
+
+    /**
+     * @property
+     * @summary Get the group repository
+     * @type {GroupRepository}
+     */
+    get groupRepository() {
+        if(!this._groupRepository)
+            this._groupRepository = new GroupRepository(this.connectionString);
+        return this._groupRepository;
     }
 }
 

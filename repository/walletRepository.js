@@ -42,12 +42,14 @@ const pg = require('pg'),
      * @method
      * @summary Retrieve a specific wallet from the database
      * @param {uuid} id Gets the specified wallet
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {Wallet} The fetched wallet
      */
-    async get(id) {
+    async get(id, _txc) {
 
-        const dbc = new pg.Client(this._connectionString);
+        const dbc = _txc || new pg.Client(this._connectionString);
         try {
-            await dbc.connect();
+            if(!_txc) await dbc.connect();
             const rdr = await dbc.query("SELECT * FROM wallets WHERE id = $1", [id]);
             if(rdr.rows.length == 0)
                 throw new exception.NotFoundException('wallet', id);
@@ -55,7 +57,7 @@ const pg = require('pg'),
                 return new model.Wallet().fromData(rdr.rows[0]);
         }
         finally {
-            dbc.end();
+            if(!_txc) dbc.end();
         }
 
     }
@@ -66,22 +68,27 @@ const pg = require('pg'),
      * @summary Update the specified wallet
      * @param {Wallet} wallet The instance of the wallet that is to be updated
      * @param {Principal} runAs The principal that is updating this wallet 
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {Wallet} The updated wallet data from the database
      */
-    async update(wallet, runAs) {
-        const dbc = new pg.Client(this._connectionString);
+    async update(wallet, runAs, _txc) {
+
+        if(!wallet.id)
+            throw new exception.Exception("Target object must carry an identifier", exception.ErrorCodes.ARGUMENT_EXCEPTION);
+
+        const dbc = _txc || new pg.Client(this._connectionString);
         try {
-            await dbc.connect();
+            if(!_txc) await dbc.connect();
 
             var updateCmd = model.Utils.generateUpdate(wallet, 'wallets', 'updated_time');
             const rdr = await dbc.query(updateCmd.sql, updateCmd.args);
             if(rdr.rows.length == 0)
-                return null;
+                throw new exception.Exception("Could not update wallet in data store", exception.ErrorCodes.DATA_ERROR);
             else
                 return wallet.fromData(rdr.rows[0]);
         }
         finally {
-            dbc.end();
+            if(!_txc) dbc.end();
         }
     }
 
@@ -91,21 +98,23 @@ const pg = require('pg'),
      * @summary Insert  the specified wallet
      * @param {Wallet} wallet The instance of the wallet that is to be inserted
      * @param {Principal} runAs The principal that is inserting this wallet 
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {Wallet} The inserted wallet
      */
-    async insert(wallet, runAs) {
-        const dbc = new pg.Client(this._connectionString);
+    async insert(wallet, runAs, _txc) {
+        const dbc = _txc || new pg.Client(this._connectionString);
         try {
-            await dbc.connect();
+            if(!_txc) await dbc.connect();
             var dbWallet = wallet.toData();
             var updateCmd = model.Utils.generateInsert(dbWallet, 'wallets');
             const rdr = await dbc.query(updateCmd.sql, updateCmd.args);
             if(rdr.rows.length == 0)
-                return null;
+                throw new exception.Exception("Could not register wallet in data store", exception.ErrorCodes.DATA_ERROR);
             else
                 return wallet.fromData(rdr.rows[0]);
         }
         finally {
-            dbc.end();
+            if(!_txc) dbc.end();
         }
     }
 
@@ -114,21 +123,26 @@ const pg = require('pg'),
      * @summary Delete / de-activate a wallet in the system
      * @param {string} walletId The identity of the wallet to delete
      * @param {Principal} runAs The identity to run the operation as (for logging)
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {Wallet} The deactivated wallet
      */
-    async delete(walletId, runAs) {
+    async delete(walletId, runAs, _txc) {
 
-        const dbc = new pg.Client(this._connectionString);
+        if(!walletId)
+            throw new exception.Exception("Target object must carry an identifier", exception.ErrorCodes.ARGUMENT_EXCEPTION);
+
+        const dbc = _txc || new pg.Client(this._connectionString);
         try {
-            await dbc.connect();
+            if(!_txc) await dbc.connect();
 
             const rdr = await dbc.query("UPDATE wallet SET deactivation_time = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *", walletId);
             if(rdr.rows.length == 0)
-                return null;
+                throw new exception.Exception("Could not deactivate wallet in data store", exception.ErrorCodes.DATA_ERROR);
             else
                 return new model.Wallet().fromData(rdr.rows[0]);
         }
         finally {
-            dbc.end();
+            if(!_txc)  dbc.end();
         }
 
     }

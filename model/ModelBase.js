@@ -47,5 +47,11 @@ module.exports = class ModelBase {
 
         return retVal;
     }
-
+    
+    /**
+     * @summary Represet this object as JSON
+     */
+    toJSON() {
+        return this.stripHiddenFields();
+    }
 }

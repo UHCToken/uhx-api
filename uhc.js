@@ -126,7 +126,7 @@
         var application = clientPrincipal.session.application;
     
         try {
-            var session = await repository.sessionRepository.transact(async (_tx) => {
+            var session = await repository.transaction(async (_tx) => {
 
                 // Get session
                 var session = await repository.sessionRepository.getByRefreshToken(refreshToken, config.security.refreshValidity, _tx);
@@ -170,12 +170,16 @@
             // Validate the user
             this.validateUser(user, password);
 
-            // Insert the user
-            var wallet = await this.createStellarWallet();
-            user.walletId = wallet.id;
-            var retVal = await repository.userRepository.insert(user, password);
-            // TODO: Add user to group
-            return retVal;
+            await repository.transaction(async (_txc) => {
+                // Insert the user
+                var wallet = await this.createStellarWallet();
+                user.walletId = wallet.id;
+                var retVal = await repository.userRepository.insert(user, password, null, _txc);
+                await repository.groupRepository.addUser(config.security.sysgroups.users, retVal.id, null, _txc);
+                return retVal;
+            });
+
+            return user;
         }
         catch(e) {
             console.error("Error finalizing authentication: " + e.message);

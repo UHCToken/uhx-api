@@ -22,7 +22,7 @@ const pg = require('pg'),
     exception = require('../exception'),
     model = require('../model/model');
 
-    /**
+ /**
   * @class
   * @summary Represents the user repository logic
   */
@@ -43,13 +43,14 @@ const pg = require('pg'),
      * @method
      * @summary Retrieve a specific user from the database
      * @param {uuid} id Gets the specified session
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {Application} The fetched application
      */
-    async get(id) {
+    async get(id, _txc) {
 
-        const dbc = new pg.Client(this._connectionString);
+        const dbc = _txc || new pg.Client(this._connectionString);
         try {
-            await dbc.connect();
+            if(!_txc) await dbc.connect();
             const rdr = await dbc.query("SELECT * FROM applications WHERE id = $1", [id]);
             if(rdr.rows.length == 0)
                 throw new exception.NotFoundException('applications', id);
@@ -57,7 +58,7 @@ const pg = require('pg'),
                 return new model.Application().fromData(rdr.rows[0]);
         }
         finally {
-            dbc.end();
+            if(!_txc) dbc.end();
         }
 
     }
@@ -69,11 +70,11 @@ const pg = require('pg'),
      * @param {string} clientSecret The secret for the client
      * @returns {Application} The fetched application
      */
-    async getByNameSecret(clientId, clientSecret) {
+    async getByNameSecret(clientId, clientSecret, _txc) {
         
-        const dbc = new pg.Client(this._connectionString);
+        const dbc = _txc || new pg.Client(this._connectionString);
         try {
-            await dbc.connect();
+            if(!_txc) await dbc.connect();
 
             const rdr = await dbc.query("SELECT * FROM applications WHERE name = $1 AND secret = crypt($2, secret)", [ clientId, clientSecret ]);
             if(rdr.rows.length == 0)
@@ -82,7 +83,7 @@ const pg = require('pg'),
                 return new model.Application().fromData(rdr.rows[0]);
         }
         finally {
-            dbc.end();
+            if(!_txc) dbc.end();
         }
     }
  }
