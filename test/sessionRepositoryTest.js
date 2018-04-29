@@ -25,7 +25,7 @@
     model = require('../model/model'),
     express = require('express');
 
-describe("User Repository Test Suite", function() {
+describe("Session Repository Test Suite", function() {
 
     var testRepository = new testRepo.UhcRepositories(uhc.Config.db.test_server);
 
