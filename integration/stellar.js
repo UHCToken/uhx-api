@@ -21,6 +21,7 @@
     uhc = require("../uhc"),
     model = require("../model/model"),
     Asset = require('../model/Asset'),
+    Wallet = require("../model/Wallet"),
     exception = require('../exception');
 /**
  * @class
@@ -91,7 +92,7 @@ module.exports = class StellarClient {
     /**
      * @method
      * @summary Creates a new account on the stellar network
-     * @return {Wallet} The constructed wallet instance 
+     * @returns {Wallet} The constructed wallet instance 
      * @param {number} startingBalance The starting balance of the account in lumens
      * @param {Wallet} initiatorWallet The wallet which is creating the account from which the startingBalance should be drawn
      */

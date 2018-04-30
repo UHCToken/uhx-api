@@ -218,6 +218,8 @@ INSERT INTO permission_sets (id, name, description, created_by) VALUES ('c428ff6
 INSERT INTO permission_sets (id, name, description, created_by) VALUES ('5245dff0-9b79-4ddb-b3bd-9dd733afd678', 'fiat', 'Access to the FIAT resource', '3c673456-23b1-4263-9deb-df46770852c9');
 INSERT INTO permission_sets (id, name, description, created_by) VALUES ('608844ca-b98a-47f5-b834-d7fded513945', 'application', 'Access to the APPLICATION resource', '3c673456-23b1-4263-9deb-df46770852c9');
 INSERT INTO permission_sets (id, name, description, created_by) VALUES ('20a97388-5b6a-43e7-ac07-911ceee7e0d6', 'contract', 'Access to the CONTRACT resource', '3c673456-23b1-4263-9deb-df46770852c9');
+INSERT INTO permission_sets (id, name, description, created_by) VALUES ('3fc7cbc7-58ca-40fa-9d17-060dbf180e0b', 'group', 'Access to the GROUP resource', '3c673456-23b1-4263-9deb-df46770852c9');
+INSERT INTO permission_sets (id, name, description, created_by) VALUES ('17e4de1c-4fd3-49ea-b394-90ddb5ccac38', 'permission', 'Access to the PERMISSION resource', '3c673456-23b1-4263-9deb-df46770852c9');
 
 -- ASSIGN DEFAULT PERMISSIONS
 

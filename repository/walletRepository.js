@@ -20,6 +20,7 @@
 const pg = require('pg'),
     exception = require('../exception'),
     model = require('../model/model'),
+    Wallet = require("../model/Wallet"),
     security = require('../security');
 
  /**
@@ -62,6 +63,29 @@ const pg = require('pg'),
 
     }
 
+    /**
+     * @method
+     * @summary Retrieve a specific wallet from the database
+     * @param {uuid} userId The identity of the user to retrieve
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {Wallet} The fetched wallet
+     */
+    async getByUserId(userId, _txc) {
+
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+            const rdr = await dbc.query("SELECT wallets.* FROM wallets INNER JOIN users ON (users.wallet_id = wallets.id) WHERE users.id = $1", [userId]);
+            if(rdr.rows.length == 0)
+                throw new exception.NotFoundException('wallet', id);
+            else
+                return new model.Wallet().fromData(rdr.rows[0]);
+        }
+        finally {
+            if(!_txc) dbc.end();
+        }
+
+    }
 
     /**
      * @method
@@ -135,11 +159,51 @@ const pg = require('pg'),
         try {
             if(!_txc) await dbc.connect();
 
-            const rdr = await dbc.query("UPDATE wallet SET deactivation_time = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *", walletId);
+            const rdr = await dbc.query("UPDATE wallet SET deactivation_time = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *", [walletId]);
             if(rdr.rows.length == 0)
                 throw new exception.Exception("Could not deactivate wallet in data store", exception.ErrorCodes.DATA_ERROR);
             else
                 return new model.Wallet().fromData(rdr.rows[0]);
+        }
+        finally {
+            if(!_txc)  dbc.end();
+        }
+
+    }
+    
+    /**
+     * @method
+     * @summary Delete / de-activate a wallet in the system given the user id that owns the wallet
+     * @param {string} userId The identity of the user whose wallet is to be deleted
+     * @param {Principal} runAs The identity to run the operation as (for logging)
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {Wallet} The deactivated wallet
+     */
+    async deleteByUserId(userId, runAs, _txc) {
+
+        if(!userId)
+            throw new exception.Exception("Target object must carry an identifier", exception.ErrorCodes.ARGUMENT_EXCEPTION);
+
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) {
+                await dbc.connect();
+                await dbc.query("BEGIN TRANSACTION");
+            }
+
+            const rdr = await dbc.query("UPDATE wallet SET deactivation_time = CURRENT_TIMESTAMP WHERE id IN (SELECT wallet_id FROM users WHERE id = $1) RETURNING *", [userId]);
+            if(rdr.rows.length == 0)
+                throw new exception.Exception("Could not deactivate wallet in data store", exception.ErrorCodes.DATA_ERROR);
+            else {
+                var retVal = new model.Wallet().fromData(rdr.rows[0]);
+                await dbc.query("UPDATE users SET wallet_id = NULL WHERE id = $1", [userId]); // Remove association
+                await dbc.query("COMMIT");
+                return retVal;
+            }
+        }
+        catch (e) {
+            if(!_txc) await dbc.query("ROLLBACK");
+            throw e;
         }
         finally {
             if(!_txc)  dbc.end();

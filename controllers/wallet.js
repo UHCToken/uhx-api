@@ -65,12 +65,13 @@ class WalletApiResource {
             ]
         };
     }
+
     /**
      * @method
      * @summary Posts a new transaction to the wallet
      * @param {Express.Request} req The request from the client
      * @param {Express.Response} res The response to send back to the client
-    * @swagger
+     * @swagger
      * /user/{userid}/wallet:
      *  post:
      *      tags:
@@ -111,7 +112,7 @@ class WalletApiResource {
      *          - "write:wallet"
      */
     async post(req, res)  {
-        res.status(201).json(await uhc.SecurityLogic.createStellarWallet())
+        res.status(201).json(await uhc.SecurityLogic.createStellarWalletForUser(req.params.uid));
         return true;
     }
     /**
@@ -119,7 +120,7 @@ class WalletApiResource {
      * @summary Get a single transaction posted to a user's wallet
      * @param {Express.Reqeust} req The request from the client 
      * @param {Express.Response} res The response from the client
-    * @swagger
+     * @swagger
      * /user/{userid}/wallet:
      *  get:
      *      tags:
@@ -152,14 +153,71 @@ class WalletApiResource {
      *          - "read:wallet"
      */
     async get(req, res) {
-        res.status(200).json(await uhc.Repositories.walletRepository.get(req.params.wid));
+        res.status(200).json(await uhc.Repositories.walletRepository.getByUserId(req.params.uid));
     }
 
+    /**
+     * @method
+     * @summary Deactivates a wallet
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to the client
+    * @swagger
+     * /user/{userid}/wallet:
+     *  delete:
+     *      tags:
+     *      - "wallet"
+     *      summary: "Deactivates the specified user wallet"
+     *      description: "This method will set the deactivation time of the user's wallet"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - in: "path"
+     *        name: "userid"
+     *        description: "The identity of the user to deactivate a wallet for"
+     *        required: true
+     *        type: string
+     *      responses:
+     *          201: 
+     *             description: "The deactivation was successful"
+     *             schema: 
+     *                  $ref: "#/definitions/Wallet"
+     *          404: 
+     *             description: "The user has not bought any UHC yet and does not have an active wallet"
+     *             schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhc_auth:
+     *          - "write:wallet"
+     */
     async delete(req, res) {
-        res.status(201).json(await uhc.Repositories.walletRepository.delete(req.param("wid")));
+        res.status(201).json(await uhc.Repositories.walletRepository.deleteByUserId(req.params.uid));
         return true;
     }
 
+    /**
+     * @method
+     * @summary Determines additional access control on the wallet resource
+     * @param {security.Principal} principal The JWT principal data that has authorization information
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to the client
+     * @returns {boolean} An indicator of whether the user has access to the resource
+     */
+    async acl(principal, req, res) {
+
+        if(!(principal instanceof security.Principal)) {
+            console.error("ACL requires a security principal to be passed");
+            return false;
+        }
+
+        // if the token has OWNER set for USER permission then this user must be SELF
+        return (principal.grant.wallet & security.PermissionType.OWNER && req.params.uid == principal.session.userId) // the permission on the principal is for OWNER only
+                ^ !(principal.grant.wallet & security.PermissionType.OWNER); // XOR the owner grant flag is not set.
+                
+    }
 }
 
 // Module exports

@@ -22,7 +22,7 @@
     repositories = require('./repository/repository'),
     exception = require('./exception'),
     security = require('./security'),
-    stellarClient = require('./integration/stellar'),
+    StellarClient = require('./integration/stellar'),
     model = require('./model/model'),
     User = require('./model/User');
 
@@ -42,7 +42,7 @@
         this.establishSession = this.establishSession.bind(this);
         this.refreshSession = this.refreshSession.bind(this);
         this.registerInternalUser = this.registerInternalUser.bind(this);
-        this.createStellarWallet = this.createStellarWallet.bind(this);
+        this.createStellarWallet = this.createStellarWalletForUser.bind(this);
         this.updateUser = this.updateUser.bind(this);
         this.validateUser = this.validateUser.bind(this);
     }
@@ -172,12 +172,12 @@
             this.validateUser(user, password);
 
             await repository.transaction(async (_txc) => {
+
                 // Insert the user
-                var wallet = await this.createStellarWallet();
-                user.walletId = wallet.id;
                 var retVal = await repository.userRepository.insert(user, password, null, _txc);
                 await repository.groupRepository.addUser(config.security.sysgroups.users, retVal.id, null, _txc);
                 return retVal;
+
             });
 
             return user;
@@ -191,15 +191,36 @@
     /**
      * @method
      * @summary Register a wallet on the stellar network
+     * @param {string} userId The user for which the wallet should be created
      */
-    async createStellarWallet() {
+    async createStellarWalletForUser(userId) {
 
         try {
-            var dist = await repository.walletRepository.get(config.stellar.distribution_wallet_id)
-            var client = await new stellarClient(config.stellar.horizon_server, repository.assetRepository.getAll(), config.stellar.testnet_use)
-            var created = await client.instantiateAccount("2", await repository.walletRepository.get(config.stellar.initiator_wallet_id))
-            var newWallet = await new model.Wallet().copy(created)
-            return repository.walletRepository.insert(newWallet);
+
+            return await repository.transact(async (_txc) => {
+                
+                // Create stellar client
+                var stellarClient = await new StellarClient(config.stellar.horizon_server, await repository.assetRepository.getAll(), config.stellar.testnet_use);
+
+                // Verify user
+                var user = await repository.userRepository.get(userId, _txc);
+
+                // Does user already have wallet?
+                if(!(await user.loadWallet()))
+                    throw new exception.BusinessRuleViolationException(new exception.RuleViolation("User already has a wallet", exception.ErrorCodes.DATA_ERROR, exception.RuleViolationSeverity.ERROR));
+
+                // Create a wallet
+                var wallet = await stellarClient.instantiateAccount("2", await repository.walletRepository.get(config.stellar.initiator_wallet_id));
+                
+                // Insert 
+                wallet = await repository.walletRepository.insert(wallet, null, _txc);
+                
+                // Update user
+                user.walletId = wallet.id;
+                await repository.userRepository.update(user, null, null, _txc);
+
+                return wallet;
+            });
         }
         catch(e) {
             console.error("Error finalizing authentication: " + e.message);

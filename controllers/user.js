@@ -353,11 +353,14 @@ class UserApiResource {
         res.status(201).json(await uhc.Repositories.userRepository.delete(req.param("uid")));
         return true;
     }
+    
     /**
-     * 
+     * @method
+     * @summary Determines additional access control on the user resource
      * @param {security.Principal} principal The JWT principal data that has authorization information
      * @param {Express.Request} req The HTTP request from the client
      * @param {Express.Response} res The HTTP response to the client
+     * @returns {boolean} An indicator of whether the user has access to the resource
      */
     async acl(principal, req, res) {
 
