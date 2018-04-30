@@ -42,7 +42,8 @@ module.exports = class MonetaryAmount extends ModelBase {
      * @param {number} amount The amount
      */
     constructor(value, code) {
-        this.code = code;
+        super();
+        this.code = code == "native" ? "XLM" : code;
         this.value = value;
     }
 

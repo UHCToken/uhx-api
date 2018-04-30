@@ -46,6 +46,7 @@ module.exports = class GroupRepository {
         this.getUsers = this.getUsers.bind(this);
         this.addUser = this.addUser.bind(this);
         this.removeUser = this.removeUser.bind(this);
+        this.getByUserId = this.getByUserId.bind(this);
     }
 
     /**
@@ -86,6 +87,28 @@ module.exports = class GroupRepository {
                 return null;
             else
                 return new Group().fromData(rdr.rows[0]);
+        }
+        finally {
+            if(!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Get all the groups from the database that the user belongs to
+     * @param {string} userId The identifier of the user to fetch group information for
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {Group} The group with matching name
+     */
+    async getByUserId(userId, _txc) {
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+            const rdr = await dbc.query("SELECT * FROM groups INNER JOIN user_group ON (user_group.group_id = groups.id) WHERE user_group.user_id = $1", [userId]);
+            var retVal = [];
+            for(var r in rdr.rows)
+                retVal.push(new Group().fromData(rdr.rows[r]));
+            return retVal;
         }
         finally {
             if(!_txc) dbc.end();

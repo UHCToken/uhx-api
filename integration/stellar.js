@@ -125,6 +125,9 @@ module.exports = class StellarClient {
             return acct.account_id !== null;
         }
         catch(e) {
+            if(e.data && e.data.status == 404)
+                return false;
+                
             console.error(`Account retrieval has failed : ${JSON.stringify(e)}`);
             throw new StellarException(e);
         }
@@ -162,7 +165,7 @@ module.exports = class StellarClient {
             // Submit transaction
             var distResult = await this.server.submitTransaction(newAcctTx);
 
-            console.info(`Account ${kp.publicKey} submitted to Horizon API`);
+            console.info(`Account ${kp.publicKey()} submitted to Horizon API`);
 
             // return 
             return new model.Wallet().copy({
@@ -241,7 +244,7 @@ module.exports = class StellarClient {
             return userWallet;
         }
         catch(e) {
-            console.error(`Account changeTrust has failed: ${JSON.stringify(e)}`);
+            console.error(`Account getAccount has failed: ${JSON.stringify(e)}`);
             throw new StellarException(e);
         }
     }

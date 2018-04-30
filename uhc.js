@@ -200,7 +200,7 @@
             return await repository.transact(async (_txc) => {
                 
                 // Create stellar client
-                var stellarClient = await new StellarClient(config.stellar.horizon_server, await repository.assetRepository.getAll(), config.stellar.testnet_use);
+                var stellarClient = await new StellarClient(config.stellar.horizon_server, await repository.assetRepository.query(), config.stellar.testnet_use);
 
                 // Verify user
                 var user = await repository.userRepository.get(userId, _txc);

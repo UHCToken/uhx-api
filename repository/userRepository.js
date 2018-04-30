@@ -43,6 +43,7 @@ const pg = require('pg'),
         this.insert = this.insert.bind(this);
         this.update = this.update.bind(this);
         this.delete = this.delete.bind(this);
+        this.getClaims = this.getClaims.bind(this);
     }
 
 
@@ -90,6 +91,28 @@ const pg = require('pg'),
             if(!_txc) dbc.end();
         }
 
+    }
+
+    /**
+     * @method
+     * @summary Get claims for the specified user id
+     * @param {string} userId The user id for which claims should be fetched
+     * @param {Client} _txc When present, the postgresql connection to load claims on
+     * @returns {*} The claims for the user in key=value format
+     */
+    async getClaims(userId, _txc) {
+        var dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+            const rdr = await dbc.query("SELECT * FROM user_claims WHERE user_id = $1 WHERE expiry < CURRENT_TIMESTAMP", [userId]);
+            var retVal = {};
+            for(var r in rdr.rows)
+                retVal[rdr.rows[r].claim_type] = rdr.rows[r].claim_value;
+            return retVal;
+        }
+        finally {
+            if(!_txc) dbc.end();
+        }
     }
 
     /**

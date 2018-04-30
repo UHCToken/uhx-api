@@ -231,6 +231,7 @@ class UserApiResource {
         var user = await uhc.Repositories.userRepository.get(req.params.uid);
         await user.loadWallet();
         await user.loadExternalIds();
+        await user.loadClaims();
         res.status(200).json(user);
         return true;
     }
@@ -353,7 +354,7 @@ class UserApiResource {
         res.status(201).json(await uhc.Repositories.userRepository.delete(req.param("uid")));
         return true;
     }
-    
+
     /**
      * @method
      * @summary Determines additional access control on the user resource
