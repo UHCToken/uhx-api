@@ -31,6 +31,9 @@
     user = require('./controllers/user'),
     contract = require('./controllers/contract'),
     wallet = require('./controllers/wallet'),
+    group = require('./controllers/group'),
+    permission = require('./controllers/permission'),
+    asset = require('./controllers/asset'),
     swagger = require('./controllers/js-doc');
     
 
@@ -57,7 +60,9 @@ restApi.addResource(new fiat.FiatApiResource());
 restApi.addResource(new user.UserApiResource());
 restApi.addResource(new contract.ContractApiResource());
 restApi.addResource(new wallet.WalletApiResource());
-
+restApi.addResource(new group.GroupApiResource());
+restApi.addResource(new permission.PermissionApiResource());
+restApi.addResource(new asset.AssetApiResource());
 // Start REST API
 restApi.start();
 

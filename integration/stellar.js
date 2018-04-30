@@ -20,6 +20,7 @@
  const Stellar = require('stellar-sdk'),
     uhc = require("../uhc"),
     model = require("../model/model"),
+    Asset = require('../model/Asset'),
     exception = require('../exception');
 /**
  * @class
@@ -48,29 +49,17 @@ module.exports = class StellarClient {
      * @constructor
      * @summary Creates a new stellar client with the specified base API
      * @param {string} horizonApiBase The horizon API server to use
-     * @param {*} stellarAsset The asset(s) on which this client will operate
-     * @param {string} stellarAsset.code The asset code on which the client will operate
-     * @param {string} stellarAsset.issuer The issuer account
-     * @param {Wallet} distAccount The account from which the asset is distributed
+     * @param {Asset} stellarAsset The asset(s) on which this client will operate
      * @param {boolean} useTestNetwork When true, instructs the client to use the test network
      */
-    constructor(horizonApiBase, stellarAsset, distWallet, useTestNetwork) {
+    constructor(horizonApiBase, stellarAsset, useTestNetwork) {
         // "private" members
-        var _server = new Stellar.Server(horizonApiBase);
         if (useTestNetwork){
             Stellar.Network.useTestNetwork()
         }
-        var _asset = [];
         
-        if(!Array.isArray(stellarAsset))
-            stellarAsset = [stellarAsset];
-        stellarAsset.forEach((o)=>{ _asset.push(new Stellar.Asset(o.code, o.issuer))});
-        
-        var _distWallet = distWallet;
-        this._getAsset = function() { return _asset; }
-        this._getServer = function() { return _server; }
-        this._getDistWallet = function() { return _distWallet; }
-
+        this._asset = stellarAsset;
+        this._server = new Stellar.Server(horizonApiBase); 
     }
 
     /**
@@ -88,7 +77,7 @@ module.exports = class StellarClient {
      * @summary Gets the stellar server instance
      * @type {Stellar.Server}
      */
-    get server() { return this._getServer(); }
+    get server() { return this._server; }
 
     /**
      * @property
@@ -96,7 +85,7 @@ module.exports = class StellarClient {
      * @type {Stellar.Asset}
      */
     get assets() { 
-        return !Array.isArray(this._getAsset()) ? [this._getAsset()] : this._getAsset(); 
+        return !Array.isArray(this._asset) ? [this._asset] : this._asset; 
     }
 
     /**
@@ -104,16 +93,18 @@ module.exports = class StellarClient {
      * @summary Creates a new account on the stellar network
      * @return {Wallet} The constructed wallet instance 
      * @param {number} startingBalance The starting balance of the account in lumens
+     * @param {Wallet} initiatorWallet The wallet which is creating the account from which the startingBalance should be drawn
      */
-    async instantiateAccount(startingBalance) {
+    async instantiateAccount(startingBalance, initiatorWallet) {
 
         try {
-            // Generate the random KP
 
+            // Generate the random KP
             var kp = Stellar.Keypair.random();
+
             // Load distribution account from stellar
             // TODO: Perhaps this can be cached?
-            var distAcct = await this.server.loadAccount(this._getDistWallet().address);
+            var distAcct = await this.server.loadAccount(initiatorWallet.address);
             // Create the new account
             var newAcctTx = new Stellar.TransactionBuilder(distAcct)
                 .addOperation(Stellar.Operation.createAccount({
@@ -122,7 +113,8 @@ module.exports = class StellarClient {
                     // TODO: If we're doing this through a payment gateway, would the fee be used to replenish the distributor account to deposit the lumens?
                 })).build();
             // Get the source key to create a trust
-            var sourceKey = await Stellar.Keypair.fromSecret(this._getDistWallet().seed);
+            var sourceKey = await Stellar.Keypair.fromSecret(initiatorWallet.seed);
+
             newAcctTx.sign(sourceKey);
             // Submit transaction
             var distResult = await this.server.submitTransaction(newAcctTx);
@@ -158,7 +150,7 @@ module.exports = class StellarClient {
             // Add trust operations
             for(var i in this.assets)
                 changeTrustTx.addOperation(Stellar.Operation.changeTrust({
-                    asset: this.assets[i],
+                    asset: new Stellar.Asset(this.assets[i].code, this.assets[i]._issuer),
                     source: userWallet.address
                 }));
 
@@ -196,7 +188,7 @@ module.exports = class StellarClient {
             stellarAcct.balances.forEach((o) => {
                 userWallet.balances.push(new model.MonetaryAmount(
                     this.round(o.balance),
-                    o.asset_type
+                    o.code || o.asset_type
                 ));
             });
 
@@ -234,6 +226,9 @@ module.exports = class StellarClient {
             // Asset type not found
             if(!assetType)
                 throw new exception.NotFoundException("asset", amount.code);
+
+            // Asset type
+            assetType = new Stellar.Asset(assetType.code, assetType._issuer);
 
             // Create payment transaction
             var paymentTx = new Stellar.TransactionBuilder(payorStellarAcct)

@@ -106,18 +106,10 @@
       */
      stellar: {
          /**
-          * @summary The issuer public key
+          * @summary The wallet from which the initial balance of XLM should be retrieved
           */
-         issuer: "GBXXXXXX",
-         /**
-          * @summary The wallet / username from which tokens are issued
-          */
-         distribution_wallet: "Dist",
+        initiator_wallet_id: "00000000-0000-0000-0000-000000000000",
         /**
-          * @summary The wallet id from which tokens are issued
-          */
-         distribution_wallet_id: "XXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX",
-         /**
           * @summary The determine if this is part of a testnet
           */
         testnet_use: true,

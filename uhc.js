@@ -70,7 +70,7 @@
      * @param {string} scope The scope which the session should be established for.
      * @returns {Principal} The authenticated user principal
      */
-    async establishSession(clientPrincipal, username, password, scope) {
+    async establishSession(clientPrincipal, username, password, scope, remote_ip) {
 
         // Ensure that the application information is loaded
         await clientPrincipal.session.loadApplication();
@@ -102,7 +102,7 @@
             await repository.userRepository.update(user);
 
             // Create the session object
-            var session = new model.Session(user, application, scope, config.security.sessionLength);
+            var session = new model.Session(user, application, scope, config.security.sessionLength, remote_ip);
             session = await repository.sessionRepository.insert(session);
             await session.loadGrants();
             return new security.Principal(session);
@@ -118,8 +118,9 @@
      * @summary Refreshes the specified session to which the refreshToken belongs
      * @param {SecurityPrincipal} clientPrincipal The principal of the application (must match the original application which the session was given to)
      * @param {string} refreshToken The refresh token
+     * @param {string} remoteAddr The remote address of the client making this session
      */
-    async refreshSession(clientPrincipal, refreshToken) {
+    async refreshSession(clientPrincipal, refreshToken, remoteAddr) {
 
         // Ensure that the application information is loaded
         await clientPrincipal.session.loadApplication();
@@ -139,7 +140,7 @@
 
                 // Establish a new session
                 return await repository.sessionRepository.insert(
-                    new model.Session(session.userId, session.applicationId, session.audience, config.security.sessionLength),
+                    new model.Session(session.userId, session.applicationId, session.audience, config.security.sessionLength, remoteAddr),
                     null,
                     _tx
                 );
@@ -195,8 +196,8 @@
 
         try {
             var dist = await repository.walletRepository.get(config.stellar.distribution_wallet_id)
-            var client = await new stellarClient(config.stellar.horizon_server, {code: 'UHC', issuer: config.stellar.issuer}, dist, config.stellar.testnet_use)
-            var created = await client.instantiateAccount("2")
+            var client = await new stellarClient(config.stellar.horizon_server, repository.assetRepository.getAll(), config.stellar.testnet_use)
+            var created = await client.instantiateAccount("2", await repository.walletRepository.get(config.stellar.initiator_wallet_id))
             var newWallet = await new model.Wallet().copy(created)
             return repository.walletRepository.insert(newWallet);
         }

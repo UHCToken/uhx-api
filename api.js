@@ -56,7 +56,7 @@ class RouteHandler {
         ];
 
         // First, is the method open?
-        if(!permissionSet || !permissionSet[0] && !permissionSet[1])
+        if(!permissionSet || !permissionSet[1])
             return true;
         else // it isn't and must be authenticated
         {

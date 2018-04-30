@@ -31,7 +31,7 @@
    *    - name: group
    *      description: A resource to fetch user group information from the UHC API
    */
-module.exports.PermissionApiResource = class PermissionApiResource {
+module.exports.GroupApiResource = class GroupApiResource {
 
     /**
      * @property
@@ -40,8 +40,9 @@ module.exports.PermissionApiResource = class PermissionApiResource {
     get routes() {
         return { 
             permission_group: "group",
-            routes: {
-                "group" : {
+            routes: [
+                {
+                    "path": "group",
                     "get" : {
                         demand: security.PermissionType.LIST,
                         method: this.getAll
@@ -51,7 +52,8 @@ module.exports.PermissionApiResource = class PermissionApiResource {
                         method: this.create
                     }
                 },
-                "group/:gid" : {
+                {
+                    "path": "group/:gid",
                     "get": {
                         demand: security.PermissionType.READ,
                         method: this.get
@@ -61,7 +63,8 @@ module.exports.PermissionApiResource = class PermissionApiResource {
                         method: this.delete
                     }
                 },
-                "group/:gid/user" : {
+                {
+                    "path": "group/:gid/user",
                     "get": {
                         demand: security.PermissionType.LIST | security.PermissionType.READ,
                         method: this.listUsers
@@ -71,13 +74,14 @@ module.exports.PermissionApiResource = class PermissionApiResource {
                         method: this.addUser
                     }
                 },
-                "group/:gid/user/:uid" : {
+                {
+                    "path": "group/:gid/user/:uid",
                     "delete": {
                         demand: security.PermissionType.WRITE,
                         method: this.deleteUser
                     }
                 }
-            }
+            ]
         };
     }
 
@@ -87,7 +91,7 @@ module.exports.PermissionApiResource = class PermissionApiResource {
      * @param {Express.Request} req The HTTP request from the client
      * @param {Express.Response} res The HTTP response from the server
      */
-    getAll(req, res) {
+    async getAll(req, res) {
         res.status(200).json(await uhc.Repositories.groupRepository.getAll());
         return true;
     }
@@ -98,7 +102,7 @@ module.exports.PermissionApiResource = class PermissionApiResource {
      * @param {Express.Request} req The HTTP request fromthis client
      * @param {Express.Response} res The HTTP response going to the client
      */
-    create(req, res) {
+    async create(req, res) {
         
         if(!req.body)
             throw new exception.Exception("Missing body", exception.ErrorCodes.MISSING_PAYLOAD);
@@ -114,7 +118,7 @@ module.exports.PermissionApiResource = class PermissionApiResource {
      * @param {Express.Request} req The HTTP request fromthis client
      * @param {Express.Response} res The HTTP response going to the client
      */
-    get(req, res) {
+    async get(req, res) {
         if(!req.params.gid)
             throw new exception.Exception("Missing group id parameter", exception.ErrorCodes.MISSING_PROPERTY);
 
@@ -128,7 +132,7 @@ module.exports.PermissionApiResource = class PermissionApiResource {
      * @param {Express.Request} req The HTTP request fromthis client
      * @param {Express.Response} res The HTTP response going to the client
      */
-    delete(req, res) {
+    async delete(req, res) {
         if(!req.params.gid)
             throw new exception.Exception("Missing group id parameter", exception.ErrorCodes.MISSING_PROPERTY);
 
@@ -142,7 +146,7 @@ module.exports.PermissionApiResource = class PermissionApiResource {
      * @param {Express.Request} req The HTTP request fromthis client
      * @param {Express.Response} res The HTTP response going to the client
      */
-    listUsers(req, res) {
+    async listUsers(req, res) {
 
         if(!req.params.gid)
             throw new exception.Exception("Missing group id parameter", exception.ErrorCodes.MISSING_PROPERTY);
@@ -157,7 +161,7 @@ module.exports.PermissionApiResource = class PermissionApiResource {
      * @param {Express.Request} req The HTTP request fromthis client
      * @param {Express.Response} res The HTTP response going to the client
      */
-    addUser(req, res) {
+    async addUser(req, res) {
         
         if(!req.params.gid)
             throw new exception.Exception("Missing group id parameter", exception.ErrorCodes.MISSING_PROPERTY);
@@ -178,7 +182,7 @@ module.exports.PermissionApiResource = class PermissionApiResource {
      * @param {Express.Request} req The HTTP request fromthis client
      * @param {Express.Response} res The HTTP response going to the client
      */
-    deleteUser(req, res) {
+    async deleteUser(req, res) {
         if(!req.params.gid)
             throw new exception.Exception("Missing group id parameter", exception.ErrorCodes.MISSING_PROPERTY);
         if(!req.params.uid)

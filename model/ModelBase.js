@@ -42,7 +42,7 @@ module.exports = class ModelBase {
         };
 
         for(var k in this) 
-            if(!k.startsWith("_"))
+            if(!k.startsWith("_") && !k.startsWith("$"))
                 retVal[k] = this[k];
 
         return retVal;

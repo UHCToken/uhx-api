@@ -36,8 +36,9 @@ module.exports = class Session extends ModelBase {
      * @param {User} user The user to construct the session from (or the id of the user)
      * @param {Application} application The application to construct the session from (or the id of application)
      * @param {number} expiry The expiration time
+     * @param {string} remoteAddr The remote address of the client
      */
-    constructor(user, application, scope, sessionLength) {
+    constructor(user, application, scope, sessionLength, remoteAddr) {
 
         super();
 
@@ -51,6 +52,7 @@ module.exports = class Session extends ModelBase {
         this._user = user.id ? user : null;
         this.audience = scope;
         this._application = application.id ? application : null;
+        this.remoteAddr = remoteAddr;
     }
 
     /**
@@ -65,6 +67,7 @@ module.exports = class Session extends ModelBase {
         this.audience = dbSession.scope;
         this.notBefore = dbSession.not_before;
         this.notAfter = dbSession.not_after;
+        this.remoteAddr = dbSession.ip_addr;
         return this;
     }
 
@@ -80,6 +83,7 @@ module.exports = class Session extends ModelBase {
             scope: this.audience,
             not_before: this.notBefore,
             not_after: this.notAfter,
+            ip_addr: this.remoteAddr,
             $refresh_token: this._refreshToken
         };
     }

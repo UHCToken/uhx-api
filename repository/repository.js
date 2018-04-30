@@ -23,6 +23,7 @@ const UserRepository = require('./userRepository'),
     WalletRepository = require('./walletRepository'),
     PermissionRepository = require('./permissionRepository'),
     GroupRepository = require('./groupRepository'),
+    AssetRepository = require('./assetRepository'),
     pg = require('pg'),
     exception = require('../exception');
 
@@ -140,6 +141,17 @@ class UhcRepositories {
         if(!this._groupRepository)
             this._groupRepository = new GroupRepository(this.connectionString);
         return this._groupRepository;
+    }
+
+    /**
+     * @property
+     * @summary Get the asset repository
+     * @type {AssetRepository}
+     */
+    get assetRepository() {
+        if(!this._assetRepository)
+            this._assetRepository = new AssetRepository(this.connectionString);
+        return this._assetRepository;
     }
 }
 

@@ -290,10 +290,10 @@
       // GRANT TYPE
       switch(req.param("grant_type")){
         case "password":
-          userPrincipal = await uhc.SecurityLogic.establishSession(principal, req.param("username"), req.param("password"), req.param("scope"));
+          userPrincipal = await uhc.SecurityLogic.establishSession(principal, req.param("username"), req.param("password"), req.param("scope"), req.ip);
           break;
         case "refresh_token":
-          userPrincipal = await uhc.SecurityLogic.refreshSession(principal, req.param("refresh_token"));
+          userPrincipal = await uhc.SecurityLogic.refreshSession(principal, req.param("refresh_token"), req.ip);
           break;
         default:
           throw new exception.NotSupportedException("Only password grants are supported");

@@ -19,7 +19,8 @@
 
  const pg = require('pg'),
     exception = require('../exception'),
-    model = require('../model/model');
+    model = require('../model/model'),
+    Session = require('../model/Session');
 
  /**
   * @class
@@ -134,12 +135,12 @@
         }
     }
 
-        /**
+    /**
      * @method
      * @summary Gets a session by refresh token
      * @param {uuid} token The refresh token to fetch the session by
      * @param {Client} _tx A database connection within a transaction to execute this
-     * @returns {Session} The session that was abandoned
+     * @returns {Session} The session that was matching the token
      */
     async getByRefreshToken(token, maxAge, _tx) {
         const dbc = _tx || new pg.Client(this._connectionString);

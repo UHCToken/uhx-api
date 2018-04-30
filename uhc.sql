@@ -177,11 +177,30 @@ CREATE TABLE IF NOT EXISTS sessions (
     not_after TIMESTAMPTZ NOT NULL, -- THE EXPIRATION TIME (NOT AFTER) OF THE SESSION
     scope VARCHAR(256) NOT NULL,
     refresh_token VARCHAR(256), -- IF THE SESSION CAN BE EXTENDED AUTOMATICALLY, THE REFRESH TOKEN TO USE
+    ip_addr VARCHAR(256), -- THE IP ADDRESS OF THE REMOTE  SESSION
     CONSTRAINT pk_sessions PRIMARY KEY (id),
     CONSTRAINT fk_sessions_users FOREIGN KEY (user_id) REFERENCES users(id),
     CONSTRAINT fk_sessions_application FOREIGN KEY (application_id) REFERENCES applications(id)
 );
 
+-- A LIST OF ASSETS CLASSES WHICH THIS SERVICE CAN INTERACT WITH
+CREATE TABLE IF NOT EXISTS assets (
+    id UUID NOT NULL DEFAULT uuid_generate_v4(),
+    code VARCHAR(6) NOT NULL, -- THE ASSET CODE
+    type VARCHAR(32) NOT NULL, -- ASSET TYPE CODE
+    issuer VARCHAR(256) NOT NULL, -- THE ISSUING ACCOUNT
+    dist_wallet_id UUID NOT NULL, -- THE DISTRIBUTION WALLET ID
+    created_by UUID NOT NULL, -- THE USER WHICH CREATED THE GROUP
+    updated_time TIMESTAMPTZ, -- THE TIME THAT THE OBJECT WAS UPDATED
+    updated_by UUID, -- THE USER WHICH UPDATED THE OBJECT
+    deactivation_time TIMESTAMPTZ, -- THE TIME THAT THE OBJECT WAS DEACTIVATED
+    deactivated_by UUID, -- THE USER WHICH DEACTIVATED THE OBJECT
+    CONSTRAINT pk_assets PRIMARY KEY (id),
+    CONSTRAINT fk_asset_created_by FOREIGN KEY (created_by) REFERENCES users(id),
+    CONSTRAINT fk_asset_updated_by FOREIGN KEY (updated_by) REFERENCES users(id),
+    CONSTRAINT fk_asset_deactivated_by FOREIGN KEY (deactivated_by) REFERENCES users(id),
+    CONSTRAINT fk_asset_dist_wallet_id FOREIGN KEY (dist_wallet_id) REFERENCES wallets(id)
+)
 
 -- CREATE ADMIN
 INSERT INTO users (id, name, password, email) VALUES ('3c673456-23b1-4263-9deb-df46770852c9', 'admin@test.com',crypt('UniversalHealthCoinAdmin', gen_salt('bf')), 'admin@test.com');

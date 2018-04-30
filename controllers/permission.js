@@ -39,8 +39,9 @@ module.exports.PermissionApiResource = class PermissionApiResource {
     get routes() {
         return { 
             permission_group: "permission",
-            routes: {
-                "permission" : {
+            routes: [
+                {
+                    "path": "permission",
                     "get" : {
                         demand: security.PermissionType.LIST,
                         method: this.getAll
@@ -50,7 +51,8 @@ module.exports.PermissionApiResource = class PermissionApiResource {
                         method: this.create
                     }
                 },
-                "permission/:pid" : {
+                {
+                    "path": "permission/:pid",
                     "get": {
                         demand: security.PermissionType.READ,
                         method: this.get
@@ -60,7 +62,7 @@ module.exports.PermissionApiResource = class PermissionApiResource {
                         method: this.delete
                     }
                 }
-            }
+            ]
         };
     }
 
@@ -70,7 +72,7 @@ module.exports.PermissionApiResource = class PermissionApiResource {
      * @param {Express.Request} req The HTTP request from the client
      * @param {Express.Response} res The HTTP response from the server
      */
-    getAll(req, res) {
+    async getAll(req, res) {
         res.status(200).json(await uhc.Repositories.permissionRepository.getAll());
         return true;
     }
@@ -81,7 +83,7 @@ module.exports.PermissionApiResource = class PermissionApiResource {
      * @param {Express.Request} req The HTTP request fromthis client
      * @param {Express.Response} res The HTTP response going to the client
      */
-    create(req, res) {
+    async create(req, res) {
         
         if(!req.body)
             throw new exception.Exception("Missing body", exception.ErrorCodes.MISSING_PAYLOAD);
@@ -97,7 +99,7 @@ module.exports.PermissionApiResource = class PermissionApiResource {
      * @param {Express.Request} req The HTTP request fromthis client
      * @param {Express.Response} res The HTTP response going to the client
      */
-    get(req, res) {
+    async get(req, res) {
         if(!req.params.pid)
             throw new exception.Exception("Missing permission id parameter", exception.ErrorCodes.MISSING_PROPERTY);
 
@@ -111,7 +113,7 @@ module.exports.PermissionApiResource = class PermissionApiResource {
      * @param {Express.Request} req The HTTP request fromthis client
      * @param {Express.Response} res The HTTP response going to the client
      */
-    delete(req, res) {
+    async delete(req, res) {
         if(!req.params.pid)
             throw new exception.Exception("Missing permission id parameter", exception.ErrorCodes.MISSING_PROPERTY);
 

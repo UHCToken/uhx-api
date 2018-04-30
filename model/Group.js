@@ -60,6 +60,7 @@ module.exports = class Group extends ModelBase{
      * @summary Constructs a new instance of the group class
      */
     constructor() {
+        super();
         this.fromData = this.fromData.bind(this);
         this.toData = this.toData.bind(this);
     }

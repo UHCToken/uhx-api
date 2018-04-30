@@ -148,6 +148,20 @@ const uhc = require('../uhc'),
         return this;
     }
 
+    /** 
+     * @method
+     * @summary Copy all the values from otherUser into this user
+     * @returns {User} This user with copied fields
+     * @param {User} otherUser The user from which the values for this user should be copied
+     */
+    copy(otherUser) {
+        this.fromData({});
+        for(var p in this)
+            if(!p.startsWith("_"))
+                this[p] = otherUser[p] || this[p];
+        return this;
+    }
+
     /**
      * Create object from database user
      * @param {*} dbUser The user instance from the database
