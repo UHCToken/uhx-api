@@ -187,6 +187,7 @@
         ]           
       }
     }
+
     /**
      * @method
      * @summary Overrides the underlying API authentication to use HTTP-Basic or client_id and client_secret body parameters
@@ -220,6 +221,7 @@
       return principal !== undefined;
 
     }
+
     /**
      * @method
      * @summary OAUTH 2.0 Token Service 
@@ -290,13 +292,16 @@
       // GRANT TYPE
       switch(req.param("grant_type")){
         case "password":
-          userPrincipal = await uhc.SecurityLogic.establishSession(principal, req.param("username"), req.param("password"), req.param("scope"), req.ip);
+          userPrincipal = await uhc.SecurityLogic.establishSession(principal, req.param("username"), req.param("password"), req.param("scope") || "*", req.ip);
           break;
         case "refresh_token":
           userPrincipal = await uhc.SecurityLogic.refreshSession(principal, req.param("refresh_token"), req.ip);
           break;
+        case "client_credentials":
+          userPrincipal = await uhc.SecurityLogic.establishClientSession(principal, req.param("scope") || "*", req.ip);
+          break;
         default:
-          throw new exception.NotSupportedException("Only password grants are supported");
+          throw new exception.NotSupportedException("Non supported grant type");
       }
 
       var payload = userPrincipal.toJSON();
@@ -311,10 +316,11 @@
      * @param {*} e The exception to be handled 
      */
     async error(e, res) {
+      console.error(`Error executing OAUTH: ${JSON.stringify(e)} `);
       if(e instanceof exception.Exception)
         res.status(400).json(new OAuthErrorResult(e.code, e.message));
       else
-        res.status(400).json(new OAuthErrorResult(exception.ErrorCodes.SECURITY_ERROR, e));
+        res.status(400).json(new OAuthErrorResult(exception.ErrorCodes.SECURITY_ERROR, e.message || e));
     }
  }
 

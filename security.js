@@ -177,7 +177,13 @@
         else if(sessionOrUser instanceof model.Application) // application principal
         {
             user = {};
-            session = { application: sessionOrUser, loadApplication: async () => {} };
+            session = { 
+                application: sessionOrUser, 
+                applicationId: sessionOrUser.id, 
+                notBefore: new Date(),
+                notAfter: new Date(new Date().getTime() + uhc.Config.security.sessionLength),
+                grant: sessionOrUser._grants,
+                loadApplication: async () => { } };
         }
         else {
             session = sessionOrUser;

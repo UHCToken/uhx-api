@@ -38,7 +38,7 @@ class UserApiResource {
     constructor() {
 
     }
-    
+
     /**
      * @method
      * @summary Get routing information for this class
@@ -65,11 +65,11 @@ class UserApiResource {
                         "method": this.get
                     },
                     "put" : {
-                        "demand": security.PermissionType.WRITE,
+                        "demand": security.PermissionType.WRITE | security.PermissionType.READ,
                         "method": this.put
                     },
                     "delete" : {
-                        "demand":security.PermissionType.WRITE,
+                        "demand":security.PermissionType.WRITE | security.PermissionType.READ,
                         "method": this.delete
                     }
                 }

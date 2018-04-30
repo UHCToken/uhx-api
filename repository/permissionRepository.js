@@ -197,15 +197,17 @@
      * @method
      * @summary Constructs the application permission information
      * @param {string} appId The identification for the application to gather permissions for
+     * @param {boolean} client_only When true, filter for only those permissions which are marked as CLIENT_ONLY
      * @param {Client} _txc The postgresql client to use (for transaction control)
      * @returns {PermissionSetInstance} The permission for the object
      */
-    async getApplicationPermission(appId, _txc) {
+    async getApplicationPermission(appId, client_only, _txc) {
         const dbc =  _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
             const rdr = await dbc.query("SELECT permission_sets.*, application_permissions.acl_flags FROM application_permissions INNER JOIN permission_sets ON (application_permissions.permission_set_id = permission_sets.id) " +
-                "WHERE application_id = $1", [appId]);
+                "WHERE application_id = $1 " + 
+                (client_only ? " AND client_only = TRUE" : ""), [appId]);
             
             var retVal = [];
             for(var r in rdr.rows)

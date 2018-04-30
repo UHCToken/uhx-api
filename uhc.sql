@@ -189,6 +189,7 @@ CREATE TABLE IF NOT EXISTS application_permissions (
     application_id UUID NOT NULL, 
     permission_set_id UUID NOT NULL, -- THE PERMISSION SET
     acl_flags INT NOT NULL DEFAULT 0, -- REPRESENTS THE ACL FLAGS (THESE ARE UNIX STYLE)
+    client_only BOOLEAN NOT NULL DEFAULT FALSE, -- WHEN TRUE INDICATES THAT A CLIENT_GRANT CAN ACCESS THIS
     CONSTRAINT pk_application_permission PRIMARY KEY (application_id, permission_set_id),
     CONSTRAINT fk_application_permission_application FOREIGN KEY (application_id) REFERENCES applications(id),
     CONSTRAINT fk_application_permission_permission_set FOREIGN KEY (permission_set_id) REFERENCES permission_sets(id)
@@ -232,6 +233,9 @@ CREATE TABLE IF NOT EXISTS assets (
 -- CREATE ADMIN
 INSERT INTO users (id, name, password, email) VALUES ('3c673456-23b1-4263-9deb-df46770852c9', 'admin@test.com',crypt('UniversalHealthCoinAdmin', gen_salt('bf')), 'admin@test.com');
 
+-- CREATE APP_USER
+INSERT INTO users (id, name, password) VALUES (uuid_nil(), 'NILUSER', crypt(uuid_generate_v4()::TEXT, gen_salt('bf')));
+
 -- CREATE GROUPS 
 INSERT INTO groups (id, name, created_by) VALUES ('044894bd-084e-47bb-9428-dbd80277614a', 'Administrators', '3c673456-23b1-4263-9deb-df46770852c9');
 INSERT INTO groups (id, name, created_by) VALUES ('330d2fb4-ba61-4b48-a0a1-8162a4708e96', 'Users', '3c673456-23b1-4263-9deb-df46770852c9');
@@ -242,11 +246,12 @@ INSERT INTO user_group (user_id, group_id) VALUES ('3c673456-23b1-4263-9deb-df46
 -- CREATE DEFAULT PERMISSION SETS
 INSERT INTO permission_sets (id, name, description, created_by) VALUES ('29b52e3b-52d6-4108-bb6e-f4c692cb4145', 'user', 'Access to the user resource', '3c673456-23b1-4263-9deb-df46770852c9');
 INSERT INTO permission_sets (id, name, description, created_by) VALUES ('c428ff6a-0d07-424f-802b-b51a040d023b', 'wallet', 'Access to the user resource', '3c673456-23b1-4263-9deb-df46770852c9');
-INSERT INTO permission_sets (id, name, description, created_by) VALUES ('5245dff0-9b79-4ddb-b3bd-9dd733afd678', 'fiat', 'Access to the FIAT resource', '3c673456-23b1-4263-9deb-df46770852c9');
+INSERT INTO permission_sets (id, name, description, created_by) VALUES ('5245dff0-9b79-4ddb-b3bd-9dd733afd678', 'purchase', 'Access to the FIAT resource', '3c673456-23b1-4263-9deb-df46770852c9');
 INSERT INTO permission_sets (id, name, description, created_by) VALUES ('608844ca-b98a-47f5-b834-d7fded513945', 'application', 'Access to the APPLICATION resource', '3c673456-23b1-4263-9deb-df46770852c9');
 INSERT INTO permission_sets (id, name, description, created_by) VALUES ('20a97388-5b6a-43e7-ac07-911ceee7e0d6', 'contract', 'Access to the CONTRACT resource', '3c673456-23b1-4263-9deb-df46770852c9');
 INSERT INTO permission_sets (id, name, description, created_by) VALUES ('3fc7cbc7-58ca-40fa-9d17-060dbf180e0b', 'group', 'Access to the GROUP resource', '3c673456-23b1-4263-9deb-df46770852c9');
 INSERT INTO permission_sets (id, name, description, created_by) VALUES ('17e4de1c-4fd3-49ea-b394-90ddb5ccac38', 'permission', 'Access to the PERMISSION resource', '3c673456-23b1-4263-9deb-df46770852c9');
+INSERT INTO permission_sets (id, name, description, created_by) VALUES ('76818f0a-2caa-4c46-83f5-064248001821', 'invite', 'Access to the INVITATION resource', '3c673456-23b1-4263-9deb-df46770852c9');
 
 -- ASSIGN DEFAULT PERMISSIONS
 
@@ -278,9 +283,6 @@ INSERT INTO user_group (user_id, group_id)
 -- CREATE TEST APPLICATION FOR FIDDLER
 INSERT INTO applications (id, name, secret, created_by) VALUES ('4fc15664-b152-4e6b-a852-b2aab0f05e05', 'fiddler', crypt('fiddler', gen_salt('bf')), '3c673456-23b1-4263-9deb-df46770852c9');
 -- FIDDLER GRANT ALL 
-INSERT INTO application_permissions (application_id, permission_set_id, acl_flags)
-	SELECT '4fc15664-b152-4e6b-a852-b2aab0f05e05', id, 31
+INSERT INTO application_permissions (application_id, permission_set_id, acl_flags, client_only)
+	SELECT '4fc15664-b152-4e6b-a852-b2aab0f05e05', id, 31, false
 	FROM permission_sets;
-
--- THE NEXT PART IS THE DISTRIBUTION OR ROOT WALLET - YOU WILL NEED TO CONFIGURE THIS
-INSERT INTO wallet (id, seed, address) VALUES (uuid_nil(), '', '');

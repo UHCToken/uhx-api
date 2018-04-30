@@ -58,6 +58,7 @@
         var application = await repository.applicationRepository.getByNameSecret(clientId, clientSecret);
         if(application.deactivationTime)
             throw new exception.Exception("Application has been deactivated", exception.ErrorCodes.SECURITY_ERROR);
+        await application.loadGrants();
         return new security.Principal(application);
     }
 
@@ -109,6 +110,28 @@
         }
         catch(e) {
             console.error("Error finalizing authentication: " + e.message);
+            throw new exception.Exception("Error finalizing authentication", exception.ErrorCodes.SECURITY_ERROR, e);
+        }
+    }
+
+    /**
+     * @method
+     * @summary Establishes a client session
+     * @param {SecurityPrincipal} clientPrincipal The client principal to be established as a session
+     * @param {string} remoteAddr The remote address to be used
+     */
+    async establishClientSession(clientPrincipal, scope, remoteAddr) {
+
+        try {
+ 
+            var nilUser = await repository.userRepository.get("00000000-0000-0000-0000-000000000000");
+            var session = new model.Session(nilUser, clientPrincipal._session.application, scope, config.security.sessionLength, remoteAddr);
+            session = await repository.sessionRepository.insert(session);
+            await session.loadGrants();
+            return new security.Principal(session);
+        }
+        catch(e) {
+            console.error("Error finalizing client authentication " + e.message);
             throw new exception.Exception("Error finalizing authentication", exception.ErrorCodes.SECURITY_ERROR, e);
         }
     }
