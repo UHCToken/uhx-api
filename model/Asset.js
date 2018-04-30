@@ -55,6 +55,7 @@
         this.updatedBy = dbAsset.updated_by;
         this.deactivationTime = dbAsset.deactivation_time;
         this.deactivatedBy = dbAsset.deactivated_by;
+        this.kycRequirement = dbAsset.kyc_req;
         return this;
     }
 
@@ -68,7 +69,8 @@
             code: this.code,
             type: this.type,
             issuer: this._issuer,
-            dist_wallet_id: this._distWalletId
+            dist_wallet_id: this._distWalletId,
+            kyc_req: this.kycRequirement
         };
     }
 
