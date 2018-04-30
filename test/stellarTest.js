@@ -31,12 +31,22 @@ describe("Stellar API Wrapper", async function() {
 
     // Test repository
     var testRepository = new testRepo.UhcRepositories(uhc.Config.db.test_server);
-
+    var initiatorWallet = null;
     var sClient = null;
+
     // Stellar client
     before(async function() {
         sClient = new StellarClient("https://horizon-testnet.stellar.org", await testRepository.assetRepository.query(), true, uhc.Config.stellar.fee_collector);
+        initiatorWallet = await testRepository.walletRepository.get(uhc.Config.stellar.initiator_wallet_id);
     })
+
+    // Get or create wallet under test
+    var tWalletUnderTest = null;
+    var getOrCreateWallet = async function() {
+        if(!tWalletUnderTest)
+            tWalletUnderTest = await sClient.generateAccount();
+        return tWalletUnderTest;
+    }
 
     /**
      * @test
@@ -59,8 +69,7 @@ describe("Stellar API Wrapper", async function() {
         assert.ok(!(await sClient.isActive(wallet)));
 
         // Activate the account with 2 XLM
-        var initWallet = await testRepository.walletRepository.get(uhc.Config.stellar.initiator_wallet_id);
-        wallet = await sClient.activateAccount(wallet, "2", initWallet);
+        wallet = await sClient.activateAccount(wallet, "2", initiatorWallet);
         assert.ok(await sClient.isActive(wallet));
 
         // Now we want to get balances
@@ -70,6 +79,8 @@ describe("Stellar API Wrapper", async function() {
         assert.ok(acctWallet.balances);
         assert.equal(acctWallet.balances[0].value, 2);
         assert.equal(acctWallet.balances[0].code, "XLM");
+
+        tWalletUnderTest = acctWallet;
     });
 
     /**
@@ -78,6 +89,23 @@ describe("Stellar API Wrapper", async function() {
      */
     it("Should trust the stellar assets", async function() {
 
+        var wallet = await getOrCreateWallet();
+
+        if(!await sClient.isActive(wallet))
+            await sClient.activateAccount(wallet, "2", initiatorWallet);
+
+        // Now we want to get the balance
+        wallet = await sClient.getAccount(wallet);
+        var balBeforeTrust = wallet.balances[0];
+
+        // Now we will trust
+        await sClient.createTrust(wallet);
+
+        // Balance should be number of trust lines time stroops
+        wallet = await sClient.getAccount(wallet);
+        assert.equal(wallet.balances[1].value, balBeforeTrust.value - (sClient.assets.length * 0.00001));
+
+        tWalletUnderTest = wallet;
     });
 
     /**
@@ -86,6 +114,16 @@ describe("Stellar API Wrapper", async function() {
      */
     it("Should retrieve account information properly", async function() {
 
+        var wallet = await getOrCreateWallet();
+
+        if(!await sClient.isActive(wallet))
+            await sClient.activateAccount(wallet, "2", initiatorWallet);
+
+        wallet = await sClient.getAccount(wallet);
+        assert.ok(wallet.balances.length);
+        assert.ok(wallet.address);
+        assert.ok(wallet.balances[0].code);
+        assert.ok(wallet.balances[0].value);
     });
 
     /**
