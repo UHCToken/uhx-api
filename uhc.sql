@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS wallets(
 -- TODO: DETERMINE WHICH OF THESE FIELDS ARE MANDATORY
 CREATE TABLE IF NOT EXISTS users(
 	id uuid NOT NULL DEFAULT uuid_generate_v4(),
-	name VARCHAR(256) NOT NULL,
+	name VARCHAR(256) UNIQUE NOT NULL,
 	password VARCHAR(256) NOT NULL,
 	invalid_login INT NOT NULL DEFAULT 0,
 	last_login TIMESTAMPTZ,
@@ -62,6 +62,32 @@ CREATE TABLE IF NOT EXISTS users(
 	CONSTRAINT pk_users PRIMARY KEY (id),
 	CONSTRAINT fk_users_wallets FOREIGN KEY (wallet_id) REFERENCES wallets(id)
 );
+
+-- REPRESENTS A USER INVITATION TO JOIN THE SERVICE
+CREATE TABLE IF NOT EXISTS invitations (
+    id uuid NOT NULL DEFAULT uuid_generate_v4(),
+    referrer uuid NOT NULL, -- WHO SENT THE INVITE?
+    email VARCHAR(256) NOT NULL, -- THE E-MAIL ADDRESS OF THE invitee
+    given_name VARCHAR(256),
+    family_name VARCHAR(256),
+    tel VARCHAR(256),
+	street VARCHAR(256),
+	unit_suite VARCHAR(128),
+	city VARCHAR(256),
+	state_prov VARCHAR(16),
+	country VARCHAR(2),
+	postal_zip VARCHAR(16),
+    creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	expiration_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP + '7 DAY'::INTERVAL,
+    claim_time TIMESTAMPTZ, -- THE TIME THAT THE INVITE WAS CONSUMED
+    signup_user_id UUID, 
+    CONSTRAINT pk_invitations PRIMARY KEY (id),
+    CONSTRAINT fk_invitations_referrer FOREIGN KEY (referrer) REFERENCES users(id),
+    CONSTRAINT fk_invitations_signup_user FOREIGN KEY (signup_user_id) REFERENCES users(id)
+);
+
+-- INVITATION EMAIL INDEX
+CREATE INDEX ix_invitations_email ON invitations(email);
 
 -- REPRESENTS CLAIMS ABOUT A USER
 CREATE TABLE IF NOT EXISTS user_claims(

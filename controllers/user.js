@@ -38,6 +38,7 @@ class UserApiResource {
     constructor() {
 
     }
+    
     /**
      * @method
      * @summary Get routing information for this class
@@ -75,6 +76,7 @@ class UserApiResource {
             ]
         };
     }
+
     /**
      * @method
      * @summary Creates a new user
