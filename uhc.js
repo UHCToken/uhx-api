@@ -210,8 +210,8 @@
                     throw new exception.BusinessRuleViolationException(new exception.RuleViolation("User already has a wallet", exception.ErrorCodes.DATA_ERROR, exception.RuleViolationSeverity.ERROR));
 
                 // Create a wallet
-                var wallet = await stellarClient.instantiateAccount("2", await repository.walletRepository.get(config.stellar.initiator_wallet_id));
-                
+                var wallet = await stellarClient.generateAccount();
+
                 // Insert 
                 wallet = await repository.walletRepository.insert(wallet, null, _txc);
                 
