@@ -48,6 +48,13 @@ module.exports.AssetApiResource = class AssetApiResource {
                     }
                 },
                 {
+                    "path":"asset/quote",
+                    "get": {
+                        demand: null, 
+                        method: this.quote
+                    }
+                },
+                {
                     "path":"asset/:id",
                     "get": {
                         demand: null, 
@@ -85,5 +92,23 @@ module.exports.AssetApiResource = class AssetApiResource {
         });
         res.status(200).json(await uhc.Repositories.assetRepository.query(assetFilter, req.param("_offset"), req.param("_count")));
         return true;
+        
+    }
+    
+    /**
+     * @method
+     * @summary Retrieves a quote for the specified asset
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to the client
+     */
+    async quote(req, res) {
+
+        if(!req.param("from"))
+            throw new exception.ArgumentException("from");
+        if(!req.param("to"))
+            throw new exception.ArgumentException("to");
+        
+        throw new exception.NotImplementedException();
+
     }
 }

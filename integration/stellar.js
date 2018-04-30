@@ -22,7 +22,9 @@
     model = require("../model/model"),
     Asset = require('../model/Asset'),
     Wallet = require("../model/Wallet"),
-    exception = require('../exception');
+    exception = require('../exception'),
+    Transaction = require('../model/Transaction'),
+    MonetaryAmount = require('../model/MonetaryAmount');
 /**
  * @class
  * @summary Represents a stellar exception
@@ -52,13 +54,15 @@ module.exports = class StellarClient {
      * @param {string} horizonApiBase The horizon API server to use
      * @param {Asset} stellarAsset The asset(s) on which this client will operate
      * @param {boolean} useTestNetwork When true, instructs the client to use the test network
+     * @param {string} feeTarget Identifies the wallet to which any fees collected from the API should be deposited
      */
-    constructor(horizonApiBase, stellarAsset, useTestNetwork) {
+    constructor(horizonApiBase, stellarAsset, useTestNetwork, feeTarget) {
         // "private" members
         if (useTestNetwork){
             Stellar.Network.useTestNetwork()
         }
         
+        this._feeAccount = feeTarget;
         this._asset = stellarAsset;
         this._server = new Stellar.Server(horizonApiBase); 
     }
@@ -91,17 +95,55 @@ module.exports = class StellarClient {
 
     /**
      * @method
-     * @summary Creates a new account on the stellar network
-     * @returns {Wallet} The constructed wallet instance 
+     * @summary Generates a random keypair for an account
+     * @returns {Wallet} The generated wallet object containing the account
+     */
+    async generateAccount() {
+        try {
+            var kp = Stellar.Keypair.random();
+            return new Wallet().copy({
+                address: kp.publicKey(),
+                seed: kp.secret()
+            });
+        }
+        catch(e) {
+            console.error(`Account generation has failed : ${JSON.stringify(e)}`);
+            throw new StellarException(e);
+        }
+    }
+
+    /**
+     * @method
+     * @summary Determines whether the account is active on the stellar network and has minimum balance
+     * @param {Wallet} userWallet The user wallet to determine if is active on stellar network
+     * @returns {boolean} An indication whether the account is active
+     */
+    async isActive(userWallet) {
+
+        try {
+            var acct = await this.server.loadAccount(userWallet.address);
+            return acct.account_id !== null;
+        }
+        catch(e) {
+            console.error(`Account retrieval has failed : ${JSON.stringify(e)}`);
+            throw new StellarException(e);
+        }
+    }
+
+    /**
+     * @method
+     * @summary Activates an account on the stellar network
+     * @returns {Wallet} The constructed wallet instance
+     * @param {Wallet} userWallet The wallet of the user which is to be activated 
      * @param {number} startingBalance The starting balance of the account in lumens
      * @param {Wallet} initiatorWallet The wallet which is creating the account from which the startingBalance should be drawn
      */
-    async instantiateAccount(startingBalance, initiatorWallet) {
+    async activateAccount(userWallet, startingBalance, initiatorWallet) {
 
         try {
 
             // Generate the random KP
-            var kp = Stellar.Keypair.random();
+            var kp = Stellar.Keypair.fromSecret(userWallet.seed);
 
             // Load distribution account from stellar
             // TODO: Perhaps this can be cached?
@@ -109,7 +151,7 @@ module.exports = class StellarClient {
             // Create the new account
             var newAcctTx = new Stellar.TransactionBuilder(distAcct)
                 .addOperation(Stellar.Operation.createAccount({
-                    destination: kp.publicKey(),
+                    destination: userWallet.address,
                     startingBalance: startingBalance // Initial lumen balance from the central distributor ... 
                     // TODO: If we're doing this through a payment gateway, would the fee be used to replenish the distributor account to deposit the lumens?
                 })).build();
@@ -242,14 +284,14 @@ module.exports = class StellarClient {
             // Assess a fee for this transaction?
             if(fee) {
                 var feeAssetType = null;
-                this.assets.foreach((o)=> { if(o.code == amount.code) feeAssetType = o; });
+                this.assets.forEach((o)=> { if(o.code == amount.code) feeAssetType = o; });
 
                 // Asset type not found
                 if(!feeAssetType)
                     throw new exception.NotFoundException("asset", fee.code);
 
                 paymentTx.addOperation(Stellar.Operation.payment({
-                    destination: this._getDistWallet().address,
+                    destination: this._feeAccount,
                     asset: feeAssetType,
                     amount: fee.value
                 }));
@@ -293,6 +335,8 @@ module.exports = class StellarClient {
     async getTransactionHistory(userWallet, filter) {
 
         try {
+
+            filter = filter || {};
             // Load the user's stellar account balances
             userWallet = this.getAccount(userWallet);
 
@@ -304,10 +348,80 @@ module.exports = class StellarClient {
                 .limit(_count)
                 .call();
 
+            var retVal = [], userMap = {};
+
+            do {
+                ledgerTx.records.forEach(async (r) => {
+                    var ops = await r.operations();
+                    
+                    // Loop through operations
+                    ops._embedded.records.forEach(async (o) => {
+                        if(!filter.asset || o.asset_code == filter.asset) {
+                            retVal.push(await this.toTransaction(r, o, userMap));
+                        }
+                    });
+
+                });
+            } while(retVal.length < filter._count && await ledgerTx.next() && ledgerTx.records.length > 0);
+
         }
         catch(e) {
             console.error(`Fetch transaction history has failed: ${JSON.stringify(e)}`);
             throw new StellarException(e);
         }
+    }
+
+
+    /**
+     * @method
+     * @summary Creates a transaction object from a Stellar operation
+     * @param {Transaction} txRecord The transaction record being processed
+     * @param {Operation} opRecord The operation record being processed
+     * @param {*} userMap A map between account IDs and known users that have already been loaded 
+     */
+    async toTransaction(txRecord, opRecord, userMap) {
+
+        // Map type
+        var type = null;
+        switch(opRecord.type) {
+            case "change_trust":
+            case "allow_trust":
+                type = model.TransactionType.Trust;
+                break;
+            case "payment":
+                type = model.TransactionType.Payment;
+                break;
+            case "create_account":
+                type = model.TransactionType.AccountManagement;
+                break;
+        }
+
+        // Payor / payee
+        var payor = userMap[opRecord.funder],
+            payee = userMap[opRecord.receiver];
+
+        // Special case : fees collected
+        var memo = txRecord.memo;
+        if(opRecord.receiver == this._feeAccount)
+            memo = "API USAGE FEE";
+
+        // Load if needed
+        if(payor === undefined)
+            payor = userMap[opRecord.funder] = await uhc.Repositories.userRepository.getByWalletId(opRecord.funder);
+        if(payee === undefined)
+            payee = userMap[opRecord.receiver] = await uhc.Repositories.userRepository.getByWalletId(opRecord.account);
+
+        // Construct tx record
+        return new Transaction(
+            opRecord.id,
+            type, 
+            memo,
+            txRecord.created_at,
+            payor || opRecord.funder, 
+            payee || opRecord.receiver, 
+            new MonetaryAmount(o.amount, o.asset_code),
+            null, 
+            opRecord._links.self                          
+        );
     }
 }

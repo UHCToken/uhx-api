@@ -136,6 +136,16 @@
 
  /**
   * @class
+  * @summary Represents an argument exception
+  */
+ class ArgumentException extends Exception {
+    constructor(argName) {
+        super("Improper argument value for " + argName, ErrorCodes.ARGUMENT_EXCEPTION);
+    }
+ }
+
+ /**
+  * @class
   * @summary Represents a single instance of a rule violation
   */
  class RuleViolation {
@@ -240,3 +250,4 @@ module.exports.NotFoundException = NotFoundException;
 module.exports.NotSupportedException = NotSupportedException;
 module.exports.RuleViolation = RuleViolation;
 module.exports.RuleViolationSeverity = RuleViolationSeverity;
+module.exports.ArgumentException = ArgumentException;

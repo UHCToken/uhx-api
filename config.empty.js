@@ -110,6 +110,10 @@
           */
         initiator_wallet_id: "00000000-0000-0000-0000-000000000000",
         /**
+         * @summary Identifies the target account where fees should be collected
+         */
+        fee_collector: "GB34934894328",
+        /**
           * @summary The determine if this is part of a testnet
           */
         testnet_use: true,
