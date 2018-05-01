@@ -195,7 +195,7 @@
         this._claims = {
             mail: user.email,
             telephoneNumber: user.tel,
-            displayName: user.givenName || user.email
+            displayName: user.givenName ? user.givenName + " " + user.familyName : user.email
         };
 
         this._session = session;
