@@ -29,6 +29,10 @@ const pg = require('pg'),
  /**
   * @class
   * @summary Represents the asset data repository logic
+  * @swagger
+  * tags:
+  *     - name: "invitation"
+  *       description: "Represents a resource which is used to invite users to the UHC service"
   */
  module.exports = class InvitationRepository {
 
