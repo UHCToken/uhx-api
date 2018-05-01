@@ -22,7 +22,7 @@
   security = require('../security'),
   jwt = require('jsonwebtoken');
 
- const TOKEN_TYPE_JWT = "urn:ietf:params:oauth:token-type:jwt";
+ const TOKEN_TYPE_JWT = "bearer";
 
  /**
   * @class

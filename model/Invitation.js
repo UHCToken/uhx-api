@@ -66,7 +66,18 @@ const ModelBase = require('./ModelBase'),
 *             userId:
 *                 type: string
 *                 description: The id of the user that was created when this invitation was claimed
- */
+*             claims:
+*                 description: Additional claims that systems have made about the user
+*                 schema:
+*                     properties:
+*                         key:
+*                             description: The name of the claim
+*                             type: string
+*                         value:
+*                             description: The value of the claim
+*                             type: string
+* 
+*/
 module.exports = class Invitation extends ModelBase {
 
     /**
