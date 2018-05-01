@@ -244,7 +244,7 @@ CREATE TABLE IF NOT EXISTS assets (
     CONSTRAINT fk_asset_updated_by FOREIGN KEY (updated_by) REFERENCES users(id),
     CONSTRAINT fk_asset_deactivated_by FOREIGN KEY (deactivated_by) REFERENCES users(id),
     CONSTRAINT fk_asset_dist_wallet_id FOREIGN KEY (dist_wallet_id) REFERENCES wallets(id)
-)
+);
 
 -- CREATE ADMIN
 INSERT INTO users (id, name, password, email) VALUES ('3c673456-23b1-4263-9deb-df46770852c9', 'admin@test.com',crypt('UniversalHealthCoinAdmin', gen_salt('bf')), 'admin@test.com');
