@@ -26,7 +26,7 @@ const ModelBase = require('./ModelBase'),
  * @summary Represents a group of users 
  * @swagger
  * definitions:
- *  User:
+ *  Group:
  *      properties:
  *          id: 
  *              type: string
@@ -34,22 +34,22 @@ const ModelBase = require('./ModelBase'),
  *          name:
  *              type: string
  *              description: The unique system name for the group
- *           creationTime:
+ *          creationTime:
  *               type: Date
  *               description: The time that this user account was created
- *           createdBy:
+ *          createdBy:
  *              type: string
  *              description: The identifier of the user which created this group
- *           updatedTime:
+ *          updatedTime:
  *               type: Date
  *               description: The time that the user account was last updated
- *           updatedBy:
+ *          updatedBy:
  *              type: string
  *              description: The identifier of the user which created this group
- *           deactivatedTime:
+ *          deactivatedTime:
  *               type: Date
  *               description: The time that the user account did or will become deactivated
- *           deactivatedBy:
+ *          deactivatedBy:
  *               type: Date
  *               description: The time that the user account did or will become deactivated
  */

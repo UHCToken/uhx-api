@@ -45,22 +45,22 @@ const ModelBase = require('./ModelBase');
  *          description: 
  *              type: string
  *              description: The human readable description for the permission
- *           creationTime:
+ *          creationTime:
  *               type: Date
  *               description: The time that this user account was created
- *           createdBy:
+ *          createdBy:
  *              type: string
  *              description: The identifier of the user which created this group
- *           updatedTime:
+ *          updatedTime:
  *               type: Date
  *               description: The time that the user account was last updated
- *           updatedBy:
+ *          updatedBy:
  *              type: string
  *              description: The identifier of the user which created this group
- *           deactivatedTime:
+ *          deactivatedTime:
  *               type: Date
  *               description: The time that the user account did or will become deactivated
- *           deactivatedBy:
+ *          deactivatedBy:
  *               type: Date
  *               description: The time that the user account did or will become deactivated
  */

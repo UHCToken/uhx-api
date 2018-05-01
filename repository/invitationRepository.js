@@ -29,10 +29,6 @@ const pg = require('pg'),
  /**
   * @class
   * @summary Represents the asset data repository logic
-  * @swagger
-  * tags:
-  *     - name: "invitation"
-  *       description: "Represents a resource which is used to invite users to the UHC service"
   */
  module.exports = class InvitationRepository {
 
@@ -64,7 +60,7 @@ const pg = require('pg'),
             if(rdr.rows.length == 0)
                 throw new exception.NotFoundException("invitation", id);
             else 
-                return new Asset().fromData(rdr.rows[0]);
+                return new Invitation().fromData(rdr.rows[0]);
         }
         finally{
             if(!_txc) dbc.end();
@@ -89,7 +85,7 @@ const pg = require('pg'),
             if(rdr.rows.length == 0)
                 throw new exception.NotFoundException("invitation", token);
             else 
-                return new Asset().fromData(rdr.rows[0]);
+                return new Invitation().fromData(rdr.rows[0]);
         }
         finally{
             if(!_txc) dbc.end();

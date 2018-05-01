@@ -243,6 +243,8 @@
      *        enum: 
      *          - password
      *          - refresh_token
+     *          - client_credentials
+     *          - authorization_code
      *      - name: username
      *        description: The e-mail address of the UHC user
      *        in: formData

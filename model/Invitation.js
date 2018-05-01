@@ -21,12 +21,51 @@ const ModelBase = require('./ModelBase'),
     uhc = require('../uhc');
 
 /**
- * @class
- * @summary Represents a single invitation from a user to join UHX
- * @swagger
- * definitions:
- *  Invitation:
- *      properties:
+* @class
+* @summary Represents a single invitation from a user to join UHX
+* @swagger
+* definitions:
+*  Invitation:
+*      properties:
+*             id: 
+*                 type: string
+*                 description: The unique identifier for the invitation
+*             email: 
+*                 type: string
+*                 description: Identifies the e-mail address the invite was sent to
+*             givenName:
+*                 type: string
+*                 description: The invitee's given name
+*             familyName:
+*                 type: string
+*                 description: The invitee's family name
+*             tel:
+*                 type: string
+*                 description: The invitee's primary telephone number
+*             address:
+*                 description: The invitee's primary addrss
+*                 $ref: "#/definitions/Address"
+*             creationTime:
+*                 type: Date
+*                 description: The time that this invite account was created
+*             expirationTime:
+*                 type: Date
+*                 description: The time that the invitation will expire
+*             claimTime:
+*                 type: Date
+*                 description: The time that the invitation was claimed
+*             deactivationTime:
+*                 type: Date
+*                 description: The time that the invitation was rescinded
+*             createdById:
+*                 type: string
+*                 description: The identifier of the user that created the invitation
+*             createdBy:
+*                 $ref: "#/definitions/User"
+*                 description: The user that created the invitation
+*             userId:
+*                 type: string
+*                 description: The id of the user that was created when this invitation was claimed
  */
 module.exports = class Invitation extends ModelBase {
 

@@ -116,6 +116,8 @@ class InvitationApiResource {
      *      security:
      *      - uhc_auth:
      *          - "write:invitation"
+     *      - app_auth:
+     *          - "write:invitation"
      */
     async post(req, res) {
         
@@ -156,7 +158,9 @@ class InvitationApiResource {
      *      security:
      *      - uhc_auth:
      *          - "list:invitation"
-     */
+      *      - app_auth:
+     *          - "list:invitation"
+    */
     async getAll(req, res) {
         throw new exception.NotImplementedException();
     }
@@ -196,6 +200,8 @@ class InvitationApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhc_auth:
+     *          - "read:invitation"
+     *      - app_auth:
      *          - "read:invitation"
      */
     async get(req, res) {
@@ -238,6 +244,8 @@ class InvitationApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhc_auth:
+     *          - "write:invitation"
+     *      - app_auth:
      *          - "write:invitation"
      */
     async delete(req, res) {
