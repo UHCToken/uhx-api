@@ -27,8 +27,7 @@
     User = require('./model/User'),
     crypto = require('crypto'),
     fs = require('fs'),
-    nodemailer = require("nodemailer"),
-    handlebars = require("handlebars");
+    Emailer = require('./integration/email');
 
  const repository = new repositories.UhcRepositories(config.db.server);
  /**
@@ -282,12 +281,72 @@
             // Validate the user
             this.validateUser(user, newPassword);
 
-            // Update the user
-            return await repository.userRepository.update(user, newPassword);
+            return await repository.transaction(async (_txc) => {
+
+                // Get existing user
+                var existingUser = await repository.userRepository.get(user.id);
+
+                // Was the user's e-mail address verified? 
+                if(existingUser.emailVerified && existingUser.email != user.email) {
+
+                    // Undo token
+                    var undoToken = this.generateSignedClaimToken();
+                    await repository.userRepository.addClaim(user.id, {
+                        type: "$undo.email",
+                        value: undoToken,
+                        expiry: new Date(new Date().getTime() + config.security.confirmationValidaty)
+                     }, _txc);
+
+                    // We want to send an e-mail to the previous e-mail address notifying the user of the change
+                    await new Emailer(config.mail.smtp).sendTemplated({
+                        to: existingUser.email,
+                        from: config.mail.from,
+                        subject: "Did you change your e-mail address?",
+                        template: config.mail.templates.emailChange
+                    }, { old: existingUser, new: user, token: undoToken });
+
+                    // TODO: We want to send a confirmation e-mail to the e-mail address
+                    await this.sendConfirmationEmail(user);
+                    user.emailVerified = false;
+                }
+                // Update the user
+                return await repository.userRepository.update(user, newPassword, null, _txc);
+
+            });
         }
         catch(e) {
             console.error("Error updating user: " + e.message);
             throw new exception.Exception("Error updating user", exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
+
+    /**
+     * @method
+     * @summary Sends an e-mail to the user to confirm their e-mail address
+     * @param {User} user The user for which the confirmation e-mail should be sent
+     * @param {*} _txc If the operation is being performed as part of a transaction then this is the transaction
+     */
+    async sendConfirmationEmail(user, _txc) {
+        try {
+            var confirmToken = this.generateSignedClaimToken();
+            await repository.userRepository.addClaim(user.id, {
+                type: "$confirm.email",
+                value: confirmToken,
+                expiry: new Date(new Date().getTime() + config.security.confirmationValidaty)
+            }, _txc);
+
+            // We want to send an e-mail to the previous e-mail address notifying the user of the change
+            await new Emailer(config.mail.smtp).sendTemplated({
+                to: user.email,
+                from: config.mail.from,
+                subject: "Confirm your e-mail address on UHX",
+                template: config.mail.templates.confirmation
+            }, { user: user, token: confirmToken });
+
+        }
+        catch(e) {
+            console.error(`Error sending confirmation e-mail: ${JSON.stringify(e)}`);
+            throw e;
         }
     }
 
@@ -315,6 +374,80 @@
 
     /**
      * @method
+     * @summary Claims an invitation
+     * @param {string} invitationToken The invitation token taken from the user
+     * @param {string} initialPassword The initial password of the user
+     * @returns {User} The created user
+     */
+    async claimInvitation(invitationToken, initialPassword, principal) {
+
+        try {
+
+            // First validate the token
+            var tokenParts = invitationToken.split(".");
+            if(tokenParts.length != 2)
+                throw new exception.ArgumentException("invitationToken");
+            else if(tokenParts[1] != crypto.createHmac('sha256', config.security.hmac256secret).update(tokenParts[0]).digest('hex'))
+                throw new exception.Exception("Token signature does not match", exception.ErrorCodes.SECURITY_ERROR);
+
+            // Fetch the invitation
+            var invitation = await repository.invitationRepository.getByClaimToken(tokenParts[0]);
+
+            // Create a user
+            var user = new User().copy(invitation);
+            user.name = invitation.email;
+            user.emailVerified = true;
+
+            // Validate the user
+            this.validateUser(user, initialPassword);
+
+            // Now a transaction to interact with the DB
+            return await repository.transaction(async (_txc) => {
+
+                // Insert the user and assign to user group
+                user = await repository.userRepository.insert(user, initialPassword, principal, _txc);
+                await repository.groupRepository.addUser(config.security.sysgroups.users, user.id, principal, _txc);
+
+                // Now we want to claim the token
+                await repository.invitationRepository.claim(invitation.id, user, _txc);
+
+                // Now we want to notify the user
+                var sendOptions = {
+                    to: user.email,
+                    from: config.mail.from,
+                    subject: "Welcome to the UHX community!",
+                    template: config.mail.templates.welcome
+                };
+                // Replacements
+                const replacements = {
+                    user: user
+                }
+                await new Emailer(config.mail.smtp).sendTemplated(sendOptions, replacements);
+
+                // Return the user
+                return user;
+            });
+
+        }
+        catch(e) {
+            console.error(`Error claiming invitation: ${JSON.stringify(e)}`);
+            throw new exception.Exception("Error claiming invitation", e.code || exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
+
+    /**
+     * @method
+     * @summary Generates and signs a random token
+     * @returns {string} The generated and signed claim token
+     */
+    generateSignedClaimToken() {
+        var token = crypto.randomBytes(32).toString('hex');
+        var sig = crypto.createHmac('sha256', config.security.hmac256secret).update(token).digest('hex');
+        return token + "." + sig;
+    }
+
+    /**
+     * @method
      * @summary Create an invitation on the data store
      * @param {Invitation} invitation The invitation information that is to be created
      * @param {SecurityPrincipal} clientPrincipal The principal which is creating the invitation
@@ -323,7 +456,7 @@
     async createInvitation(invitation, clientPrincipal) {
 
         try {
-            var claimToken = crypto.randomBytes(32).toString('hex');
+            var claimToken = this.generateSignedClaimToken();
 
             // Verify e-mail address is properly formatted
             if(!invitation.email || !new RegExp(config.security.email_regex).test(invitation.email))
@@ -341,34 +474,24 @@
                 var sendOptions = {
                     to: invitation.email,
                     from: config.mail.from,
-                    subject: "Your wallet is waiting for you on UHX!"
+                    subject: "Your wallet is waiting for you on UHX!",
+                    template: config.mail.templates.invitation
                 };
 
                 // Replacements
                 const replacements = {
                     invitation:invitation,
                     claimToken: claimToken,
-                    claimSig: crypto.createHmac('sha256', config.security.hmac256secret).update(claimToken).digest('hex'),
-                    claimUrl: config.security.invitations.claimUrl,
                     sender: clientPrincipal.session.userId != "00000000-0000-0000-0000-000000000000" ? (await clientPrincipal.session.loadUser()).name : (await clientPrincipal.session.loadApplication()).name
                 }
 
-                // Create e-mails from templates
-                if(fs.existsSync(config.mail.templates.invitation + ".html"))
-                    sendOptions.html = handlebars.compile(fs.readFileSync(config.mail.templates.invitation + ".html").toString("utf-8"))(replacements);
-                if(fs.existsSync(config.mail.templates.invitation + ".txt"))
-                    sendOptions.text = handlebars.compile(fs.readFileSync(config.mail.templates.invitation + ".txt").toString("utf-8"))(replacements);
-
-                var transport = nodemailer.createTransport(config.mail.smtp);
-                await transport.sendMail(sendOptions);
-                console.info(`Invitation has successfully been sent to ${invitation.email}`);
-
+                await new Emailer(config.mail.smtp).sendTemplated(sendOptions, replacements);
                 return invitation;
             });
         }
         catch(e) {
             console.error(`Error finalizing invitation: ${e.message}`);
-            throw new exception.Exception("Error finalizing invitation", exception.ErrorCodes.UNKNOWN, e);
+            throw new exception.Exception("Error finalizing invitation", e.code || exception.ErrorCodes.UNKNOWN, e);
         }
     }
 

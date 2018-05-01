@@ -22,7 +22,8 @@ const pg = require('pg'),
     exception = require('../exception'),
     Group = require('../model/Group'),
     User = require('../model/User'),
-    model = require('../model/model');
+    model = require('../model/model'),
+    security = require('../security');
 
 /**
  * @class

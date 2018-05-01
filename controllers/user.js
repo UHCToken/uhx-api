@@ -189,6 +189,7 @@ class UserApiResource {
     async put(req, res) {
         
         // does the request have a password if so we want to ensure that get's passed
+        req.body.id = req.params.uid;
         res.status(201).json(await uhc.SecurityLogic.updateUser(new model.User().copy(req.body), req.body.password));
         return true;
     }

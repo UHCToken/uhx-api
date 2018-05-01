@@ -102,8 +102,8 @@ module.exports = class PermissionSet extends ModelBase {
     copy(other) {
         this.fromData({});
         for(var p in this)
-            if(!p.startsWith("_"))
-                this[p] = other[p] || this[p];
+            if(!p.startsWith("_") && !(this[p] instanceof Function))
+              this[p] = other[p] || this[p];
         return this;
     }
     /**

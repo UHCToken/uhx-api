@@ -83,8 +83,8 @@
     copy(otherAsset) {
         this.fromData({});
         for(var p in this)
-            if(!p.startsWith("_"))
-                this[p] = otherAsset[p] || this[p];
+           if(!p.startsWith("_") && !(this[p] instanceof Function))
+            this[p] = otherAsset[p] || this[p];
         return this;
     }
 

@@ -68,6 +68,13 @@ class InvitationApiResource {
                         "demand": security.PermissionType.WRITE,
                         "method": this.delete
                     }
+                },
+                {
+                    "path": "invitation/claim",
+                    "post": {
+                        "demand": security.PermissionType.EXECUTE,
+                        "method": this.claim
+                    }
                 }
             ]
         };
@@ -253,6 +260,62 @@ class InvitationApiResource {
         return true;
     }
     
+    /**
+     * @method
+     * @summary Claims the specfied authorization grant and returns a CSRF authorization code which can be used to obtain a session
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to the client
+     * @swagger
+     * /invitation/claim:
+     *  post: 
+     *      tags:
+     *      - "invitation"
+     *      summary: "Claims an invitation token"
+     *      description: "This method will claim an invitation token and create a user"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "code"
+     *        in: "formData"
+     *        description: "The complete claim token for the invitation"
+     *        required: true
+     *        type: string
+     *      - name: "password"
+     *        in: "formData"
+     *        description: "The initial password to set on the user's account"
+     *        required: true
+     *        type: string
+     *      responses:
+     *          201: 
+     *             description: "The invitation was claimed successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/User"
+     *          404: 
+     *             description: "The invitation cannot be found"
+     *             schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - app_auth:
+     *          - "execute:invitation"
+     */
+    async claim(req, res) {
+
+        if(!req.param("code")) // The claim code
+            throw new exception.ArgumentException("code");
+        if(!req.param("password")) // The password to set on the created user instance
+            throw new exception.ArgumentException("password");
+        
+        var user = await uhc.SecurityLogic.claimInvitation(req.param("code"), req.param("password"), req.principal);
+        res.status(201)
+            .set("Location", `${uhc.Config.api.scheme}://${uhc.Config.api.host}:${uhc.Config.api.port}${uhc.Config.api.base}/user/${user.id}`)
+            .json(user);
+        return true;
+    }
+
 }
 
 module.exports.InvitationApiResource = InvitationApiResource;

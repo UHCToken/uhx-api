@@ -140,8 +140,8 @@ module.exports = class Invitation extends ModelBase {
 
         this.fromData({});
         for(var p in this)
-            if(!p.startsWith("_"))
-                this[p] = otherInvitation[p] || this[p];
+        if(!p.startsWith("_") && !(this[p] instanceof Function))
+            this[p] = otherInvitation[p] || this[p];
         return this;
     }
 

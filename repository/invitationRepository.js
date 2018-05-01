@@ -133,12 +133,12 @@ const pg = require('pg'),
     /**
      * @method
      * @summary Claims an invitation for the specified user
-     * @param {Invitation} invitation The unique claim token to be claimed
+     * @param {string} id The unique claim token to be claimed
      * @param {User} user The created user which is claiming this token
      * @param {Client} _txc The client on which transactions should be run
      * @return {Invitation} The user that was created as part of claiming the token
      */
-    async update(invitation, user, _txc) {
+    async claim(id, user, _txc) {
         var dbc = _txc || new pg.Client(this._connectionString);
         try {
             
@@ -148,7 +148,7 @@ const pg = require('pg'),
             if(rdr.rows.length == 0)
                 throw new exception.Exception("Error claiming invitation", exception.ErrorCodes.DATA_ERROR);
             else
-                return invitation.fromData(rdr.rows[0]);
+                return new Invitation().fromData(rdr.rows[0]);
 
         }
         finally {
@@ -172,7 +172,7 @@ const pg = require('pg'),
             if(rdr.rows.length == 0)
                 throw new exception.Exception("Error rescinding invitation", exception.ErrorCodes.DATA_ERROR);
             else
-                return invitation.fromData(rdr.rows[0]);
+                return new Invitation().fromData(rdr.rows[0]);
 
         }
         finally {

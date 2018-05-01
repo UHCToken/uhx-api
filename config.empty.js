@@ -123,11 +123,7 @@
             /**
              * @summary Validity time of invitations
              */
-            validityTime: 604800000,
-            /**
-             * @summary The URL for claiming the token
-             */
-            claimUrl: "http://localhost:4001/auth/claimInvite"
+            validityTime: 604800000
         }
      },
      /**
@@ -180,7 +176,10 @@
         },
         from: "no-reply@domain.com",
         templates: {
-            invitation: "./templates/invitation.html"
+            invitation: "./templates/invitation",
+            welcome: "./templates/welcome",
+            confirmation: "./templates/confirm",
+            emailChange: "./templates/emailChange"
         } 
     }
  }

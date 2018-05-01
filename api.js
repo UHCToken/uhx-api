@@ -150,7 +150,9 @@ class RouteHandler {
                         break;
                     case exception.ErrorCodes.ARGUMENT_EXCEPTION:
                     case exception.ErrorCodes.MISSING_PROPERTY:
+                    case exception.ErrorCodes.RULES_VIOLATION:
                         httpStatusCode = 422;
+                        break;
                     case exception.ErrorCodes.NOT_FOUND:
                         httpStatusCode = 404;
                         break;

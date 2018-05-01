@@ -302,6 +302,8 @@
         case "client_credentials":
           userPrincipal = await uhc.SecurityLogic.establishClientSession(principal, req.param("scope") || "*", req.ip);
           break;
+        case "authorization_code":
+          break;
         default:
           throw new exception.NotSupportedException("Non supported grant type");
       }

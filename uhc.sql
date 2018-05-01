@@ -103,6 +103,8 @@ CREATE TABLE IF NOT EXISTS user_claims(
     CONSTRAINT fk_user_claims_user FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
+CREATE UNIQUE INDEX user_claim_name_value_idx ON user_claims(user_id, claim_type) WHERE expiry IS NULL;
+
 -- REPRESENTS EXTERNAL IDENTITIES 
 CREATE TABLE IF NOT EXISTS user_identity (
     id uuid NOT NULL DEFAULT uuid_generate_v4(),

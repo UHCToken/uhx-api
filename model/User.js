@@ -178,7 +178,7 @@ const uhc = require('../uhc'),
     copy(otherUser) {
         this.fromData({});
         for(var p in this)
-            if(!p.startsWith("_"))
+            if(!p.startsWith("_") && !(this[p] instanceof Function))
                 this[p] = otherUser[p] || this[p];
         return this;
     }
@@ -322,7 +322,7 @@ const uhc = require('../uhc'),
         var retVal = this.stripHiddenFields();
         retVal.externalIds = this._externIds;
         retVal.wallet = this._wallet;
-        retVal.claims = this._claims;
+        retVal.claims = this.stripHiddenFields(this._claims);
         retVal.groups = this._groups;
         return retVal;
     }
