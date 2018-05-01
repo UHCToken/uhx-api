@@ -24,7 +24,11 @@
     security = require('./security'),
     StellarClient = require('./integration/stellar'),
     model = require('./model/model'),
-    User = require('./model/User');
+    User = require('./model/User'),
+    crypto = require('crypto'),
+    fs = require('fs'),
+    nodemailer = require("nodemailer"),
+    handlebars = require("handlebars");
 
  const repository = new repositories.UhcRepositories(config.db.server);
  /**
@@ -45,6 +49,7 @@
         this.createStellarWallet = this.createStellarWalletForUser.bind(this);
         this.updateUser = this.updateUser.bind(this);
         this.validateUser = this.validateUser.bind(this);
+        this.createInvitation = this.createInvitation.bind(this);
     }
     /**
      * @method
@@ -307,6 +312,66 @@
         
         return true;
     }
+
+    /**
+     * @method
+     * @summary Create an invitation on the data store
+     * @param {Invitation} invitation The invitation information that is to be created
+     * @param {SecurityPrincipal} clientPrincipal The principal which is creating the invitation
+     * @returns {Invitation} The created invitation
+     */
+    async createInvitation(invitation, clientPrincipal) {
+
+        try {
+            var claimToken = crypto.randomBytes(32).toString('hex');
+
+            // Verify e-mail address is properly formatted
+            if(!invitation.email || !new RegExp(config.security.email_regex).test(invitation.email))
+                throw new exception.ArgumentException("email");
+            if(!config.security.invitations.enabled)
+                throw new exception.Exception("Invitations are disabled on this server", exception.ErrorCodes.UNAUTHORIZED);
+
+            // Insert the invitation
+            return await repository.transaction(async (_txc) => {
+
+                // First let's insert the data - That is cool 
+                invitation = await repository.invitationRepository.insert(invitation, claimToken, config.security.invitations.validityTime, clientPrincipal, _txc);
+
+                // Next - We want to prepare an e-mail
+                var sendOptions = {
+                    to: invitation.email,
+                    from: config.mail.from,
+                    subject: "Your wallet is waiting for you on UHX!"
+                };
+
+                // Replacements
+                const replacements = {
+                    invitation:invitation,
+                    claimToken: claimToken,
+                    claimSig: crypto.createHmac('sha256', config.security.hmac256secret).update(claimToken).digest('hex'),
+                    claimUrl: config.security.invitations.claimUrl,
+                    sender: clientPrincipal.session.userId != "00000000-0000-0000-0000-000000000000" ? (await clientPrincipal.session.loadUser()).name : (await clientPrincipal.session.loadApplication()).name
+                }
+
+                // Create e-mails from templates
+                if(fs.existsSync(config.mail.templates.invitation + ".html"))
+                    sendOptions.html = handlebars.compile(fs.readFileSync(config.mail.templates.invitation + ".html").toString("utf-8"))(replacements);
+                if(fs.existsSync(config.mail.templates.invitation + ".txt"))
+                    sendOptions.text = handlebars.compile(fs.readFileSync(config.mail.templates.invitation + ".txt").toString("utf-8"))(replacements);
+
+                var transport = nodemailer.createTransport(config.mail.smtp);
+                await transport.sendMail(sendOptions);
+                console.info(`Invitation has successfully been sent to ${invitation.email}`);
+
+                return invitation;
+            });
+        }
+        catch(e) {
+            console.error(`Error finalizing invitation: ${e.message}`);
+            throw new exception.Exception("Error finalizing invitation", exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
+
  }
 
 

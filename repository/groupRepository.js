@@ -156,6 +156,8 @@ module.exports = class GroupRepository {
 
             var dbGroup = group.toData();
             dbGroup.created_by = runAs.session.userId;
+            delete(dbGroup.id);
+            
             var insertCmd = model.Utils.generateInsert(dbGroup, "groups");
 
             const rdr = await dbc.query(insertCmd.sql, insertCmd.args);

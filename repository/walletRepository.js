@@ -130,6 +130,7 @@ const pg = require('pg'),
         try {
             if(!_txc) await dbc.connect();
             var dbWallet = wallet.toData();
+            delete(dbWallet.id);
             var updateCmd = model.Utils.generateInsert(dbWallet, 'wallets');
             const rdr = await dbc.query(updateCmd.sql, updateCmd.args);
             if(rdr.rows.length == 0)

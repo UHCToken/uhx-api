@@ -55,7 +55,15 @@
          /**
           * @summary The base URL on which the API will listen
           */
-         base: "/api/v1"
+         base: "/api/v1",
+         /**
+          * @summary The preferred host to expose to clients
+          */
+         host: "localhost",
+         /**
+          * @summary The preferred scheme
+          */
+         scheme: "http"
      },
      /**
       * @summary Configuration for security parameters
@@ -64,11 +72,11 @@
          /**
           * @summary Default session length for users
           */
-         sessionLength: 3000000,
+         sessionLength: 30000000,
          /**
           * @summary Refresh vailidity in ms
           */
-         refreshValidity: 3000,
+         refreshValidity: 30000000,
          /**
           * @summary Maximum failed login attempts
           */
@@ -86,6 +94,10 @@
          */
         username_regex: /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/g,
         /**
+         * @summary The validation regex for usernames following RFC2822 regex for e-mails
+         */
+        email_regex: /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/g,
+        /**
          * @summary When true, enables cross-origin scripting
          */
         enable_cors: true,
@@ -99,6 +111,23 @@
         sysgroups: {
             "administrators" : "044894bd-084e-47bb-9428-dbd80277614a",
             "users": "330d2fb4-ba61-4b48-a0a1-8162a4708e96"
+        },
+        /**
+         * @summary Configuration options for invitations
+         */
+        invitations : {
+            /**
+             * @summary Whether invitations are allowed on this service
+             */
+            enabled: true,
+            /**
+             * @summary Validity time of invitations
+             */
+            validityTime: 604800000,
+            /**
+             * @summary The URL for claiming the token
+             */
+            claimUrl: "http://localhost:4001/auth/claimInvite"
         }
      },
      /**
@@ -137,5 +166,21 @@
         },
          apis: [ './controllers/*.js', './model/*.js', './exception.js', './api.js' ],
          enabled: true
-     }
+     },
+     /**
+      * @summary Settings for mail which originates from this service
+      */
+     mail: {
+        smtp: {
+            service: 'SendGrid',
+            auth: {
+                user: 'myuser',
+                pass: 'mypass'
+            }
+        },
+        from: "no-reply@domain.com",
+        templates: {
+            invitation: "./templates/invitation.html"
+        } 
+    }
  }

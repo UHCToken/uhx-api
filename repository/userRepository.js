@@ -246,6 +246,7 @@ const pg = require('pg'),
             if(!_txc) await dbc.connect();
 
             var dbUser = user.toData();
+            delete(dbUser.id);
             dbUser.$password = password;
             var updateCmd = model.Utils.generateInsert(dbUser, 'users');
             const rdr = await dbc.query(updateCmd.sql, updateCmd.args);

@@ -66,7 +66,6 @@ CREATE TABLE IF NOT EXISTS users(
 -- REPRESENTS A USER INVITATION TO JOIN THE SERVICE
 CREATE TABLE IF NOT EXISTS invitations (
     id uuid NOT NULL DEFAULT uuid_generate_v4(),
-    referrer uuid NOT NULL, -- WHO SENT THE INVITE?
     email VARCHAR(256) NOT NULL, -- THE E-MAIL ADDRESS OF THE invitee
     given_name VARCHAR(256),
     family_name VARCHAR(256),
@@ -78,16 +77,19 @@ CREATE TABLE IF NOT EXISTS invitations (
 	country VARCHAR(2),
 	postal_zip VARCHAR(16),
     creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID NOT NULL, 
 	expiration_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP + '7 DAY'::INTERVAL,
+    claim_token VARCHAR(256) UNIQUE NOT NULL, -- THE TOKEN TO CLAIM
     claim_time TIMESTAMPTZ, -- THE TIME THAT THE INVITE WAS CONSUMED
+    deactivation_time TIMESTAMPTZ, -- THE TIME THE INVITATION WAS RESCINDED
     signup_user_id UUID, 
     CONSTRAINT pk_invitations PRIMARY KEY (id),
-    CONSTRAINT fk_invitations_referrer FOREIGN KEY (referrer) REFERENCES users(id),
+    CONSTRAINT fk_invitations_created_by FOREIGN KEY (created_by) REFERENCES users(id),
     CONSTRAINT fk_invitations_signup_user FOREIGN KEY (signup_user_id) REFERENCES users(id)
 );
 
 -- INVITATION EMAIL INDEX
-CREATE INDEX ix_invitations_email ON invitations(email);
+CREATE UNIQUE INDEX ix_invitations_email ON invitations(email) WHERE deactivation_time IS NULL;
 
 -- REPRESENTS CLAIMS ABOUT A USER
 CREATE TABLE IF NOT EXISTS user_claims(
@@ -195,6 +197,20 @@ CREATE TABLE IF NOT EXISTS application_permissions (
     CONSTRAINT fk_application_permission_permission_set FOREIGN KEY (permission_set_id) REFERENCES permission_sets(id)
 );
 
+-- ASSOCIATES AN APPLICATION WITH A USER AND THE PERMISSION THEY GRANT TO THAT APPLICATION
+CREATE TABLE IF NOT EXISTS application_user_consent (
+    id UUID NOT NULL DEFAULT uuid_generate_v4(),
+    application_id UUID NOT NULL,
+    user_id UUID NOT NULL,
+    permission_set_id UUID NOT NULL,
+    creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    rescinded_time TIMESTAMPTZ,
+    CONSTRAINT pk_application_user_consent PRIMARY KEY (id),
+    CONSTRAINT fk_application_user_consent_application FOREIGN KEY (application_id) REFERENCES applications(id),
+    CONSTRAINT fk_application_user_consent_user FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_application_user_consent_permission FOREIGN KEY (permission_set_id) REFERENCES permission_sets(id)
+);
+
 -- REPRESENTS A SINGLE SESSION - A SESSION IS A COMBINATION OF A USER USING AN APPLICATION 
 CREATE TABLE IF NOT EXISTS sessions (
     id UUID NOT NULL DEFAULT uuid_generate_v4(),
@@ -251,7 +267,7 @@ INSERT INTO permission_sets (id, name, description, created_by) VALUES ('608844c
 INSERT INTO permission_sets (id, name, description, created_by) VALUES ('20a97388-5b6a-43e7-ac07-911ceee7e0d6', 'contract', 'Access to the CONTRACT resource', '3c673456-23b1-4263-9deb-df46770852c9');
 INSERT INTO permission_sets (id, name, description, created_by) VALUES ('3fc7cbc7-58ca-40fa-9d17-060dbf180e0b', 'group', 'Access to the GROUP resource', '3c673456-23b1-4263-9deb-df46770852c9');
 INSERT INTO permission_sets (id, name, description, created_by) VALUES ('17e4de1c-4fd3-49ea-b394-90ddb5ccac38', 'permission', 'Access to the PERMISSION resource', '3c673456-23b1-4263-9deb-df46770852c9');
-INSERT INTO permission_sets (id, name, description, created_by) VALUES ('76818f0a-2caa-4c46-83f5-064248001821', 'invite', 'Access to the INVITATION resource', '3c673456-23b1-4263-9deb-df46770852c9');
+INSERT INTO permission_sets (id, name, description, created_by) VALUES ('76818f0a-2caa-4c46-83f5-064248001821', 'invitation', 'Access to the INVITATION resource', '3c673456-23b1-4263-9deb-df46770852c9');
 
 -- ASSIGN DEFAULT PERMISSIONS
 

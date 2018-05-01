@@ -24,6 +24,7 @@ const UserRepository = require('./userRepository'),
     PermissionRepository = require('./permissionRepository'),
     GroupRepository = require('./groupRepository'),
     AssetRepository = require('./assetRepository'),
+    InvitationRepository = require('./invitationRepository'),
     pg = require('pg'),
     exception = require('../exception');
 
@@ -40,7 +41,7 @@ class UhcRepositories {
      */
     constructor(connectionString) {
         this.connectionString = connectionString;
-        this.transact = this.transaction.bind(this);
+        this.transaction = this.transaction.bind(this);
     }
 
     /**
@@ -152,6 +153,17 @@ class UhcRepositories {
         if(!this._assetRepository)
             this._assetRepository = new AssetRepository(this.connectionString);
         return this._assetRepository;
+    }
+
+    /**
+     * @property 
+     * @summary Get the invidtation repository
+     * @type {InvitationRepository}
+     */
+    get invitationRepository() {
+        if(!this._invitationRepository)
+            this._invitationRepository = new InvitationRepository(this.connectionString);
+        return this._invitationRepository;
     }
 }
 

@@ -19,17 +19,18 @@
  
 const uhc = require('../uhc'),
     exception = require('../exception'),
-    security = require('../security');
+    security = require('../security'),
+    Invitation = require('../model/Invitation');
 
 /**
  * @class
  * @summary Represents a contract in the system
  * @swagger
  * tags:
- *  - name: "contract"
- *    description: "The contract resource is used to coordinate agreements between two parties in UHC (requests for payment, escrow agreements, recurring transfers, etc.)"
+ *  - name: "invitation"
+ *    description: "The invitation resource represents an invitation to join the UHX network"
  */
-class ContractApiResource {
+class InvitationApiResource {
 
     /**
      * @constructor
@@ -47,7 +48,7 @@ class ContractApiResource {
             "permission_group": "invitation",
             "routes" : [
                 {
-                    "path" : "invite",
+                    "path" : "invitation",
                     "post": {
                         "demand" : security.PermissionType.WRITE,
                         "method" : this.post
@@ -58,14 +59,10 @@ class ContractApiResource {
                     }
                 },
                 {
-                    "path":"invite/:id",
+                    "path":"invitation/:id",
                     "get" :{
                         "demand": security.PermissionType.READ,
                         "method": this.get
-                    },
-                    "put" :{
-                        "demand": security.PermissionType.WRITE,
-                        "method": this.put
                     },
                     "delete" : {
                         "demand": security.PermissionType.WRITE,
@@ -76,6 +73,56 @@ class ContractApiResource {
         };
     }
 
-    // TODO: Write custom authorize method that uses the registration form's invite ID as the session
+    /**
+     * @method
+     * @summary Creates a new invitation
+     * @param {Express.Request} req The HTTP request from the user
+     * @param {Express.Response} res The HTTP response from the user
+     */
+    async post(req, res) {
+        
+        if(!req.body)
+            throw new exception.Exception("Missing payload", exception.ErrorCodes.MISSING_PAYLOAD);
+        
+        var invite = await uhc.SecurityLogic.createInvitation(new Invitation().copy(req.body), req.principal);
+        res.status(201)
+            .set("Location", `${uhc.Config.api.scheme}://${uhc.Config.api.host}:${uhc.Config.api.port}${uhc.Config.api.base}/invitation/${invite.id}`)
+            .json(invite);
+        return true;
+    }
+
+    /**
+     * @method
+     * @summary Gets all invitations
+     * @param {Express.Request} req The HTTP request from the user
+     * @param {Express.Response} res The HTTP response from the user
+     */
+    async getAll(req, res) {
+        throw new exception.NotImplementedException();
+    }
+
+    /**
+     * @method
+     * @summary Gets a specific invitation
+     * @param {Express.Request} req The HTTP request from the user
+     * @param {Express.Response} res The HTTP response from the user
+     */
+    async get(req, res) {
+        res.status(200).json(await uhc.Repositories.invitationRepository.get(req.params.id));
+        return true;
+    }
+
+    /**
+     * @method
+     * @summary Rescinds a particular invitation
+     * @param {Express.Request} req The HTTP request from the user
+     * @param {Express.Response} res The HTTP response from the user
+     */
+    async delete(req, res) {
+        res.status(201).json(await uhc.Repositories.invitationRepository.delete(req.params.id));
+        return true;
+    }
     
 }
+
+module.exports.InvitationApiResource = InvitationApiResource;

@@ -67,6 +67,8 @@
 
             // Set the createdBy
             dbPermission.created_by = runAs.session.userId;
+            delete(dbPermission.id);
+            
             var insertCmd = model.Utils.generateInsert(dbPermission, "permission_set");
             const rdr = await dbc.query(insertCmd.sql, insertCmd.args);
             if(rdr.rows.length == 0)

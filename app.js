@@ -34,6 +34,7 @@
     group = require('./controllers/group'),
     permission = require('./controllers/permission'),
     asset = require('./controllers/asset'),
+    invitation = require('./controllers/invitation'),
     swagger = require('./controllers/js-doc');
     
 
@@ -63,6 +64,8 @@ restApi.addResource(new wallet.WalletApiResource());
 restApi.addResource(new group.GroupApiResource());
 restApi.addResource(new permission.PermissionApiResource());
 restApi.addResource(new asset.AssetApiResource());
+restApi.addResource(new invitation.InvitationApiResource());
+
 // Start REST API
 restApi.start();
 
