@@ -106,13 +106,6 @@ class PurchaseApiResource {
     async getPaymentProvider(req, res) {
         res.status(200).json([
             {
-                "name": "Credit Card",
-                "note": "2 XLM fee (market rate) and a 2.5% processing fee applies",
-                "type": "CreditCard",
-                "description": "Pay with credit card",
-                "currency": "USD"
-            },
-            {
                 "name": "Stellar Lumens",
                 "type": "StellarLumen",
                 "description": "Pay with Lumens",

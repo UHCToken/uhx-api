@@ -43,7 +43,7 @@ module.exports = class MonetaryAmount extends ModelBase {
      */
     constructor(value, code) {
         super();
-        this.code = code == "native" ? "XLM" : code;
+        this.code = code;
         this.value = value;
     }
 

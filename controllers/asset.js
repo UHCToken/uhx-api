@@ -45,11 +45,15 @@ module.exports.AssetApiResource = class AssetApiResource {
                     "get": {
                         demand: null,
                         method: this.getAll
+                    }, 
+                    "post" : {
+                        demand: security.Permission.WRITE,
+                        method: this.post
                     }
                 },
                 {
                     "path":"asset/quote",
-                    "get": {
+                    "post": {
                         demand: null, 
                         method: this.quote
                     }
@@ -59,12 +63,40 @@ module.exports.AssetApiResource = class AssetApiResource {
                     "get": {
                         demand: null, 
                         method: this.get
+                    },
+                    "lock": {
+                        demand: security.PermissionType.EXECUTE | security.PermissionType.WRITE,
+                        method: this.lock
+                    },
+                    "unlock": {
+                        demand: security.PermissionType.EXECUTE | security.PermissionType.WRITE,
+                        method: this.unlock
+                    },
+                    "put": {
+                        demand: security.PermissionType.WRITE,
+                        method: this.put
                     }
                 }
             ]
         }
     }
 
+    async post(req, res) {
+
+    }
+
+    async lock(req, res) {
+
+    }
+
+    async unlock(req, res) {
+
+    }
+
+    async put(req, res) {
+
+    }
+    
     /**
      * @method
      * @summary Gets a single asset type from the database

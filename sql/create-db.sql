@@ -245,6 +245,27 @@ CREATE TABLE IF NOT EXISTS assets (
     CONSTRAINT fk_asset_dist_wallet_id FOREIGN KEY (dist_wallet_id) REFERENCES wallets(id)
 );
 
+-- LINKS ASSETS TO A SCHEDULE WHICH IDENTIFIES FIXED RATES AND LIMITS
+-- EXAMPLES:
+--  (BETWEEN 2018-06-01 AND 2018-06-30) OR (SELL @ 0.2 USD) FROM WALLET AAAAAA
+--  (BETWEEN 2018-07-04 AND 2018-07-31) OR (SELL @ 0.4 USD) FROM WALLET BBBBBB
+CREATE TABLE IF NOT EXISTS asset_distribution (
+    id UUID NOT NULL DEFAULT uuid_generate_v4(),
+    asset_id UUID NOT NULL, -- THE ASSET TYPE
+    start_date DATE NOT NULL, -- THE START DATE OF THE SCHEDULE
+    stop_date DATE, -- THE STOP DATE OF THE SCHEDULE
+    wallet_id UUID NOT NULL, -- THE WALLET FROM WHICH ASSETS SHOULD BE PURCHASED DURING THIS TIME
+    sell NUMERIC(20,5), -- THE OFFER DURING THIS SCHEDULE (IF NULL NO FIXED EXCHANGE) 
+    sell_code VARCHAR(12), -- THE OFFER CODE ()
+    target_bal NUMERIC(20), -- WHEN POPULATED AND START DATE HAS PASSED THE BALANCE OF THE ACCOUNT SHOULD BE X 
+    CONSTRAINT pk_asset_distribution PRIMARY KEY (id),
+    CONSTRAINT fk_asset_distribution_asset FOREIGN KEY (asset_id) REFERENCES assets(id),
+    CONSTRAINT fk_asset_distribution_wallet_id FOREIGN KEY (wallet_id) REFERENCES wallets(id),
+    CONSTRAINT ck_asset_distribution_sell  CHECK (stop_date IS NULL OR stop_date > start_date),
+    CONSTRAINT ck_asset_distribution_sell_code CHECK (sell IS NULL OR sell_code IS NOT NULL)
+);
+
+
 -- CREATE ADMIN
 INSERT INTO users (id, name, password, email) VALUES ('3c673456-23b1-4263-9deb-df46770852c9', 'admin@test.com',crypt('UniversalHealthCoinAdmin', gen_salt('bf')), 'admin@test.com');
 

@@ -29,7 +29,6 @@
     oauth = require('./controllers/oauth'),
     purchase = require('./controllers/purchase'),
     user = require('./controllers/user'),
-    contract = require('./controllers/contract'),
     wallet = require('./controllers/wallet'),
     group = require('./controllers/group'),
     permission = require('./controllers/permission'),
@@ -59,7 +58,6 @@ if(uhc.Config.swagger.enabled) {
 restApi.addResource(new oauth.OAuthTokenService());
 restApi.addResource(new purchase.PurchaseApiResource());
 restApi.addResource(new user.UserApiResource());
-restApi.addResource(new contract.ContractApiResource());
 restApi.addResource(new wallet.WalletApiResource());
 restApi.addResource(new group.GroupApiResource());
 restApi.addResource(new permission.PermissionApiResource());

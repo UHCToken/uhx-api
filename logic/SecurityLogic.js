@@ -47,7 +47,19 @@ const uhc = require('../uhc'),
         this.updateUser = this.updateUser.bind(this);
         this.validateUser = this.validateUser.bind(this);
         this.createInvitation = this.createInvitation.bind(this);
+        this.getStellarClient = this.getStellarClient.bind(this);
     }
+
+    /**
+     * @method
+     * @summary Gets or creates the stellar client
+     */
+    async getStellarClient() {
+        if(!this._stellarClient)
+            this._stellarClient = new StellarClient(uhc.Config.stellar.horizon_server, await uhc.Repositories.assetRepository.query(), uhc.Config.stellar.testnet_use);
+        return this._stellarClient;
+    }
+
     /**
      * @method
      * @summary Authenticates the application
@@ -57,7 +69,7 @@ const uhc = require('../uhc'),
      */
     async authenticateClientApplication(clientId, clientSecret) {
         // Get the application and verify
-        var application = await repository.applicationRepository.getByNameSecret(clientId, clientSecret);
+        var application = await uhc.Repositories.applicationRepository.getByNameSecret(clientId, clientSecret);
         if(application.deactivationTime)
             throw new exception.Exception("Application has been deactivated", exception.ErrorCodes.SECURITY_ERROR);
         await application.loadGrants();
@@ -80,7 +92,7 @@ const uhc = require('../uhc'),
         var application = clientPrincipal.session.application;
 
         try {
-            var user = await repository.userRepository.getByNameSecret(username, password);
+            var user = await uhc.Repositories.userRepository.getByNameSecret(username, password);
             
             // User was successful but their account is still locked
             if(user.lockout > new Date())
@@ -91,7 +103,7 @@ const uhc = require('../uhc'),
         catch(e) {
             console.error("Error performing authentication: " + e.message);
             // Attempt to increment the invalid login count
-            var invalidUser = await repository.userRepository.incrementLoginFailure(username, config.security.maxFailedLogin);
+            var invalidUser = await uhc.Repositories.userRepository.incrementLoginFailure(username, uhc.Config.security.maxFailedLogin);
             if(invalidUser.lockout) 
                 throw new exception.Exception("Account is locked", exception.ErrorCodes.ACCOUNT_LOCKED, e);
             throw e;
@@ -102,11 +114,11 @@ const uhc = require('../uhc'),
             user.invalidLogins = 0;
             user.lastLogin = new Date();
             
-            await repository.userRepository.update(user);
+            await uhc.Repositories.userRepository.update(user);
 
             // Create the session object
-            var session = new model.Session(user, application, scope, config.security.sessionLength, remote_ip);
-            session = await repository.sessionRepository.insert(session);
+            var session = new model.Session(user, application, scope, uhc.Config.security.sessionLength, remote_ip);
+            session = await uhc.Repositories.sessionRepository.insert(session);
             await session.loadGrants();
             return new security.Principal(session);
         }
@@ -126,9 +138,9 @@ const uhc = require('../uhc'),
 
         try {
  
-            var nilUser = await repository.userRepository.get("00000000-0000-0000-0000-000000000000");
-            var session = new model.Session(nilUser, clientPrincipal._session.application, scope, config.security.sessionLength, remoteAddr);
-            session = await repository.sessionRepository.insert(session);
+            var nilUser = await uhc.Repositories.userRepository.get("00000000-0000-0000-0000-000000000000");
+            var session = new model.Session(nilUser, clientPrincipal._session.application, scope, uhc.Config.security.sessionLength, remoteAddr);
+            session = await uhc.Repositories.sessionRepository.insert(session);
             await session.loadGrants();
             return new security.Principal(session);
         }
@@ -152,20 +164,20 @@ const uhc = require('../uhc'),
         var application = clientPrincipal.session.application;
     
         try {
-            var session = await repository.transaction(async (_tx) => {
+            var session = await uhc.Repositories.transaction(async (_tx) => {
 
                 // Get session
-                var session = await repository.sessionRepository.getByRefreshToken(refreshToken, config.security.refreshValidity, _tx);
+                var session = await uhc.Repositories.sessionRepository.getByRefreshToken(refreshToken, uhc.Config.security.refreshValidity, _tx);
                 if(session == null)
                     throw new exception.Exception("Invalid refresh token", exception.ErrorCodes.SECURITY_ERROR);
                 else if(session.applicationId != application.id)
                     throw new exception.Exception("Refresh must be performed by originator", exception.ErrorCodes.SECURITY_ERROR);
                 // Abandon the existing session
-                await repository.sessionRepository.abandon(session.id, _tx);
+                await uhc.Repositories.sessionRepository.abandon(session.id, _tx);
 
                 // Establish a new session
-                return await repository.sessionRepository.insert(
-                    new model.Session(session.userId, session.applicationId, session.audience, config.security.sessionLength, remoteAddr),
+                return await uhc.Repositories.sessionRepository.insert(
+                    new model.Session(session.userId, session.applicationId, session.audience, uhc.Config.security.sessionLength, remoteAddr),
                     null,
                     _tx
                 );
@@ -196,13 +208,16 @@ const uhc = require('../uhc'),
             // Validate the user
             this.validateUser(user, password);
 
-            await repository.transaction(async (_txc) => {
+            await uhc.Repositories.transaction(async (_txc) => {
 
                 // Insert the user
-                var retVal = await repository.userRepository.insert(user, password, null, _txc);
-                await repository.groupRepository.addUser(config.security.sysgroups.users, retVal.id, null, _txc);
+                var stellarClient = await this.getStellarClient();
+                var wallet = await stellarClient.generateAccount();
+                wallet = await uhc.Repositories.walletRepository.insert(wallet, null, _txc);
+                user.walletId = wallet.id;
+                var retVal = await uhc.Repositories.userRepository.insert(user, password, null, _txc);
+                await uhc.Repositories.groupRepository.addUser(uhc.Config.security.sysgroups.users, retVal.id, null, _txc);
                 return retVal;
-
             });
 
             return user;
@@ -222,13 +237,13 @@ const uhc = require('../uhc'),
 
         try {
 
-            return await repository.transact(async (_txc) => {
+            return await uhc.Repositories.transact(async (_txc) => {
                 
                 // Create stellar client
-                var stellarClient = await new StellarClient(config.stellar.horizon_server, await repository.assetRepository.query(), config.stellar.testnet_use);
-
+                var stellarClient = await this.getStellarClient();
+                
                 // Verify user
-                var user = await repository.userRepository.get(userId, _txc);
+                var user = await uhc.Repositories.userRepository.get(userId, _txc);
 
                 // Does user already have wallet?
                 if(!(await user.loadWallet()))
@@ -238,11 +253,11 @@ const uhc = require('../uhc'),
                 var wallet = await stellarClient.generateAccount();
 
                 // Insert 
-                wallet = await repository.walletRepository.insert(wallet, null, _txc);
+                wallet = await uhc.Repositories.walletRepository.insert(wallet, null, _txc);
                 
                 // Update user
                 user.walletId = wallet.id;
-                await repository.userRepository.update(user, null, null, _txc);
+                await uhc.Repositories.userRepository.update(user, null, null, _txc);
 
                 return wallet;
             });
@@ -279,28 +294,28 @@ const uhc = require('../uhc'),
             // Validate the user
             this.validateUser(user, newPassword);
 
-            return await repository.transaction(async (_txc) => {
+            return await uhc.Repositories.transaction(async (_txc) => {
 
                 // Get existing user
-                var existingUser = await repository.userRepository.get(user.id);
+                var existingUser = await uhc.Repositories.userRepository.get(user.id);
 
                 // Was the user's e-mail address verified? 
                 if(existingUser.emailVerified && existingUser.email != user.email) {
 
                     // Undo token
                     var undoToken = this.generateSignedClaimToken();
-                    await repository.userRepository.addClaim(user.id, {
+                    await uhc.Repositories.userRepository.addClaim(user.id, {
                         type: "$undo.email",
                         value: undoToken,
-                        expiry: new Date(new Date().getTime() + config.security.confirmationValidaty)
+                        expiry: new Date(new Date().getTime() + uhc.Config.security.confirmationValidaty)
                      }, _txc);
 
                     // We want to send an e-mail to the previous e-mail address notifying the user of the change
-                    await new Emailer(config.mail.smtp).sendTemplated({
+                    await new Emailer(uhc.Config.mail.smtp).sendTemplated({
                         to: existingUser.email,
-                        from: config.mail.from,
+                        from: uhc.Config.mail.from,
                         subject: "Did you change your e-mail address?",
-                        template: config.mail.templates.emailChange
+                        template: uhc.Config.mail.templates.emailChange
                     }, { old: existingUser, new: user, token: undoToken });
 
                     // TODO: We want to send a confirmation e-mail to the e-mail address
@@ -308,7 +323,7 @@ const uhc = require('../uhc'),
                     user.emailVerified = false;
                 }
                 // Update the user
-                return await repository.userRepository.update(user, newPassword, null, _txc);
+                return await uhc.Repositories.userRepository.update(user, newPassword, null, _txc);
 
             });
         }
@@ -327,18 +342,18 @@ const uhc = require('../uhc'),
     async sendConfirmationEmail(user, _txc) {
         try {
             var confirmToken = this.generateSignedClaimToken();
-            await repository.userRepository.addClaim(user.id, {
+            await uhc.Repositories.userRepository.addClaim(user.id, {
                 type: "$confirm.email",
                 value: confirmToken,
-                expiry: new Date(new Date().getTime() + config.security.confirmationValidaty)
+                expiry: new Date(new Date().getTime() + uhc.Config.security.confirmationValidaty)
             }, _txc);
 
             // We want to send an e-mail to the previous e-mail address notifying the user of the change
-            await new Emailer(config.mail.smtp).sendTemplated({
+            await new Emailer(uhc.Config.mail.smtp).sendTemplated({
                 to: user.email,
-                from: config.mail.from,
+                from: uhc.Config.mail.from,
                 subject: "Confirm your e-mail address on UHX",
-                template: config.mail.templates.confirmation
+                template: uhc.Config.mail.templates.confirmation
             }, { user: user, token: confirmToken });
 
         }
@@ -359,9 +374,9 @@ const uhc = require('../uhc'),
     validateUser(user, password) {
 
         var ruleViolations = [];
-        if(user.name && !new RegExp(config.security.username_regex).test(user.name))
+        if(user.name && !new RegExp(uhc.Config.security.username_regex).test(user.name))
             ruleViolations.push(new exception.RuleViolation("Username format invalid", exception.ErrorCodes.INVALID_USERNAME, exception.RuleViolationSeverity.ERROR));
-        if(password && !new RegExp(config.security.password_regex).test(password))
+        if(password && !new RegExp(uhc.Config.security.password_regex).test(password))
             ruleViolations.push(new exception.RuleViolation("Password does not meet complexity requirements", exception.ErrorCodes.PASSWORD_COMPLEXITY, exception.RuleViolationSeverity.ERROR));
 
         if(ruleViolations.length > 0)
@@ -385,11 +400,11 @@ const uhc = require('../uhc'),
             var tokenParts = invitationToken.split(".");
             if(tokenParts.length != 2)
                 throw new exception.ArgumentException("invitationToken");
-            else if(tokenParts[1] != crypto.createHmac('sha256', config.security.hmac256secret).update(tokenParts[0]).digest('hex'))
+            else if(tokenParts[1] != crypto.createHmac('sha256', uhc.Config.security.hmac256secret).update(tokenParts[0]).digest('hex'))
                 throw new exception.Exception("Token signature does not match", exception.ErrorCodes.SECURITY_ERROR);
 
             // Fetch the invitation
-            var invitation = await repository.invitationRepository.getByClaimToken(tokenParts[0]);
+            var invitation = await uhc.Repositories.invitationRepository.getByClaimToken(tokenParts[0]);
 
             // Create a user
             var user = new User().copy(invitation);
@@ -400,27 +415,27 @@ const uhc = require('../uhc'),
             this.validateUser(user, initialPassword);
 
             // Now a transaction to interact with the DB
-            return await repository.transaction(async (_txc) => {
+            return await uhc.Repositories.transaction(async (_txc) => {
 
                 // Insert the user and assign to user group
-                user = await repository.userRepository.insert(user, initialPassword, principal, _txc);
-                await repository.groupRepository.addUser(config.security.sysgroups.users, user.id, principal, _txc);
+                user = await uhc.Repositories.userRepository.insert(user, initialPassword, principal, _txc);
+                await uhc.Repositories.groupRepository.addUser(uhc.Config.security.sysgroups.users, user.id, principal, _txc);
 
                 // Now we want to claim the token
-                await repository.invitationRepository.claim(invitation.id, user, _txc);
+                await uhc.Repositories.invitationRepository.claim(invitation.id, user, _txc);
 
                 // Now we want to notify the user
                 var sendOptions = {
                     to: user.email,
-                    from: config.mail.from,
+                    from: uhc.Config.mail.from,
                     subject: "Welcome to the UHX community!",
-                    template: config.mail.templates.welcome
+                    template: uhc.Config.mail.templates.welcome
                 };
                 // Replacements
                 const replacements = {
                     user: user
                 }
-                await new Emailer(config.mail.smtp).sendTemplated(sendOptions, replacements);
+                await new Emailer(uhc.Config.mail.smtp).sendTemplated(sendOptions, replacements);
 
                 // Return the user
                 return user;
@@ -440,7 +455,7 @@ const uhc = require('../uhc'),
      */
     generateSignedClaimToken() {
         var token = crypto.randomBytes(32).toString('hex');
-        var sig = crypto.createHmac('sha256', config.security.hmac256secret).update(token).digest('hex');
+        var sig = crypto.createHmac('sha256', uhc.Config.security.hmac256secret).update(token).digest('hex');
         return token + "." + sig;
     }
 
@@ -457,23 +472,23 @@ const uhc = require('../uhc'),
             var claimToken = this.generateSignedClaimToken();
 
             // Verify e-mail address is properly formatted
-            if(!invitation.email || !new RegExp(config.security.email_regex).test(invitation.email))
+            if(!invitation.email || !new RegExp(uhc.Config.security.email_regex).test(invitation.email))
                 throw new exception.ArgumentException("email");
-            if(!config.security.invitations.enabled)
+            if(!uhc.Config.security.invitations.enabled)
                 throw new exception.Exception("Invitations are disabled on this server", exception.ErrorCodes.UNAUTHORIZED);
 
             // Insert the invitation
-            return await repository.transaction(async (_txc) => {
+            return await uhc.Repositories.transaction(async (_txc) => {
 
                 // First let's insert the data - That is cool 
-                invitation = await repository.invitationRepository.insert(invitation, claimToken, config.security.invitations.validityTime, clientPrincipal, _txc);
+                invitation = await uhc.Repositories.invitationRepository.insert(invitation, claimToken, uhc.Config.security.invitations.validityTime, clientPrincipal, _txc);
 
                 // Next - We want to prepare an e-mail
                 var sendOptions = {
                     to: invitation.email,
-                    from: config.mail.from,
+                    from: uhc.Config.mail.from,
                     subject: "Your wallet is waiting for you on UHX!",
-                    template: config.mail.templates.invitation
+                    template: uhc.Config.mail.templates.invitation
                 };
 
                 // Replacements
@@ -483,7 +498,7 @@ const uhc = require('../uhc'),
                     sender: clientPrincipal.session.userId != "00000000-0000-0000-0000-000000000000" ? (await clientPrincipal.session.loadUser()).name : (await clientPrincipal.session.loadApplication()).name
                 }
 
-                await new Emailer(config.mail.smtp).sendTemplated(sendOptions, replacements);
+                await new Emailer(uhc.Config.mail.smtp).sendTemplated(sendOptions, replacements);
                 return invitation;
             });
         }

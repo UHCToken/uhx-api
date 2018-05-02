@@ -22,9 +22,7 @@
     repositories = require('./repository/repository'),
     SecurityLogic = require('./logic/SecurityLogic');
 
- const repository = new repositories.UhcRepositories(config.db.server);
-
  // Exports section
  module.exports.SecurityLogic = new SecurityLogic();
  module.exports.Config = config;
- module.exports.Repositories = repository;
+ module.exports.Repositories = new repositories.UhcRepositories(config.db.server);
