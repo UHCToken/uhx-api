@@ -36,16 +36,23 @@ module.exports = class ModelBase {
      * @summary Strips hidden fields for JSON from instance
      * @returns {*} An instance with all private fields stripped
      */
-    stripHiddenFields() {
+    stripHiddenFields(obj) {
+        obj = obj || this;
         var retVal = {
             $type : this.constructor.name
         };
 
         for(var k in this) 
-            if(!k.startsWith("_"))
+            if(!k.startsWith("_") && !k.startsWith("$"))
                 retVal[k] = this[k];
 
         return retVal;
     }
-
+    
+    /**
+     * @summary Represet this object as JSON
+     */
+    toJSON() {
+        return this.stripHiddenFields();
+    }
 }

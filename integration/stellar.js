@@ -20,7 +20,11 @@
  const Stellar = require('stellar-sdk'),
     uhc = require("../uhc"),
     model = require("../model/model"),
-    exception = require('../exception');
+    Asset = require('../model/Asset'),
+    Wallet = require("../model/Wallet"),
+    exception = require('../exception'),
+    Transaction = require('../model/Transaction'),
+    MonetaryAmount = require('../model/MonetaryAmount');
 /**
  * @class
  * @summary Represents a stellar exception
@@ -48,29 +52,19 @@ module.exports = class StellarClient {
      * @constructor
      * @summary Creates a new stellar client with the specified base API
      * @param {string} horizonApiBase The horizon API server to use
-     * @param {*} stellarAsset The asset(s) on which this client will operate
-     * @param {string} stellarAsset.code The asset code on which the client will operate
-     * @param {string} stellarAsset.issuer The issuer account
-     * @param {Wallet} distAccount The account from which the asset is distributed
+     * @param {Asset} stellarAsset The asset(s) on which this client will operate
      * @param {boolean} useTestNetwork When true, instructs the client to use the test network
+     * @param {string} feeTarget Identifies the wallet to which any fees collected from the API should be deposited
      */
-    constructor(horizonApiBase, stellarAsset, distWallet, useTestNetwork) {
+    constructor(horizonApiBase, stellarAsset, useTestNetwork, feeTarget) {
         // "private" members
-        var _server = new Stellar.Server(horizonApiBase);
         if (useTestNetwork){
             Stellar.Network.useTestNetwork()
         }
-        var _asset = [];
         
-        if(!Array.isArray(stellarAsset))
-            stellarAsset = [stellarAsset];
-        stellarAsset.forEach((o)=>{ _asset.push(new Stellar.Asset(o.code, o.issuer))});
-        
-        var _distWallet = distWallet;
-        this._getAsset = function() { return _asset; }
-        this._getServer = function() { return _server; }
-        this._getDistWallet = function() { return _distWallet; }
-
+        this._feeAccount = feeTarget;
+        this._asset = stellarAsset;
+        this._server = new Stellar.Server(horizonApiBase); 
     }
 
     /**
@@ -88,7 +82,7 @@ module.exports = class StellarClient {
      * @summary Gets the stellar server instance
      * @type {Stellar.Server}
      */
-    get server() { return this._getServer(); }
+    get server() { return this._server; }
 
     /**
      * @property
@@ -96,38 +90,85 @@ module.exports = class StellarClient {
      * @type {Stellar.Asset}
      */
     get assets() { 
-        return !Array.isArray(this._getAsset()) ? [this._getAsset()] : this._getAsset(); 
+        return !Array.isArray(this._asset) ? [this._asset] : this._asset; 
     }
 
     /**
      * @method
-     * @summary Creates a new account on the stellar network
-     * @return {Wallet} The constructed wallet instance 
-     * @param {number} startingBalance The starting balance of the account in lumens
+     * @summary Generates a random keypair for an account
+     * @returns {Wallet} The generated wallet object containing the account
      */
-    async instantiateAccount(startingBalance) {
+    async generateAccount() {
+        try {
+            var kp = Stellar.Keypair.random();
+            return new Wallet().copy({
+                address: kp.publicKey(),
+                seed: kp.secret()
+            });
+        }
+        catch(e) {
+            console.error(`Account generation has failed : ${JSON.stringify(e)}`);
+            throw new StellarException(e);
+        }
+    }
+
+    /**
+     * @method
+     * @summary Determines whether the account is active on the stellar network and has minimum balance
+     * @param {Wallet} userWallet The user wallet to determine if is active on stellar network
+     * @returns {boolean} An indication whether the account is active
+     */
+    async isActive(userWallet) {
 
         try {
-            // Generate the random KP
+            console.info(`isActive(): Loading ${userWallet.address} from Horizon API`);
+            var acct = await this.server.loadAccount(userWallet.address);
+            return acct.account_id !== null;
+        }
+        catch(e) {
+            if(e.data && e.data.status == 404)
+                return false;
+                
+            console.error(`Account retrieval has failed : ${JSON.stringify(e)}`);
+            throw new StellarException(e);
+        }
+    }
 
-            var kp = Stellar.Keypair.random();
+    /**
+     * @method
+     * @summary Activates an account on the stellar network
+     * @returns {Wallet} The constructed wallet instance
+     * @param {Wallet} userWallet The wallet of the user which is to be activated 
+     * @param {number} startingBalance The starting balance of the account in lumens
+     * @param {Wallet} initiatorWallet The wallet which is creating the account from which the startingBalance should be drawn
+     */
+    async activateAccount(userWallet, startingBalance, initiatorWallet) {
+
+        try {
+
+            console.info(`activateAccount(): Activating ${userWallet.address} on Horizon API`);
+
+            // Generate the random KP
+            var kp = Stellar.Keypair.fromSecret(userWallet.seed);
+
             // Load distribution account from stellar
             // TODO: Perhaps this can be cached?
-            var distAcct = await this.server.loadAccount(this._getDistWallet().address);
+            var distAcct = await this.server.loadAccount(initiatorWallet.address);
             // Create the new account
             var newAcctTx = new Stellar.TransactionBuilder(distAcct)
                 .addOperation(Stellar.Operation.createAccount({
-                    destination: kp.publicKey(),
+                    destination: userWallet.address,
                     startingBalance: startingBalance // Initial lumen balance from the central distributor ... 
                     // TODO: If we're doing this through a payment gateway, would the fee be used to replenish the distributor account to deposit the lumens?
                 })).build();
             // Get the source key to create a trust
-            var sourceKey = await Stellar.Keypair.fromSecret(this._getDistWallet().seed);
+            var sourceKey = await Stellar.Keypair.fromSecret(initiatorWallet.seed);
+
             newAcctTx.sign(sourceKey);
             // Submit transaction
             var distResult = await this.server.submitTransaction(newAcctTx);
 
-            console.info(`Account ${kp.publicKey} submitted to Horizon API`);
+            console.info(`activateAccount(): Account ${kp.publicKey()} activated on Horizon API`);
 
             // return 
             return new model.Wallet().copy({
@@ -156,14 +197,16 @@ module.exports = class StellarClient {
             var changeTrustTx = new Stellar.TransactionBuilder(stellarAcct);
 
             // Add trust operations
-            for(var i in this.assets)
+            for(var i in this.assets){
+                console.info(`createTrust(): Creating trust for ${this.assets[i].code} for ${userWallet.address}`);
                 changeTrustTx.addOperation(Stellar.Operation.changeTrust({
-                    asset: this.assets[i],
+                    asset: new Stellar.Asset(this.assets[i].code, this.assets[i]._issuer),
                     source: userWallet.address
                 }));
+            }
 
             // Build the transaction
-            changeTrustTx.build();
+            changeTrustTx = changeTrustTx.build();
 
             // Load signing key
             changeTrustTx.sign(Stellar.Keypair.fromSecret(userWallet.seed));
@@ -171,7 +214,9 @@ module.exports = class StellarClient {
             // Submit transaction
             var distResult = await this.server.submitTransaction(changeTrustTx);
             
-            console.info(`Account ${userWallet.address} trust has been changed to allow ${this.asset.code}`);
+            console.info(`createTrust(): Account ${userWallet.address} trust has been changed`);
+
+            return userWallet;
         }
         catch(e) {
             console.error(`Account changeTrust has failed: ${JSON.stringify(e)}`);
@@ -188,6 +233,9 @@ module.exports = class StellarClient {
      */
     async getAccount(userWallet) {
         try {
+
+            console.info(`getAccount(): Get account ${userWallet.address} from Horizon API`);
+            
             // Load stellar user acct
             var stellarAcct = await this.server.loadAccount(userWallet.address);
 
@@ -196,17 +244,17 @@ module.exports = class StellarClient {
             stellarAcct.balances.forEach((o) => {
                 userWallet.balances.push(new model.MonetaryAmount(
                     this.round(o.balance),
-                    o.asset_type
+                    o.asset_code || o.asset_type
                 ));
             });
 
-            console.info(`Account ${userWallet.address} has been loaded`);
+            console.info(`getAccount(): Account ${userWallet.address} has been loaded from Horizon API`);
             
             // TODO: Should we wrap this?
             return userWallet;
         }
         catch(e) {
-            console.error(`Account changeTrust has failed: ${JSON.stringify(e)}`);
+            console.error(`Account getAccount has failed: ${JSON.stringify(e)}`);
             throw new StellarException(e);
         }
     }
@@ -235,6 +283,9 @@ module.exports = class StellarClient {
             if(!assetType)
                 throw new exception.NotFoundException("asset", amount.code);
 
+            // Asset type
+            assetType = new Stellar.Asset(assetType.code, assetType._issuer);
+
             // Create payment transaction
             var paymentTx = new Stellar.TransactionBuilder(payorStellarAcct)
                 .addOperation(Stellar.Operation.payment({
@@ -246,14 +297,14 @@ module.exports = class StellarClient {
             // Assess a fee for this transaction?
             if(fee) {
                 var feeAssetType = null;
-                this.assets.foreach((o)=> { if(o.code == amount.code) feeAssetType = o; });
+                this.assets.forEach((o)=> { if(o.code == amount.code) feeAssetType = o; });
 
                 // Asset type not found
                 if(!feeAssetType)
                     throw new exception.NotFoundException("asset", fee.code);
 
                 paymentTx.addOperation(Stellar.Operation.payment({
-                    destination: this._getDistWallet().address,
+                    destination: this._feeAccount,
                     asset: feeAssetType,
                     amount: fee.value
                 }));
@@ -297,6 +348,8 @@ module.exports = class StellarClient {
     async getTransactionHistory(userWallet, filter) {
 
         try {
+
+            filter = filter || {};
             // Load the user's stellar account balances
             userWallet = this.getAccount(userWallet);
 
@@ -308,10 +361,80 @@ module.exports = class StellarClient {
                 .limit(_count)
                 .call();
 
+            var retVal = [], userMap = {};
+
+            do {
+                ledgerTx.records.forEach(async (r) => {
+                    var ops = await r.operations();
+                    
+                    // Loop through operations
+                    ops._embedded.records.forEach(async (o) => {
+                        if(!filter.asset || o.asset_code == filter.asset) {
+                            retVal.push(await this.toTransaction(r, o, userMap));
+                        }
+                    });
+
+                });
+            } while(retVal.length < filter._count && await ledgerTx.next() && ledgerTx.records.length > 0);
+
         }
         catch(e) {
             console.error(`Fetch transaction history has failed: ${JSON.stringify(e)}`);
             throw new StellarException(e);
         }
+    }
+
+
+    /**
+     * @method
+     * @summary Creates a transaction object from a Stellar operation
+     * @param {Transaction} txRecord The transaction record being processed
+     * @param {Operation} opRecord The operation record being processed
+     * @param {*} userMap A map between account IDs and known users that have already been loaded 
+     */
+    async toTransaction(txRecord, opRecord, userMap) {
+
+        // Map type
+        var type = null;
+        switch(opRecord.type) {
+            case "change_trust":
+            case "allow_trust":
+                type = model.TransactionType.Trust;
+                break;
+            case "payment":
+                type = model.TransactionType.Payment;
+                break;
+            case "create_account":
+                type = model.TransactionType.AccountManagement;
+                break;
+        }
+
+        // Payor / payee
+        var payor = userMap[opRecord.funder],
+            payee = userMap[opRecord.receiver];
+
+        // Special case : fees collected
+        var memo = txRecord.memo;
+        if(opRecord.receiver == this._feeAccount)
+            memo = "API USAGE FEE";
+
+        // Load if needed
+        if(payor === undefined)
+            payor = userMap[opRecord.funder] = await uhc.Repositories.userRepository.getByWalletId(opRecord.funder);
+        if(payee === undefined)
+            payee = userMap[opRecord.receiver] = await uhc.Repositories.userRepository.getByWalletId(opRecord.account);
+
+        // Construct tx record
+        return new Transaction(
+            opRecord.id,
+            type, 
+            memo,
+            txRecord.created_at,
+            payor || opRecord.funder, 
+            payee || opRecord.receiver, 
+            new MonetaryAmount(o.amount, o.asset_code),
+            null, 
+            opRecord._links.self                          
+        );
     }
 }

@@ -56,7 +56,7 @@ class RouteHandler {
         ];
 
         // First, is the method open?
-        if(!permissionSet || !permissionSet[0] && !permissionSet[1])
+        if(!permissionSet || !permissionSet[1])
             return true;
         else // it isn't and must be authenticated
         {
@@ -150,7 +150,9 @@ class RouteHandler {
                         break;
                     case exception.ErrorCodes.ARGUMENT_EXCEPTION:
                     case exception.ErrorCodes.MISSING_PROPERTY:
+                    case exception.ErrorCodes.RULES_VIOLATION:
                         httpStatusCode = 422;
+                        break;
                     case exception.ErrorCodes.NOT_FOUND:
                         httpStatusCode = 404;
                         break;
@@ -260,19 +262,28 @@ class RouteHandler {
     /**
      * @summary Handler for the options method
      * @swagger
-     * path: /
-     * operations:
-     *  -   httpMethod: OPTIONS
-     *      summary: Returns an OPTIONS statement which contains allowed operations based on current ACL
-     *      notes: When logged in, this service will inform clients which methods they can access based on their ACL
-     *      responseClass: Options
+     * /:
+     *  options:
+     *      summary: Gets the operations uspported on this UHC API instance
+     *      description: "Note: When the session is authenticated this resource will only show routes which the authenticated user has access to"
+     *      responses:
+     *          200:
+     *              description: Options operation was successful
+     *              schema:
+     *                  properties:
+     *                      version:
+     *                          type: string
+     *                          description: The version of the API being reported
+     *                      routes:
+     *                          description: The routing information for the API resources available
+     *                                      
      */
     async options(req, res) {
         try {
             // Get the routes on this service
 
             var retVal = {
-                api_version: "1.0",
+                api_version: "1.0-alpha",
                 routes: []
             };
             this._resources.forEach((o)=>{

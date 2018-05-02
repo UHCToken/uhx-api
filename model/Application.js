@@ -18,7 +18,8 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
- const ModelBase = require('./ModelBase');
+ const ModelBase = require('./ModelBase'),
+    uhc = require('../uhc');
 
 /**
  * @class Application
@@ -70,6 +71,19 @@ module.exports = class Application extends ModelBase {
             name : this.name
             // All time and "by" fields are stripped as they are readonly
         }
+    }
+
+    /**
+     * @summary Load the application grants
+     */
+    async loadGrants() {
+        if(!this._grants) {
+            this._grants = {};
+            var perms = await uhc.Repositories.permissionRepository.getApplicationPermission(this.id);
+            for(var p in perms)
+                this._grants[perms[p].name] = perms[p].grant;
+        }
+        return this._grants;
     }
 
     /**

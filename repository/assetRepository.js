@@ -20,13 +20,14 @@
  
 const pg = require('pg'),
     exception = require('../exception'),
-    model = require('../model/model');
+    model = require('../model/model'),
+    Asset = require('../model/Asset');
 
  /**
   * @class
-  * @summary Represents the user repository logic
+  * @summary Represents the asset data repository logic
   */
- module.exports = class ApplicationRepository {
+ module.exports = class AsssetRepository {
 
     /**
      * @constructor
@@ -36,54 +37,63 @@ const pg = require('pg'),
     constructor(connectionString) {
         this._connectionString = connectionString;
         this.get = this.get.bind(this);
-        this.getByNameSecret = this.getByNameSecret.bind(this);
     }
 
     /**
      * @method
-     * @summary Retrieve a specific user from the database
-     * @param {uuid} id Gets the specified session
-     * @param {Client} _txc The postgresql connection with an active transaction to run in
-     * @returns {Application} The fetched application
+     * @summary Gets the specified asset by ID
+     * @param {string} id The id of the asset to get
+     * @param {Client} _txc When present, the database transaction to use
+     * @returns {Asset} The asset with identifier matching
      */
     async get(id, _txc) {
-
-        const dbc = _txc || new pg.Client(this._connectionString);
+        var dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM applications WHERE id = $1", [id]);
+
+            // Get by ID
+            var rdr = await dbc.query("SELECT * FROM assets WHERE id = $1", [id]);
             if(rdr.rows.length == 0)
-                throw new exception.NotFoundException('applications', id);
-            else
-                return new model.Application().fromData(rdr.rows[0]);
+                throw new exception.NotFoundException("asset", id);
+            else 
+                return new Asset().fromData(rdr.rows[0]);
         }
-        finally {
+        finally{
             if(!_txc) dbc.end();
         }
-
     }
 
     /**
      * @method
-     * @summary Get the application information by using the id and secret
-     * @param {string} clientId The identifier of the client 
-     * @param {string} clientSecret The secret for the client
-     * @returns {Application} The fetched application
+     * @summary Get the specified asset by code
+     * @param {Asset} filter The filter to query on
+     * @param {number} offset The offset to start filter on
+     * @param {number} count The number of results to return
+     * @param {Client} _txc When present, the database transaction to use
+     * @return {Asset} The asset with the matching code
      */
-    async getByNameSecret(clientId, clientSecret, _txc) {
-        
-        const dbc = _txc || new pg.Client(this._connectionString);
+    async query(filter, offset, count, _txc) {
+
+        var dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
 
-            const rdr = await dbc.query("SELECT * FROM applications WHERE name = $1 AND secret = crypt($2, secret)", [ clientId, clientSecret ]);
-            if(rdr.rows.length == 0)
-                throw new exception.NotFoundException("application", clientId);
-            else
-                return new model.Application().fromData(rdr.rows[0]);
+            var dbFilter = {};
+            // User supplied filter
+            if(filter) {
+                dbFilter = filter.toData();
+                if(!filter.deactivationTime)
+                    dbFilter.deactivation_time = filter.deactivationTime;
+            }
+            var selectCmd = model.Utils.generateSelect(dbFilter, "assets", offset, count);
+            var rdr = await dbc.query(selectCmd.sql, selectCmd.args);
+            var retVal = [];
+            for(var r in rdr.rows)
+                retVal.push(new Asset().fromData(rdr.rows[r]));
+            return retVal;
         }
-        finally {
+        finally{
             if(!_txc) dbc.end();
         }
     }
- }
+}

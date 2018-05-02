@@ -18,33 +18,22 @@
  */
 
 
-const ModelBase = require('./ModelBase');
+const ModelBase = require('./ModelBase'),
+    uhc = require('../uhc');
 
 /**
  * @class
- * @summary Represents a permission set
- * @property {string} id The identifier for the permission set
- * @property {string} name The unique name for the permission set
- * @property {string} description The description of the permission set
- * @property {Date} creationTime The time that the user was created
- * @property {string} createdBy The user that created the application
- * @property {Date} updatedTime The time that the user was updated
- * @property {string} updatedBy The user that updated  the application
- * @property {Date} deactivatedTime The time that the user was deactivated
- * @property {string} deactivatedBy The user that deactivated the application
+ * @summary Represents a group of users 
  * @swagger
  * definitions:
- *  Permission:
+ *  Group:
  *      properties:
  *          id: 
  *              type: string
- *              description: The unique identifier for the permission
+ *              description: The unique identifier for the group
  *          name:
  *              type: string
- *              description: The unique system name for the permission
- *          description: 
- *              type: string
- *              description: The human readable description for the permission
+ *              description: The unique system name for the group
  *          creationTime:
  *               type: Date
  *               description: The time that this user account was created
@@ -64,59 +53,45 @@ const ModelBase = require('./ModelBase');
  *               type: Date
  *               description: The time that the user account did or will become deactivated
  */
-module.exports = class PermissionSet extends ModelBase {
+module.exports = class Group extends ModelBase{
 
     /**
      * @constructor
-     * @summary Creates a new permission set instance
+     * @summary Constructs a new instance of the group class
      */
-    constructor () {
+    constructor() {
         super();
         this.fromData = this.fromData.bind(this);
         this.toData = this.toData.bind(this);
     }
-    
+
     /**
-     * 
-     * @param {*} dbPermission The database permission from which to construct this instance
+     * @method
+     * @summary Converts a data representation of a group to a structure in this instance
+     * @param {*} dbGroup The data representation of the group
      */
-    fromData(dbPermission) {
-        this.id = dbPermission.id;
-        this.name = dbPermission.name;
-        this.description = dbPermission.description;
-        this.creationTime = dbPermission.creation_time;
-        this.createdBy = dbPermission.created_by;
-        this.updatedTime = dbPermission.updated_time;
-        this.updatedBy = dbPermission.updated_by;
-        this.deactivationTime = dbPermission.deactivation_time;
-        this.deactivatedBy = dbPermission.deactivated_by;
+    fromData(dbGroup) {
+        this.id = dbGroup.id;
+        this.name = dbGroup.name;
+        this.creationTime = dbGroup.creation_time;
+        this.createdBy = dbGroup.created_by;
+        this.updatedTime = dbGroup.updated_time;
+        this.updatedBy = dbGroup.updated_by;
+        this.deactivationTime = dbGroup.deactivation_time;
+        this.deactivatedBy = dbGroup.deactivated_by;
         return this;
     }
 
     /**
      * @method
-     * @summary Copy this instance's property values from another instance
-     * @param {PermissionSet} other The other permission set instance to copy from
-     * @returns {PermissionSet} This instance of the permission set with the copied values
-     */
-    copy(other) {
-        this.fromData({});
-        for(var p in this)
-            if(!p.startsWith("_") && !(this[p] instanceof Function))
-              this[p] = other[p] || this[p];
-        return this;
-    }
-    /**
-     * @method
-     * @summary Creates an instance of the application in data layer structure
+     * @summary Converts this representation of a group to a data structure
      */
     toData() {
         return {
-            id : this.id,
-            name : this.name,
-            description: this.description
-            // All time and "by" fields are stripped as they are readonly
-        }
+            id: this.id,
+            name: this.name
+            // No tracking properties are updated here.
+        };
     }
 
 }

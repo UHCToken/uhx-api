@@ -36,8 +36,9 @@ module.exports = class Session extends ModelBase {
      * @param {User} user The user to construct the session from (or the id of the user)
      * @param {Application} application The application to construct the session from (or the id of application)
      * @param {number} expiry The expiration time
+     * @param {string} remoteAddr The remote address of the client
      */
-    constructor(user, application, scope, sessionLength) {
+    constructor(user, application, scope, sessionLength, remoteAddr) {
 
         super();
 
@@ -51,6 +52,7 @@ module.exports = class Session extends ModelBase {
         this._user = user.id ? user : null;
         this.audience = scope;
         this._application = application.id ? application : null;
+        this.remoteAddr = remoteAddr;
     }
 
     /**
@@ -65,6 +67,7 @@ module.exports = class Session extends ModelBase {
         this.audience = dbSession.scope;
         this.notBefore = dbSession.not_before;
         this.notAfter = dbSession.not_after;
+        this.remoteAddr = dbSession.ip_addr;
         return this;
     }
 
@@ -80,6 +83,7 @@ module.exports = class Session extends ModelBase {
             scope: this.audience,
             not_before: this.notBefore,
             not_after: this.notAfter,
+            ip_addr: this.remoteAddr,
             $refresh_token: this._refreshToken
         };
     }
@@ -148,16 +152,24 @@ module.exports = class Session extends ModelBase {
         if(!this._grants) {
             this._grants = {};
 
-            // Fetch from the user and application objects
-            var usrPerms = await uhc.Repositories.permissionRepository.getUserPermission(this.userId);
-            for(var p in usrPerms)
-                this._grants[usrPerms[p].name] = usrPerms[p].grant;
-            
-            var appPerms = await uhc.Repositories.permissionRepository.getApplicationPermission(this.applicationId);
-            for(var p in appPerms) {
-                var gp = this._grants[appPerms[p].name];
-                if(gp)
-                    this._grants[appPerms[p].name] &= appPerms[p].grant;
+            // User is NIL_USER so use app
+            if(this.userId == "00000000-0000-0000-0000-000000000000") {
+                var appPerms = await uhc.Repositories.permissionRepository.getApplicationPermission(this.applicationId, true);
+                for(var p in appPerms)
+                    this._grants[appPerms[p].name] = appPerms[p].grant;
+            }
+            else {
+                // Fetch from the user and application objects
+                var usrPerms = await uhc.Repositories.permissionRepository.getUserPermission(this.userId);
+                for(var p in usrPerms)
+                    this._grants[usrPerms[p].name] = usrPerms[p].grant;
+                
+                var appPerms = await uhc.Repositories.permissionRepository.getApplicationPermission(this.applicationId);
+                for(var p in appPerms) {
+                    var gp = this._grants[appPerms[p].name];
+                    if(gp)
+                        this._grants[appPerms[p].name] &= appPerms[p].grant;
+                }
             }
 
             // Now we XRef with scope

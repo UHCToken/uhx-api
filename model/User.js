@@ -97,6 +97,26 @@ const uhc = require('../uhc'),
   *             deactivatedTime:
   *                 type: Date
   *                 description: The time that the user account did or will become deactivated
+  *             wallet: 
+  *                 $ref: "#/definitions/Wallet"
+  *                 description: The wallet information for the user
+  *             groups:
+  *                 $ref: "#/definitions/Group"
+  *                 description: "The groups to which the user belongs"
+  *             externalIds:
+  *                 description: Systems for which the user has an external login registered
+  *                 type: string
+  *             claims:
+  *                 description: Additional claims that systems have made about the user
+  *                 schema:
+  *                     properties:
+  *                         key:
+  *                             description: The name of the claim
+  *                             type: string
+  *                         value:
+  *                             description: The value of the claim
+  *                             type: string
+  * 
   *     Address:
   *         properties:
   *             street:
@@ -130,7 +150,8 @@ const uhc = require('../uhc'),
         this.fromData = this.fromData.bind(this);
         this.toData = this.toData.bind(this);
         this.copy = this.copy.bind(this);
-
+        this.loadGroups = this.loadGroups.bind(this);
+        this.loadClaims = this.loadClaims.bind(this);
         this._externIds = [];
     }
 
@@ -144,6 +165,20 @@ const uhc = require('../uhc'),
         this.fromData({});
         for(var p in this)
             if(!p.startsWith("_"))
+                this[p] = otherUser[p] || this[p];
+        return this;
+    }
+
+    /** 
+     * @method
+     * @summary Copy all the values from otherUser into this user
+     * @returns {User} This user with copied fields
+     * @param {User} otherUser The user from which the values for this user should be copied
+     */
+    copy(otherUser) {
+        this.fromData({});
+        for(var p in this)
+            if(!p.startsWith("_") && !(this[p] instanceof Function))
                 this[p] = otherUser[p] || this[p];
         return this;
     }
@@ -227,7 +262,7 @@ const uhc = require('../uhc'),
      */
     async loadExternalIds() {
         if(!this._externIds)
-            this._externIds = await uhc.Repositories.userRepository.getExternalIdentities(this);
+            this._externIds = await uhc.Repositories.userRepository.getExternalIds(this);
         return this._externIds;
     }
 
@@ -236,9 +271,20 @@ const uhc = require('../uhc'),
      * @summary Prefetch user's wallet information
      */
     async loadWallet() {
-//      if(!this._wallet)
-//            this._wallet = await uhc.Repositories.walletRepository.get(this.walletId);
+      if(!this._wallet)
+            this._wallet = await uhc.Repositories.walletRepository.get(this.walletId);
         return this._wallet;
+    }
+
+    /**
+     * @method
+     * @summary Load the groups and return them if needed
+     * @returns {Group} The loaded groups to which the user belongs
+     */
+    async loadGroups() {
+        if(!this._groups)
+            this._groups = await uhc.Repositories.groupRepository.getByUserId(this.id);
+        return this._groups;
     }
 
     /**
@@ -246,11 +292,26 @@ const uhc = require('../uhc'),
      * @property
      */
     get groups() {
-        if(this._groups)
-            return this._groups;
-        else {
-            // load groups here
-        }
+        return this._groups;
+    }
+
+    /**
+     * @summary Get the claims for the user
+     * @return {*} The claims for the user
+     */
+    async loadClaims() {
+        if(!this._claims)
+            this._claims = await uhc.Repositories.userRepository.getClaims(this.id);
+        return this._claims;
+    }
+
+    /**
+     * @property
+     * @summary Get the claims for the user
+     * @type {*}
+     */
+    get claims() {
+        return this._claims;
     }
 
     /**
@@ -261,6 +322,8 @@ const uhc = require('../uhc'),
         var retVal = this.stripHiddenFields();
         retVal.externalIds = this._externIds;
         retVal.wallet = this._wallet;
+        retVal.claims = this.stripHiddenFields(this._claims);
+        retVal.groups = this._groups;
         return retVal;
     }
 

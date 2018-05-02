@@ -77,14 +77,22 @@ module.exports = class ModelUtil {
                 if(dbModel[k] == "null")
                     whereClause += `${k} IS NULL AND `;
                 else {
-                    whereClause += `${k} = $${parmId++} AND `;
+                    var op = "=";
+                    if(dbModel[k].indexOf("*") > -1)
+                    {
+                        op = "ILIKE";
+                        dbModel[k] = dbModel[k].replace('*', '%');
+                    }
+                    whereClause += `${k} ${op} $${parmId++} AND `;
                     parameters.push(dbModel[k]);
                 }
             }
             
         // Strip last AND
         if(whereClause.endsWith("AND "))
-            whereClause = whereClause.substring(0, whereClause.length - 4);
+            whereClause = "WHERE " + whereClause.substring(0, whereClause.length - 4);
+        else if(whereClause.trim() == "")
+            whereClause = "";
 
         var control = "";
         if(offset)
@@ -93,7 +101,7 @@ module.exports = class ModelUtil {
             control += `LIMIT ${count} `;
 
         return {
-            sql: `SELECT * FROM ${tableName} WHERE ${whereClause} ${control}`,
+            sql: `SELECT * FROM ${tableName} ${whereClause} ${control}`,
             args : parameters
         };
     }

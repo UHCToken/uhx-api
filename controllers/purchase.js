@@ -25,7 +25,7 @@ const uhc = require('../uhc'),
  * @class
  * @summary Represents a user payment service
  */
-class FiatApiResource {
+class PurchaseApiResource {
 
     /**
      * @constructor
@@ -39,10 +39,10 @@ class FiatApiResource {
      */
     get routes() {
         return {
-            "permission_group": "fiat",
+            "permission_group": "purchase",
             "routes" : [
                 {
-                    "path" : "user/:uid/fiat",
+                    "path" : "user/:uid/purchase",
                     "post": {
                         "demand" : security.PermissionType.WRITE,
                         "method" : this.post
@@ -53,10 +53,17 @@ class FiatApiResource {
                     }
                 },
                 {
-                    "path":"user/:uid/fiat/:pid",
+                    "path":"user/:uid/purchase/:pid",
                     "get" :{
                         "demand": security.PermissionType.READ,
                         "method": this.get
+                    }
+                },
+                {
+                    "path":"paymentMethod",
+                    "get": {
+                        "demand": null,
+                        "method": this.getPaymentProvider
                     }
                 }
             ]
@@ -83,14 +90,39 @@ class FiatApiResource {
     /**
      * @method
      * @summary Get a single payment posted to a user's account
-     * @param {Express.Reqeust} req The request from the client 
+     * @param {Express.Request} req The request from the client 
      * @param {Express.Response} res The response from the client
      */
     async get(req, res) {
         throw new exception.NotImplementedException();
     }
 
+    /**
+     * @method
+     * @summary Get the payment methods allowed on this service
+     * @param {Express.Request} req The request from the client 
+     * @param {Express.Response} res The response from the client
+     */
+    async getPaymentProvider(req, res) {
+        res.status(200).json([
+            {
+                "name": "Credit Card",
+                "note": "2 XLM fee (market rate) and a 2.5% processing fee applies",
+                "type": "CreditCard",
+                "description": "Pay with credit card",
+                "currency": "USD"
+            },
+            {
+                "name": "Stellar Lumens",
+                "type": "StellarLumen",
+                "description": "Pay with Lumens",
+                "note": "Your UHX account must contain 2 XLM for transaction processing, if you use this option you should transfer an extra 2 XLM to your account",
+                "currency": "XLM"
+            }
+        ]);
+        return true;
+    }
 }
 
 // Module exports
-module.exports.FiatApiResource = FiatApiResource;
+module.exports.PurchaseApiResource = PurchaseApiResource;

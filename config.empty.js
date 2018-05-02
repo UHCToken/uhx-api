@@ -55,7 +55,15 @@
          /**
           * @summary The base URL on which the API will listen
           */
-         base: "/api/v1"
+         base: "/api/v1",
+         /**
+          * @summary The preferred host to expose to clients
+          */
+         host: "localhost",
+         /**
+          * @summary The preferred scheme
+          */
+         scheme: "http"
      },
      /**
       * @summary Configuration for security parameters
@@ -64,11 +72,11 @@
          /**
           * @summary Default session length for users
           */
-         sessionLength: 3000000,
+         sessionLength: 30000000,
          /**
           * @summary Refresh vailidity in ms
           */
-         refreshValidity: 3000,
+         refreshValidity: 30000000,
          /**
           * @summary Maximum failed login attempts
           */
@@ -86,31 +94,51 @@
          */
         username_regex: /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/g,
         /**
+         * @summary The validation regex for usernames following RFC2822 regex for e-mails
+         */
+        email_regex: /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/g,
+        /**
          * @summary When true, enables cross-origin scripting
          */
         enable_cors: true,
         /**
          * @summary The URI of the token service when sending WWW-Authenticate headers
          */
-        tokenServiceUri: "http://localhost:4001/api/v1/auth/oauth2_token"
+        tokenServiceUri: "http://localhost:4001/api/v1/auth/oauth2_token",
+        /**
+         * @summary Specifies the constants for system groups
+         */
+        sysgroups: {
+            "administrators" : "044894bd-084e-47bb-9428-dbd80277614a",
+            "users": "330d2fb4-ba61-4b48-a0a1-8162a4708e96"
+        },
+        /**
+         * @summary Configuration options for invitations
+         */
+        invitations : {
+            /**
+             * @summary Whether invitations are allowed on this service
+             */
+            enabled: true,
+            /**
+             * @summary Validity time of invitations
+             */
+            validityTime: 604800000
+        }
      },
      /**
       * @summary Configuration settings related to interaction with the stellar network
       */
      stellar: {
          /**
-          * @summary The issuer public key
+          * @summary The wallet from which the initial balance of XLM should be retrieved
           */
-         issuer: "GBXXXXXX",
-         /**
-          * @summary The wallet / username from which tokens are issued
-          */
-         distribution_wallet: "Dist",
+        initiator_wallet_id: "00000000-0000-0000-0000-000000000000",
         /**
-          * @summary The wallet id from which tokens are issued
-          */
-         distribution_wallet_id: "XXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX",
-         /**
+         * @summary Identifies the target account where fees should be collected
+         */
+        fee_collector: "GB34934894328",
+        /**
           * @summary The determine if this is part of a testnet
           */
         testnet_use: true,
@@ -132,7 +160,26 @@
          basePath: "/api/v1",
          swagger: "2.0"
         },
-         apis: [ './controllers/*.js', './model/*.js', './exception.js' ],
+         apis: [ './controllers/*.js', './model/*.js', './exception.js', './api.js' ],
          enabled: true
-     }
+     },
+     /**
+      * @summary Settings for mail which originates from this service
+      */
+     mail: {
+        smtp: {
+            service: 'SendGrid',
+            auth: {
+                user: 'myuser',
+                pass: 'mypass'
+            }
+        },
+        from: "no-reply@domain.com",
+        templates: {
+            invitation: "./templates/invitation",
+            welcome: "./templates/welcome",
+            confirmation: "./templates/confirm",
+            emailChange: "./templates/emailChange"
+        } 
+    }
  }

@@ -39,6 +39,11 @@
                 type: "oauth2",
                 flow: "password",
                 tokenUrl: uhc.Config.security.tokenServiceUri
+            },
+            "app_auth" : {
+                type: "oauth2",
+                flow: "application",
+                tokenUrl: uhc.Config.security.tokenServiceUri
             }
         };
         
@@ -78,12 +83,16 @@
             this._spec.securityDefinitions.uhc_auth.scopes = {
                 "*" : "all permissions for user"
             };
+            this._spec.securityDefinitions.app_auth.scopes = {
+                "*" : "all permissions for application"
+            };
 
             var permissions = await uhc.Repositories.permissionRepository.getAll();
             permissions.forEach((o) => {
                 Object.keys(security.PermissionType).forEach((p) => {
                     if(p == "OWNER" || p == "RWX") return;
                     this._spec.securityDefinitions.uhc_auth.scopes[p.toLowerCase() + ":" + o.name] = p + " " + o.description; 
+                    this._spec.securityDefinitions.app_auth.scopes[p.toLowerCase() + ":" + o.name] = p + " " + o.description; 
 
                 });
             });

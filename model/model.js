@@ -39,7 +39,8 @@ const TransactionType = {
     Payment : 1,
     Trust : 2, 
     Refund : 3,
-    Deposit: 4
+    Deposit: 4,
+    AccountManagement: 5
 };
 
 /**
