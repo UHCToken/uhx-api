@@ -38,6 +38,7 @@ class UserApiResource {
     constructor() {
 
     }
+
     /**
      * @method
      * @summary Get routing information for this class
@@ -64,17 +65,18 @@ class UserApiResource {
                         "method": this.get
                     },
                     "put" : {
-                        "demand": security.PermissionType.WRITE,
+                        "demand": security.PermissionType.WRITE | security.PermissionType.READ,
                         "method": this.put
                     },
                     "delete" : {
-                        "demand":security.PermissionType.WRITE,
+                        "demand":security.PermissionType.WRITE | security.PermissionType.READ,
                         "method": this.delete
                     }
                 }
             ]
         };
     }
+
     /**
      * @method
      * @summary Creates a new user
@@ -187,6 +189,7 @@ class UserApiResource {
     async put(req, res) {
         
         // does the request have a password if so we want to ensure that get's passed
+        req.body.id = req.params.uid;
         res.status(201).json(await uhc.SecurityLogic.updateUser(new model.User().copy(req.body), req.body.password));
         return true;
     }
@@ -231,6 +234,7 @@ class UserApiResource {
         var user = await uhc.Repositories.userRepository.get(req.params.uid);
         await user.loadWallet();
         await user.loadExternalIds();
+        await user.loadClaims();
         res.status(200).json(user);
         return true;
     }
@@ -353,7 +357,7 @@ class UserApiResource {
         res.status(201).json(await uhc.Repositories.userRepository.delete(req.param("uid")));
         return true;
     }
-    
+
     /**
      * @method
      * @summary Determines additional access control on the user resource

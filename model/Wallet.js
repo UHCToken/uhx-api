@@ -103,6 +103,7 @@ module.exports = class Wallet extends ModelBase {
         this.id = otherWallet.id;
         this.balances = otherWallet.balances;
         this.transactions = otherWallet.transactions;
+        return this;
     }
 
     /**

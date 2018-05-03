@@ -73,15 +73,18 @@ const pg = require('pg'),
      * @return {Asset} The asset with the matching code
      */
     async query(filter, offset, count, _txc) {
+
         var dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
 
-            // Get by ID
-            var dbFilter = filter.toData();
-            if(!filter.deactivationTime)
-                dbFilter.deactivation_time = filter.deactivationTime;
-
+            var dbFilter = {};
+            // User supplied filter
+            if(filter) {
+                dbFilter = filter.toData();
+                if(!filter.deactivationTime)
+                    dbFilter.deactivation_time = filter.deactivationTime;
+            }
             var selectCmd = model.Utils.generateSelect(dbFilter, "assets", offset, count);
             var rdr = await dbc.query(selectCmd.sql, selectCmd.args);
             var retVal = [];

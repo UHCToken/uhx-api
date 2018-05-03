@@ -121,10 +121,14 @@ module.exports = class StellarClient {
     async isActive(userWallet) {
 
         try {
+            console.info(`isActive(): Loading ${userWallet.address} from Horizon API`);
             var acct = await this.server.loadAccount(userWallet.address);
             return acct.account_id !== null;
         }
         catch(e) {
+            if(e.data && e.data.status == 404)
+                return false;
+                
             console.error(`Account retrieval has failed : ${JSON.stringify(e)}`);
             throw new StellarException(e);
         }
@@ -141,6 +145,8 @@ module.exports = class StellarClient {
     async activateAccount(userWallet, startingBalance, initiatorWallet) {
 
         try {
+
+            console.info(`activateAccount(): Activating ${userWallet.address} on Horizon API`);
 
             // Generate the random KP
             var kp = Stellar.Keypair.fromSecret(userWallet.seed);
@@ -162,7 +168,7 @@ module.exports = class StellarClient {
             // Submit transaction
             var distResult = await this.server.submitTransaction(newAcctTx);
 
-            console.info(`Account ${kp.publicKey} submitted to Horizon API`);
+            console.info(`activateAccount(): Account ${kp.publicKey()} activated on Horizon API`);
 
             // return 
             return new model.Wallet().copy({
@@ -191,14 +197,16 @@ module.exports = class StellarClient {
             var changeTrustTx = new Stellar.TransactionBuilder(stellarAcct);
 
             // Add trust operations
-            for(var i in this.assets)
+            for(var i in this.assets){
+                console.info(`createTrust(): Creating trust for ${this.assets[i].code} for ${userWallet.address}`);
                 changeTrustTx.addOperation(Stellar.Operation.changeTrust({
                     asset: new Stellar.Asset(this.assets[i].code, this.assets[i]._issuer),
                     source: userWallet.address
                 }));
+            }
 
             // Build the transaction
-            changeTrustTx.build();
+            changeTrustTx = changeTrustTx.build();
 
             // Load signing key
             changeTrustTx.sign(Stellar.Keypair.fromSecret(userWallet.seed));
@@ -206,7 +214,9 @@ module.exports = class StellarClient {
             // Submit transaction
             var distResult = await this.server.submitTransaction(changeTrustTx);
             
-            console.info(`Account ${userWallet.address} trust has been changed to allow ${this.asset.code}`);
+            console.info(`createTrust(): Account ${userWallet.address} trust has been changed`);
+
+            return userWallet;
         }
         catch(e) {
             console.error(`Account changeTrust has failed: ${JSON.stringify(e)}`);
@@ -223,6 +233,9 @@ module.exports = class StellarClient {
      */
     async getAccount(userWallet) {
         try {
+
+            console.info(`getAccount(): Get account ${userWallet.address} from Horizon API`);
+            
             // Load stellar user acct
             var stellarAcct = await this.server.loadAccount(userWallet.address);
 
@@ -231,17 +244,17 @@ module.exports = class StellarClient {
             stellarAcct.balances.forEach((o) => {
                 userWallet.balances.push(new model.MonetaryAmount(
                     this.round(o.balance),
-                    o.code || o.asset_type
+                    o.asset_code || o.asset_type
                 ));
             });
 
-            console.info(`Account ${userWallet.address} has been loaded`);
+            console.info(`getAccount(): Account ${userWallet.address} has been loaded from Horizon API`);
             
             // TODO: Should we wrap this?
             return userWallet;
         }
         catch(e) {
-            console.error(`Account changeTrust has failed: ${JSON.stringify(e)}`);
+            console.error(`Account getAccount has failed: ${JSON.stringify(e)}`);
             throw new StellarException(e);
         }
     }

@@ -27,13 +27,13 @@
     pg = require('pg'),
     api = require('./api'),
     oauth = require('./controllers/oauth'),
-    fiat = require('./controllers/fiat'),
+    purchase = require('./controllers/purchase'),
     user = require('./controllers/user'),
-    contract = require('./controllers/contract'),
     wallet = require('./controllers/wallet'),
     group = require('./controllers/group'),
     permission = require('./controllers/permission'),
     asset = require('./controllers/asset'),
+    invitation = require('./controllers/invitation'),
     swagger = require('./controllers/js-doc');
     
 
@@ -56,13 +56,14 @@ if(uhc.Config.swagger.enabled) {
 
 // Add OAuth token service
 restApi.addResource(new oauth.OAuthTokenService());
-restApi.addResource(new fiat.FiatApiResource());
+restApi.addResource(new purchase.PurchaseApiResource());
 restApi.addResource(new user.UserApiResource());
-restApi.addResource(new contract.ContractApiResource());
 restApi.addResource(new wallet.WalletApiResource());
 restApi.addResource(new group.GroupApiResource());
 restApi.addResource(new permission.PermissionApiResource());
 restApi.addResource(new asset.AssetApiResource());
+restApi.addResource(new invitation.InvitationApiResource());
+
 // Start REST API
 restApi.start();
 

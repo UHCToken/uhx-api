@@ -42,6 +42,7 @@ module.exports = class MonetaryAmount extends ModelBase {
      * @param {number} amount The amount
      */
     constructor(value, code) {
+        super();
         this.code = code;
         this.value = value;
     }

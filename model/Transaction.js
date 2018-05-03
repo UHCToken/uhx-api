@@ -41,6 +41,10 @@ const uhc = require('../uhc'),
  *                  - Trust
  *                  - Refund 
  *                  - Deposit
+ *                  - Account Management
+ *          test: 
+ *              type: boolean
+ *              description: When present, does not commit the transaction, rather validates that a transaction is most likely to succeed
  *          memo:
  *              type: string
  *              description: A textual memorandum applied to the transaction at time of processing

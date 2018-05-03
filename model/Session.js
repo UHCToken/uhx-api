@@ -152,16 +152,24 @@ module.exports = class Session extends ModelBase {
         if(!this._grants) {
             this._grants = {};
 
-            // Fetch from the user and application objects
-            var usrPerms = await uhc.Repositories.permissionRepository.getUserPermission(this.userId);
-            for(var p in usrPerms)
-                this._grants[usrPerms[p].name] = usrPerms[p].grant;
-            
-            var appPerms = await uhc.Repositories.permissionRepository.getApplicationPermission(this.applicationId);
-            for(var p in appPerms) {
-                var gp = this._grants[appPerms[p].name];
-                if(gp)
-                    this._grants[appPerms[p].name] &= appPerms[p].grant;
+            // User is NIL_USER so use app
+            if(this.userId == "00000000-0000-0000-0000-000000000000") {
+                var appPerms = await uhc.Repositories.permissionRepository.getApplicationPermission(this.applicationId, true);
+                for(var p in appPerms)
+                    this._grants[appPerms[p].name] = appPerms[p].grant;
+            }
+            else {
+                // Fetch from the user and application objects
+                var usrPerms = await uhc.Repositories.permissionRepository.getUserPermission(this.userId);
+                for(var p in usrPerms)
+                    this._grants[usrPerms[p].name] = usrPerms[p].grant;
+                
+                var appPerms = await uhc.Repositories.permissionRepository.getApplicationPermission(this.applicationId);
+                for(var p in appPerms) {
+                    var gp = this._grants[appPerms[p].name];
+                    if(gp)
+                        this._grants[appPerms[p].name] &= appPerms[p].grant;
+                }
             }
 
             // Now we XRef with scope

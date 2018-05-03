@@ -86,6 +86,7 @@
         this.updatedBy = dbAsset.updated_by;
         this.deactivationTime = dbAsset.deactivation_time;
         this.deactivatedBy = dbAsset.deactivated_by;
+        this.kycRequirement = dbAsset.kyc_req;
         return this;
     }
 
@@ -99,7 +100,8 @@
             code: this.code,
             type: this.type,
             issuer: this._issuer,
-            dist_wallet_id: this._distWalletId
+            dist_wallet_id: this._distWalletId,
+            kyc_req: this.kycRequirement
         };
     }
 
@@ -112,8 +114,8 @@
     copy(otherAsset) {
         this.fromData({});
         for(var p in this)
-            if(!p.startsWith("_"))
-                this[p] = otherAsset[p] || this[p];
+           if(!p.startsWith("_") && !(this[p] instanceof Function))
+            this[p] = otherAsset[p] || this[p];
         return this;
     }
 
