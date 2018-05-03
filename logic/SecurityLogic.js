@@ -111,7 +111,7 @@ const uhc = require('../uhc'),
 
         try {
             // Success, reset the user invalid logins
-            var session = await uhc.Repositories.transaction((_txc) => {
+            var session = await uhc.Repositories.transaction(async (_txc) => {
                 user.invalidLogins = 0;
                 user.lastLogin = new Date();
                 
