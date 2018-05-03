@@ -70,6 +70,34 @@ module.exports.AssetApiResource = class AssetApiResource {
      * @summary Gets a single asset type from the database
      * @param {Express.Request} req The HTTP request from the client
      * @param {Express.Response} res The HTTP response to the client
+     * @swagger
+     * /asset/{assetId}:
+     *  get:
+     *      tags:
+     *      - "asset"
+     *      summary: "Gets the specified asset with specified assetId"
+     *      description: "This method will retrieve detailed information about the specified asset identifier"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - in: "path"
+     *        name: "assetId"
+     *        description: "The identity of the asset"
+     *        required: true
+     *        type: string
+     *      responses:
+     *          200: 
+     *             description: "The requested resource was retrieved successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/Asset"
+     *          404:
+     *              description: "The specified asset does not exist"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
      */
     async get(req, res) {
         var asset = await uhc.Repositories.assetRepository.get(req.params.id);
@@ -82,6 +110,39 @@ module.exports.AssetApiResource = class AssetApiResource {
      * @summary Queries for asset types on the server
      * @param {Express.Request} req The HTTP request from the client
      * @param {Express.Response} res The HTTP response to the client
+     * @swagger
+     * /asset:
+     *  get:
+     *      tags:
+     *      - "asset"
+     *      summary: "Gets all  assets from the server"
+     *      description: "This method will return a collection of assets this API can work with"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - in: "query"
+     *        name: "code"
+     *        description: "The code of the asset to filter on"
+     *        required: false
+     *        type: string
+     *      - in: "query"
+     *        name: "type"
+     *        description: "The type of the asset to filter on"
+     *        required: false
+     *        type: string
+     *      responses:
+     *          200: 
+     *             description: "The requested resource was retrieved successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/Asset"
+     *          404:
+     *              description: "The specified asset does not exist"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
      */
     async getAll(req, res) {
 
@@ -92,7 +153,7 @@ module.exports.AssetApiResource = class AssetApiResource {
         });
         res.status(200).json(await uhc.Repositories.assetRepository.query(assetFilter, req.param("_offset"), req.param("_count")));
         return true;
-        
+
     }
     
     /**
@@ -100,6 +161,57 @@ module.exports.AssetApiResource = class AssetApiResource {
      * @summary Retrieves a quote for the specified asset
      * @param {Express.Request} req The HTTP request from the client
      * @param {Express.Response} res The HTTP response to the client
+     * @swagger
+     * /asset:
+     *  get:
+     *      tags:
+     *      - "asset"
+     *      summary: "Retrieves a market rate quote from the API"
+     *      description: "This method will return an exchange rate (market rate) between two asset classes"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - in: "query"
+     *        name: "from"
+     *        description: "The code of the asset which is the buying asset"
+     *        required: false
+     *        type: string
+     *      - in: "query"
+     *        name: "to"
+     *        description: "The type of the asset which is being bought"
+     *        required: false
+     *        type: string
+     *      responses:
+     *          200: 
+     *             description: "The requested resource was retrieved successfully"
+     *             schema: 
+     *                  properties:
+     *                      from: 
+     *                          description: "The asset code which is the buying asset"
+     *                          type: "string"
+     *                      to: 
+     *                          description: "The asset code which is being bought"
+     *                          type: "string"
+     *                      buy: 
+     *                          description: "The buy rate of exchange being offered"
+     *                          type: "number"
+     *                      sell: 
+     *                          description: "The sell rate of exchange being offered"
+     *                          type: "number"
+     *                      source: 
+     *                          description: "Where the quote was obtained"
+     *                          type: "string"
+      *                      path: 
+     *                          description: "If a path was obtained to get the quote (i.e. from USD to UHX quote may be: USD > XLM > UHX)"
+     *                          type: "string"
+    *          404:
+     *              description: "The specified asset does not exist"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
      */
     async quote(req, res) {
 

@@ -23,7 +23,38 @@
 
  /**
   * @class
-  * @summary Represents an asset which this API can track and issue / distribute 
+  * @summary Represents an asset which this API can track and issue / distribute
+  * @swagger
+  * definitions:
+  *     Asset:
+  *         properties:
+  *             id:
+  *                 type: string
+  *                 description: The unique identifier for the asset
+  *             code:
+  *                 type: string
+  *                 description: The codified identifier for the asset
+  *             type:
+  *                 type: string
+  *                 description: A textual description of the type of asset
+  *             creationTime:
+  *               type: Date
+  *               description: The time that this user account was created
+  *             createdBy:
+  *              type: string
+  *              description: The identifier of the user which created this group
+  *             updatedTime:
+  *               type: Date
+  *               description: The time that the user account was last updated
+  *             updatedBy:
+  *              type: string
+  *              description: The identifier of the user which created this group
+  *             deactivatedTime:
+  *               type: Date
+  *               description: The time that the user account did or will become deactivated
+  *             deactivatedBy:
+  *               type: Date
+  *               description: The time that the user account did or will become deactivated
   */
  module.exports = class Asset extends ModelBase {
 

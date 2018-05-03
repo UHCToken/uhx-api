@@ -90,6 +90,31 @@ module.exports.GroupApiResource = class GroupApiResource {
      * @summary Get all groups from the server
      * @param {Express.Request} req The HTTP request from the client
      * @param {Express.Response} res The HTTP response from the server
+     * @swagger
+     * /group:
+     *  get:
+     *      tags:
+     *      - "group"
+     *      summary: "Gets all groups from the server"
+     *      description: "This method return all active groups available for use in the API server"
+     *      produces:
+     *      - "application/json"
+     *      responses:
+     *          200: 
+     *             description: "The requested resource was retrieved successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/Group"
+     *          404:
+     *              description: "The specified asset does not exist"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"     
+     *      security:
+     *      - uhc_auth:
+     *          - "list:group"
      */
     async getAll(req, res) {
         res.status(200).json(await uhc.Repositories.groupRepository.getAll());
