@@ -318,7 +318,7 @@ const uhc = require('../uhc'),
                         from: uhc.Config.mail.from,
                         subject: "Did you change your e-mail address?",
                         template: uhc.Config.mail.templates.emailChange
-                    }, { old: existingUser, new: user, token: undoToken });
+                    }, { old: existingUser, new: user, token: undoToken, ui_base: uhc.Config.api.ui_base });
 
                     // TODO: We want to send a confirmation e-mail to the e-mail address
                     await this.sendConfirmationEmail(user);
@@ -356,7 +356,7 @@ const uhc = require('../uhc'),
                 from: uhc.Config.mail.from,
                 subject: "Confirm your e-mail address on UHX",
                 template: uhc.Config.mail.templates.confirmation
-            }, { user: user, token: confirmToken });
+            }, { user: user, token: confirmToken, ui_base: uhc.Config.api.ui_base });
 
         }
         catch(e) {
@@ -435,7 +435,8 @@ const uhc = require('../uhc'),
                 };
                 // Replacements
                 const replacements = {
-                    user: user
+                    user: user,
+                    ui_base: uhc.Config.api.ui_base
                 }
                 await new Emailer(uhc.Config.mail.smtp).sendTemplated(sendOptions, replacements);
 
@@ -497,7 +498,8 @@ const uhc = require('../uhc'),
                 const replacements = {
                     invitation:invitation,
                     claimToken: claimToken,
-                    sender: clientPrincipal.session.userId != "00000000-0000-0000-0000-000000000000" ? (await clientPrincipal.session.loadUser()).name : (await clientPrincipal.session.loadApplication()).name
+                    sender: clientPrincipal.session.userId != "00000000-0000-0000-0000-000000000000" ? (await clientPrincipal.session.loadUser()).name : (await clientPrincipal.session.loadApplication()).name, 
+                    ui_base: uhc.Config.api.ui_base
                 }
 
                 await new Emailer(uhc.Config.mail.smtp).sendTemplated(sendOptions, replacements);

@@ -63,7 +63,11 @@
          /**
           * @summary The preferred scheme
           */
-         scheme: "http"
+         scheme: "http",
+         /**
+          * @summary The link to the front-facing web site which users can interact with in order to do things like reset passwords, claim invites, etc.
+          */
+         ui_base: "http://localhost:4004/"
      },
      /**
       * @summary Configuration for security parameters

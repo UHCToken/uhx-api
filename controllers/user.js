@@ -72,6 +72,13 @@ class UserApiResource {
                         "demand":security.PermissionType.WRITE | security.PermissionType.READ,
                         "method": this.delete
                     }
+                },
+                {
+                    "path": "user/:uid/reset",
+                    "post": {
+                        "demand": security.PermissionType.EXECUTE | security.PermissionType.WRITE,
+                        "method": this.reset
+                    }
                 }
             ]
         };
@@ -185,6 +192,7 @@ class UserApiResource {
      *      security:
      *      - uhc_auth:
      *          - "write:user"
+     *          - "read:user"
      */
     async put(req, res) {
         
@@ -351,11 +359,22 @@ class UserApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhc_auth:
+     *          - "write:user"
      *          - "read:user"
      */
     async delete(req, res) {
         res.status(201).json(await uhc.Repositories.userRepository.delete(req.param("uid")));
         return true;
+    }
+
+    /**
+     * @method
+     * @summary Generates a reset password email
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to the client
+     */
+    async reset(req, res) {
+
     }
 
     /**
