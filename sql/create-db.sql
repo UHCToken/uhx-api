@@ -249,7 +249,7 @@ CREATE TABLE IF NOT EXISTS assets (
 -- EXAMPLES:
 --  (BETWEEN 2018-06-01 AND 2018-06-30) OR (SELL @ 0.2 USD) FROM WALLET AAAAAA
 --  (BETWEEN 2018-07-04 AND 2018-07-31) OR (SELL @ 0.4 USD) FROM WALLET BBBBBB
-CREATE TABLE IF NOT EXISTS asset_distribution (
+CREATE TABLE IF NOT EXISTS asset_sale (
     id UUID NOT NULL DEFAULT uuid_generate_v4(),
     asset_id UUID NOT NULL, -- THE ASSET TYPE
     start_date DATE NOT NULL, -- THE START DATE OF THE SCHEDULE
@@ -258,11 +258,11 @@ CREATE TABLE IF NOT EXISTS asset_distribution (
     sell NUMERIC(20,5), -- THE OFFER DURING THIS SCHEDULE (IF NULL NO FIXED EXCHANGE) 
     sell_code VARCHAR(12), -- THE OFFER CODE ()
     target_bal NUMERIC(20), -- WHEN POPULATED AND START DATE HAS PASSED THE BALANCE OF THE ACCOUNT SHOULD BE X 
-    CONSTRAINT pk_asset_distribution PRIMARY KEY (id),
-    CONSTRAINT fk_asset_distribution_asset FOREIGN KEY (asset_id) REFERENCES assets(id),
-    CONSTRAINT fk_asset_distribution_wallet_id FOREIGN KEY (wallet_id) REFERENCES wallets(id),
-    CONSTRAINT ck_asset_distribution_sell  CHECK (stop_date IS NULL OR stop_date > start_date),
-    CONSTRAINT ck_asset_distribution_sell_code CHECK (sell IS NULL OR sell_code IS NOT NULL)
+    CONSTRAINT pk_asset_sale PRIMARY KEY (id),
+    CONSTRAINT fk_asset_sale_asset FOREIGN KEY (asset_id) REFERENCES assets(id),
+    CONSTRAINT fk_asset_sale_wallet_id FOREIGN KEY (wallet_id) REFERENCES wallets(id),
+    CONSTRAINT ck_asset_sale_sell  CHECK (stop_date IS NULL OR stop_date > start_date),
+    CONSTRAINT ck_asset_sale_sell_code CHECK (sell IS NULL OR sell_code IS NOT NULL)
 );
 
 

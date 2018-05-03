@@ -183,3 +183,20 @@
         } 
     }
  }
+
+ 
+ // Are we comparing?
+ if(process.argv[2] == "whatsnew") {
+    var config = require('./config');
+    console.log("What's new in config.empty?")
+    
+    var fnDump = function(a, b, p) {
+        for(var k in a)
+           if(!b[k]) 
+               console.log(`${p}.${k}`);
+           else if(b[k] != a[k] && Object.keys(a[k]).length > 0) 
+               fnDump(a[k], b[k], `${p}.${k}`);
+    };
+
+    fnDump(module.exports, config, '');
+}

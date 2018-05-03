@@ -111,14 +111,16 @@ const uhc = require('../uhc'),
 
         try {
             // Success, reset the user invalid logins
-            user.invalidLogins = 0;
-            user.lastLogin = new Date();
-            
-            await uhc.Repositories.userRepository.update(user);
-
-            // Create the session object
-            var session = new model.Session(user, application, scope, uhc.Config.security.sessionLength, remote_ip);
-            session = await uhc.Repositories.sessionRepository.insert(session);
+            var session = await uhc.Repositories.transaction((_txc) => {
+                user.invalidLogins = 0;
+                user.lastLogin = new Date();
+                
+                await uhc.Repositories.userRepository.update(user);
+    
+                // Create the session object
+                var ses = new model.Session(user, application, scope, uhc.Config.security.sessionLength, remote_ip);
+                return await uhc.Repositories.sessionRepository.insert(ses);
+            });
             await session.loadGrants();
             return new security.Principal(session);
         }
@@ -164,7 +166,7 @@ const uhc = require('../uhc'),
         var application = clientPrincipal.session.application;
     
         try {
-            var session = await uhc.Repositories.transaction(async (_tx) => {
+            var session = await uhc.Repositories.transaction(async (_txc) => {
 
                 // Get session
                 var session = await uhc.Repositories.sessionRepository.getByRefreshToken(refreshToken, uhc.Config.security.refreshValidity, _tx);
@@ -183,7 +185,7 @@ const uhc = require('../uhc'),
                 );
                 
             }); 
-
+        
             await session.loadGrants();
             await session.loadUser();
             return new security.Principal(session);
