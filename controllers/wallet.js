@@ -51,7 +51,7 @@ class WalletApiResource {
                     "path" : "user/:uid/wallet",
                     "post": {
                         "demand" : security.PermissionType.WRITE,
-                        "method" : this.post
+                        "method" : this.put
                     },
                     "get" : {
                         "demand":security.PermissionType.LIST,
@@ -73,11 +73,11 @@ class WalletApiResource {
      * @param {Express.Response} res The response to send back to the client
      * @swagger
      * /user/{userid}/wallet:
-     *  post:
+     *  put:
      *      tags:
      *      - "wallet"
-     *      summary: "Creates a new blockchain account for the specified user"
-     *      description: "This method will construct a new account object and associate it with the specified user account"
+     *      summary: "Activates a new blockchain account for the specified user"
+     *      description: "This method will activate the user's wallet enabling the balances to appear"
      *      consumes: 
      *      - "application/json"
      *      produces:
@@ -85,7 +85,7 @@ class WalletApiResource {
      *      parameters:
      *      - in: "path"
      *        name: "userid"
-     *        description: "The identity of the user to create a wallet for"
+     *        description: "The identity of the user to activate an account for"
      *        required: true
      *        type: string
      *      - in: "body"
@@ -111,8 +111,8 @@ class WalletApiResource {
      *      - uhc_auth:
      *          - "write:wallet"
      */
-    async post(req, res)  {
-        res.status(201).json(await uhc.SecurityLogic.createStellarWalletForUser(req.params.uid));
+    async put(req, res)  {
+        res.status(201).json(await uhc.SecurityLogic.activateStellarWalletForUser(req.params.uid));
         return true;
     }
     /**

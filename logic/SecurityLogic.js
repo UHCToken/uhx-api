@@ -43,7 +43,7 @@ const uhc = require('../uhc'),
         this.establishSession = this.establishSession.bind(this);
         this.refreshSession = this.refreshSession.bind(this);
         this.registerInternalUser = this.registerInternalUser.bind(this);
-        this.createStellarWallet = this.createStellarWalletForUser.bind(this);
+        this.createStellarWallet = this.activateStellarWalletForUser.bind(this);
         this.updateUser = this.updateUser.bind(this);
         this.validateUser = this.validateUser.bind(this);
         this.createInvitation = this.createInvitation.bind(this);
@@ -53,6 +53,7 @@ const uhc = require('../uhc'),
     /**
      * @method
      * @summary Gets or creates the stellar client
+     * @returns {StellarClient} The stellar client
      */
     async getStellarClient() {
         if(!this._stellarClient)
@@ -235,7 +236,7 @@ const uhc = require('../uhc'),
      * @summary Register a wallet on the stellar network
      * @param {string} userId The user for which the wallet should be created
      */
-    async createStellarWalletForUser(userId) {
+    async activateStellarWalletForUser(userId) {
 
         try {
 
@@ -248,19 +249,20 @@ const uhc = require('../uhc'),
                 var user = await uhc.Repositories.userRepository.get(userId, _txc);
 
                 // Does user already have wallet?
-                if(!(await user.loadWallet()))
-                    throw new exception.BusinessRuleViolationException(new exception.RuleViolation("User already has a wallet", exception.ErrorCodes.DATA_ERROR, exception.RuleViolationSeverity.ERROR));
+                var wallet = await user.loadWallet();
+                if(!wallet) { // Generate a KP
+                    // Create a wallet
+                    var wallet = await stellarClient.generateAccount();
+                    // Insert 
+                    wallet = await uhc.Repositories.walletRepository.insert(wallet, null, _txc);
+                    // Update user
+                    user.walletId = wallet.id;
+                    await uhc.Repositories.userRepository.update(user, null, null, _txc);
+                }
 
-                // Create a wallet
-                var wallet = await stellarClient.generateAccount();
-
-                // Insert 
-                wallet = await uhc.Repositories.walletRepository.insert(wallet, null, _txc);
-                
-                // Update user
-                user.walletId = wallet.id;
-                await uhc.Repositories.userRepository.update(user, null, null, _txc);
-
+                // Activate wallet if not already active
+                if(!stellarClient.isActive(wallet))
+                    await stellarClient.activateAccount(wallet, "1",  await testRepository.walletRepository.get(uhc.Config.stellar.initiator_wallet_id));
                 return wallet;
             });
         }

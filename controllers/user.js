@@ -241,6 +241,9 @@ class UserApiResource {
     async get(req, res) {
         var user = await uhc.Repositories.userRepository.get(req.params.uid);
         await user.loadWallet();
+
+        user._wallet = await uhc.SecurityLogic.getStellarClient().isActive(user._wallet) || user._wallet;
+        
         await user.loadExternalIds();
         await user.loadClaims();
         res.status(200).json(user);

@@ -271,9 +271,9 @@ const uhc = require('../uhc'),
      * @summary Prefetch user's wallet information
      */
     async loadWallet() {
-      if(!this._wallet)
+      if(!this._wallet) 
             this._wallet = await uhc.Repositories.walletRepository.get(this.walletId);
-        return this._wallet;
+      return this._wallet;
     }
 
     /**

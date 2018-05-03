@@ -121,13 +121,12 @@ module.exports = class StellarClient {
     async isActive(userWallet) {
 
         try {
-            console.info(`isActive(): Loading ${userWallet.address} from Horizon API`);
-            var acct = await this.server.loadAccount(userWallet.address);
-            return acct.account_id !== null;
+            var acct = this.getAccount(userWallet);
+            return acct;
         }
         catch(e) {
-            if(e.data && e.data.status == 404)
-                return false;
+            if(e.constructor.name == "NotFoundException")
+                return null;
                 
             console.error(`Account retrieval has failed : ${JSON.stringify(e)}`);
             throw new StellarException(e);
@@ -186,8 +185,9 @@ module.exports = class StellarClient {
      * @method
      * @summary Changes trust on userWallet such that the wallet trusts the asset
      * @param {Wallet} userWallet The wallet to establish trust with the asset defined on this class
+     * @param {string} assetCode The asset to create a trust on
      */
-    async createTrust(userWallet) {
+    async createTrust(userWallet, assetCode) {
 
         try {
             // Load stellar user acct
@@ -197,13 +197,21 @@ module.exports = class StellarClient {
             var changeTrustTx = new Stellar.TransactionBuilder(stellarAcct);
 
             // Add trust operations
-            for(var i in this.assets){
-                console.info(`createTrust(): Creating trust for ${this.assets[i].code} for ${userWallet.address}`);
+            if(assetCode) {
+                console.info(`createTrust(): Creating trust for ${assetCode} for ${userWallet.address}`);
                 changeTrustTx.addOperation(Stellar.Operation.changeTrust({
-                    asset: new Stellar.Asset(this.assets[i].code, this.assets[i]._issuer),
+                    asset : this.getAssetByCode(assetCode),
                     source: userWallet.address
                 }));
             }
+            else
+                for(var i in this.assets){
+                    console.info(`createTrust(): Creating trust for ${this.assets[i].code} for ${userWallet.address}`);
+                    changeTrustTx.addOperation(Stellar.Operation.changeTrust({
+                        asset: new Stellar.Asset(this.assets[i].code, this.assets[i]._issuer),
+                        source: userWallet.address
+                    }));
+                }
 
             // Build the transaction
             changeTrustTx = changeTrustTx.build();
@@ -254,61 +262,87 @@ module.exports = class StellarClient {
             return userWallet;
         }
         catch(e) {
+
+            if(e.data && e.data.status == 404)
+                throw new exception.NotFoundException("wallet", userWallet.id); // soft fail
             console.error(`Account getAccount has failed: ${JSON.stringify(e)}`);
             throw new StellarException(e);
         }
     }
 
     /**
-     * 
+     * @method
+     * @summary Creats a payment between the payor and payee
      * @param {Wallet} payorWallet The wallet from which the payment should be made
      * @param {Wallet} payeeWallet The wallet to which the payment should be made
      * @param {MonetaryAmount} amount The amount of the payment
-     * @param {MonetaryAmount} fee A fee to assess to the distribution wallet for performing the transaction. Null if none
      * @param {string} memo A memo to add to the transaction
+     * @param {boolean} rollback When true, this class will not actually perform the transaction
      * @returns {Transaction} The transaction information for the operation
      */
-    async createPayment(payorWallet, payeeWallet, amount, fee, memo) {
+    async createPayment(payorWallet, payeeWallet, amount, memo, rollback) {
 
         try {
 
             // Load payor stellar account
             var payorStellarAcct = await this.server.loadAccount(payorWallet.address);
 
+            // New tx
+            var paymentTx = new Stellar.TransactionBuilder(payorStellarAcct);
+            
             // Find the asset type
-            var assetType = null;
-            this.assets.foreach((o)=> { if(o.code == amount.code) assetType = o; });
+            var assetType = this.getAssetByCode(amount.code);
 
             // Asset type not found
             if(!assetType)
                 throw new exception.NotFoundException("asset", amount.code);
 
-            // Asset type
-            assetType = new Stellar.Asset(assetType.code, assetType._issuer);
+            var fee = null;
+
+            // Do we need to activate the payee wallet?
+            try {
+                var payeeStellarAccount = await this.server.loadAccount(payeeAccount);
+
+                // Payee has an account but no trust?
+                var hasTrust = false;
+                payeeStellarAccount.balances.forEach((o)=>{if(o.asset_code == amount.code) hasTrust = true; });
+                if(!hasTrust && !rollback)
+                    this.createTrust(payeeWallet, amount.code); // We have to create a trust
+            }
+            catch(e) {
+                if(e.data && e.data.status == 404) // payee wallet not found, so we need to fund it from the payor wallet {
+                {
+                    var nativeBalance = 0;
+                    payorStellarAcct.balances.forEach((b)=> { if(b.asset_type == "native") nativeBalance = b.balance });
+                    // Check that native balance is greater than 4 XLM (2 min balance + 2 for payee)
+                    if(nativeBalance < 4) {
+                        throw new exception.BusinessRuleViolationException(
+                            new exception.RuleViolation(
+                                    "Payee wallet is not active. Payor does not have sufficient funds to activate payee wallet",
+                                    exception.ErrorCodes.INSUFFICIENT_FUNDS,
+                                    exception.RuleViolationSeverity.ERROR)
+                        );
+                    }
+                    else {
+                        fee = new MonetaryAmount(2, "XLM");
+                        if(!rollback) {
+                            // Create user account
+                            this.activateAccount(payeeWallet, "2", payorWallet);
+                            this.createTrust(payorWallet, amount.code);
+                        }
+                    }
+                }
+                // Other exception
+                throw e;
+            }
 
             // Create payment transaction
-            var paymentTx = new Stellar.TransactionBuilder(payorStellarAcct)
-                .addOperation(Stellar.Operation.payment({
+            paymentTx.addOperation(Stellar.Operation.payment({
                     destination: payeeWallet.address, 
                     asset: assetType,
-                    amount: amount.value
+                    amount: amount.value,
+                    source: payorWallet.address
                 }));
-
-            // Assess a fee for this transaction?
-            if(fee) {
-                var feeAssetType = null;
-                this.assets.forEach((o)=> { if(o.code == amount.code) feeAssetType = o; });
-
-                // Asset type not found
-                if(!feeAssetType)
-                    throw new exception.NotFoundException("asset", fee.code);
-
-                paymentTx.addOperation(Stellar.Operation.payment({
-                    destination: this._feeAccount,
-                    asset: feeAssetType,
-                    amount: fee.value
-                }));
-            }
 
             // Memo field if memo is present
             if(memo)
@@ -321,13 +355,24 @@ module.exports = class StellarClient {
             paymentTx.sign(Stellar.Keypair.fromSecret(payorWallet.seed));
 
             // Submit transaction
-            var paymentResult = await this.server.submitTransaction(paymentTx);
-            
-            // TODO: Handle errors (i.e. NSF, etc.)
-            console.info(`Payment ${payorWallet.address} > ${payeeWallet.address} (${amount.value} ${amount.code}) success`);
+            var ref = null;
+            if(!rollback) {
+                var paymentResult = await this.server.submitTransaction(paymentTx);
+                ref = {
+                    id: paymentResult.id,
+                    href: paymentResult._links.transaction.href
+                };
+                // TODO: Handle errors (i.e. NSF, etc.)
+                console.info(`Payment ${payorWallet.address} > ${payeeWallet.address} (${amount.value} ${amount.code}) success`);
+            } 
+            else 
+                ref = {
+                    id: "rollback",
+                    href: "Transaction was not submitted"
+                };
 
             // Build transaction 
-            return new model.Transaction(null, new Date(), await payorWallet.loadUser(), await payeeWallet.loadUser(), amount, fee, transactionResult._links.transaction.href);
+            return new model.Transaction(ref.id, new Date(), await payorWallet.loadUser(), await payeeWallet.loadUser(), amount, fee, ref.href);
         }
         catch(e) {
             console.error(`Account payment has failed: ${JSON.stringify(e)}`);
@@ -335,6 +380,16 @@ module.exports = class StellarClient {
         }
     }
 
+    /**
+     * @method
+     * @summary Gets the stellar asset instance by code
+     * @param {string} code The asset code to find
+     */
+    getAssetByCode(code) {
+        var retVal = null;
+        this.assets.forEach((a) => { if(a.code == code) retVal = new Stellar.Asset(a.code, a._issuer); });
+        return retVal;
+    }
 
     /**
      * @method
