@@ -1,4 +1,4 @@
--- UPDATE: 2018-04-27
+﻿-- UPDATE: 2018-04-27
 --  * ADDS TFA_METHOD TO USER TABLE
 --  * ADDS TIMESTAMP INFO TO WALLETS TABLE
 --  * CREATES CONTRACT TABLE
@@ -9,7 +9,7 @@ CREATE TABLE tfa_methods (
     moduleName VARCHAR(256) NOT NULL, -- THE NAME OF THE MODULE WHICH HANDLES THE TFA MECHANISM
     display VARCHAR(256) NOT NULL, -- THE DISPLAY NAME OF THE TFA METHOD
     CONSTRAINT pk_tfa_methods PRIMARY KEY (id)
-)
+);
 
 INSERT INTO tfa_methods (id, name, moduleName, display) VALUES (1, 'sms', './tfa/SmsTfaMechansim', 'Send me a Text Message');
 INSERT INTO tfa_methods (id, name, moduleName, display) VALUES (2, 'email', './tfa/EmailTfaMechansim', 'Send me an E-Mail');
