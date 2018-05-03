@@ -1,4 +1,4 @@
--- 2018-05-03 UPDATE
+﻿-- 2018-05-03 UPDATE
 
 CREATE TABLE IF NOT EXISTS asset_quote (
     id UUID NOT NULL DEFAULT uuid_generate_v4(), -- THE UNIQUE IDENTIFIER FOR THE QUOTE
@@ -22,5 +22,5 @@ CREATE TABLE IF NOT EXISTS application_grant_type (
     grant_type VARCHAR(32) NOT NULL, -- THE GRANT TYPE WHICH THE APPLICATION IS ALLOWED TO HAVE
     CONSTRAINT pk_application_grant_type PRIMARY KEY (application_id, grant_type),
     CONSTRAINT pk_application_grant_type_application FOREIGN KEY (application_id) REFERENCES applications(id),
-    CONSTRAINT ck_application_grant_type CHECK (grant_type IN ('password', 'authorization_code', 'refresh', 'client_credentials')
+    CONSTRAINT ck_application_grant_type CHECK (grant_type IN ('password', 'authorization_code', 'refresh', 'client_credentials'))
 );
