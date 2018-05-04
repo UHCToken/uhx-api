@@ -19,12 +19,8 @@
 
  const express = require('express'),
     bodyParser = require('body-parser'),
-
-    Stellar = require('stellar-sdk'),
+    exception = require('./exception'),
     uhc = require("./uhc"),
-    stripe = require('stripe')(uhc.Config.stripe.key),
-    jwt = require('jsonwebtoken'),
-    pg = require('pg'),
     api = require('./api'),
     oauth = require('./controllers/oauth'),
     purchase = require('./controllers/purchase'),
@@ -34,13 +30,20 @@
     permission = require('./controllers/permission'),
     asset = require('./controllers/asset'),
     invitation = require('./controllers/invitation'),
-    swagger = require('./controllers/js-doc');
+    swagger = require('./controllers/js-doc'),
+    toobusy = require('toobusy-js');
     
 
 // Startup application
 const app = express();
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }))
+app.use(function(req, res, next) {
+    if(toobusy())
+        res.status(503).json(new exception.Exception("Server is too busy", exception.ErrorCodes.API_RATE_EXCEEDED));
+    else
+        next();
+});
 
 // Construct REST API
 var restApi = new api.RestApi(uhc.Config.api.base, app);
