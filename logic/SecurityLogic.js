@@ -379,7 +379,7 @@ const uhc = require('../uhc'),
 
         var ruleViolations = [];
         if(user.name && !new RegExp(uhc.Config.security.username_regex).test(user.name))
-            ruleViolations.push(new exception.RuleViolation("Username format invalid", exception.ErrorCodes.INVALID_USERNAME, exception.RuleViolationSeverity.ERROR));
+            ruleViolations.push(new exception.RuleViolation("Username format invalid", exception.ErrorCodes.INVALID_NAME, exception.RuleViolationSeverity.ERROR));
         if(password && !new RegExp(uhc.Config.security.password_regex).test(password))
             ruleViolations.push(new exception.RuleViolation("Password does not meet complexity requirements", exception.ErrorCodes.PASSWORD_COMPLEXITY, exception.RuleViolationSeverity.ERROR));
 

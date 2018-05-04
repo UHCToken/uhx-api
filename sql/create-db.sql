@@ -229,15 +229,20 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE TABLE IF NOT EXISTS assets (
     id UUID NOT NULL DEFAULT uuid_generate_v4(),
     code VARCHAR(6) NOT NULL, -- THE ASSET CODE
-    type VARCHAR(32) NOT NULL, -- ASSET TYPE CODE
+    name VARCHAR(32) NOT NULL, -- ASSET TYPE CODE
+    description TEXT NOT NULL, -- THE DESCRIPTION OF THE ASSET
     issuer VARCHAR(256) NOT NULL, -- THE ISSUING ACCOUNT
+    display_decimals NUMERIC(2) NOT NULL DEFAULT 2, -- DISPLAY DECIMALS
+    img VARCHAR(256), -- A LINK TO THE IMAGE
     dist_wallet_id UUID NOT NULL, -- THE DISTRIBUTION WALLET ID
     kyc_req BOOLEAN NOT NULL DEFAULT FALSE,
+    creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by UUID NOT NULL, -- THE USER WHICH CREATED THE GROUP
     updated_time TIMESTAMPTZ, -- THE TIME THAT THE OBJECT WAS UPDATED
     updated_by UUID, -- THE USER WHICH UPDATED THE OBJECT
     deactivation_time TIMESTAMPTZ, -- THE TIME THAT THE OBJECT WAS DEACTIVATED
     deactivated_by UUID, -- THE USER WHICH DEACTIVATED THE OBJECT
+    locked BOOLEAN NOT NULL DEFAULT FALSE,
     CONSTRAINT pk_assets PRIMARY KEY (id),
     CONSTRAINT fk_asset_created_by FOREIGN KEY (created_by) REFERENCES users(id),
     CONSTRAINT fk_asset_updated_by FOREIGN KEY (updated_by) REFERENCES users(id),
@@ -249,20 +254,31 @@ CREATE TABLE IF NOT EXISTS assets (
 -- EXAMPLES:
 --  (BETWEEN 2018-06-01 AND 2018-06-30) OR (SELL @ 0.2 USD) FROM WALLET AAAAAA
 --  (BETWEEN 2018-07-04 AND 2018-07-31) OR (SELL @ 0.4 USD) FROM WALLET BBBBBB
-CREATE TABLE IF NOT EXISTS asset_sale (
+CREATE TABLE IF NOT EXISTS asset_offer (
     id UUID NOT NULL DEFAULT uuid_generate_v4(),
     asset_id UUID NOT NULL, -- THE ASSET TYPE
-    start_date DATE NOT NULL, -- THE START DATE OF THE SCHEDULE
+    start_date DATE, -- THE START DATE OF THE SCHEDULE
     stop_date DATE, -- THE STOP DATE OF THE SCHEDULE
-    wallet_id UUID NOT NULL, -- THE WALLET FROM WHICH ASSETS SHOULD BE PURCHASED DURING THIS TIME
-    sell NUMERIC(20,5), -- THE OFFER DURING THIS SCHEDULE (IF NULL NO FIXED EXCHANGE) 
-    sell_code VARCHAR(12), -- THE OFFER CODE ()
-    target_bal NUMERIC(20), -- WHEN POPULATED AND START DATE HAS PASSED THE BALANCE OF THE ACCOUNT SHOULD BE X 
+    wallet_id UUID NOT NULL, -- THE WALLET FROM WHICH ASSETS SHOULD BE PURCHASED DURING THIS OFFER
+    price NUMERIC(20,5), -- THE OFFER DURING THIS SCHEDULE (IF NULL NO FIXED EXCHANGE) 
+    price_code VARCHAR(12), -- THE OFFER CODE ()
+    amount NUMERIC(20, 5), -- WHEN POPULATED AND START DATE HAS PASSED THE BALANCE OF THE ACCOUNT SHOULD BE X 
+    creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID NOT NULL, -- THE USER WHICH CREATED THE GROUP
+    updated_time TIMESTAMPTZ, -- THE TIME THAT THE OBJECT WAS UPDATED
+    updated_by UUID, -- THE USER WHICH UPDATED THE OBJECT
+    deactivation_time TIMESTAMPTZ, -- THE TIME THAT THE OBJECT WAS DEACTIVATED
+    deactivated_by UUID, -- THE USER WHICH DEACTIVATED THE OBJECT
+    is_public BOOLEAN NOT NULL DEFAULT TRUE, -- IF TRUE LIST THE SALE ON THE DEX
+    offer_id VARCHAR(256), -- THE OFFER ID CREATED ON THE STELLAR BLOCKCHAIN
     CONSTRAINT pk_asset_sale PRIMARY KEY (id),
     CONSTRAINT fk_asset_sale_asset FOREIGN KEY (asset_id) REFERENCES assets(id),
     CONSTRAINT fk_asset_sale_wallet_id FOREIGN KEY (wallet_id) REFERENCES wallets(id),
-    CONSTRAINT ck_asset_sale_sell  CHECK (stop_date IS NULL OR stop_date > start_date),
-    CONSTRAINT ck_asset_sale_sell_code CHECK (sell IS NULL OR sell_code IS NOT NULL)
+    CONSTRAINT ck_asset_sale_sell  CHECK (stop_date IS NULL OR (stop_date > start_date AND stop_date > CURRENT_DATE)),
+    CONSTRAINT ck_asset_sale_sell_code CHECK (price IS NULL OR price_code IS NOT NULL),
+    CONSTRAINT fk_asset_sale_created_by FOREIGN KEY (created_by) REFERENCES users(id),
+    CONSTRAINT fk_asset_sale_updated_by FOREIGN KEY (updated_by) REFERENCES users(id),
+    CONSTRAINT fk_asset_sale_deactivated_by FOREIGN KEY (deactivated_by) REFERENCES users(id)
 );
 
 
@@ -284,7 +300,7 @@ INSERT INTO permission_sets (id, name, description, created_by) VALUES ('29b52e3
 INSERT INTO permission_sets (id, name, description, created_by) VALUES ('c428ff6a-0d07-424f-802b-b51a040d023b', 'wallet', 'Access to the user resource', '3c673456-23b1-4263-9deb-df46770852c9');
 INSERT INTO permission_sets (id, name, description, created_by) VALUES ('5245dff0-9b79-4ddb-b3bd-9dd733afd678', 'purchase', 'Access to the FIAT resource', '3c673456-23b1-4263-9deb-df46770852c9');
 INSERT INTO permission_sets (id, name, description, created_by) VALUES ('608844ca-b98a-47f5-b834-d7fded513945', 'application', 'Access to the APPLICATION resource', '3c673456-23b1-4263-9deb-df46770852c9');
-INSERT INTO permission_sets (id, name, description, created_by) VALUES ('20a97388-5b6a-43e7-ac07-911ceee7e0d6', 'contract', 'Access to the CONTRACT resource', '3c673456-23b1-4263-9deb-df46770852c9');
+INSERT INTO permission_sets (id, name, description, created_by) VALUES ('20a97388-5b6a-43e7-ac07-911ceee7e0d6', 'asset', 'Access to the CONTRACT resource', '3c673456-23b1-4263-9deb-df46770852c9');
 INSERT INTO permission_sets (id, name, description, created_by) VALUES ('3fc7cbc7-58ca-40fa-9d17-060dbf180e0b', 'group', 'Access to the GROUP resource', '3c673456-23b1-4263-9deb-df46770852c9');
 INSERT INTO permission_sets (id, name, description, created_by) VALUES ('17e4de1c-4fd3-49ea-b394-90ddb5ccac38', 'permission', 'Access to the PERMISSION resource', '3c673456-23b1-4263-9deb-df46770852c9');
 INSERT INTO permission_sets (id, name, description, created_by) VALUES ('76818f0a-2caa-4c46-83f5-064248001821', 'invitation', 'Access to the INVITATION resource', '3c673456-23b1-4263-9deb-df46770852c9');

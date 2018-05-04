@@ -259,7 +259,7 @@ const pg = require('pg'),
         }
         catch(e) {
             if(e.code == '23505') // duplicate key
-                throw new exception.Exception("Duplicate user name", exception.ErrorCodes.DUPLICATE_USERNAME);
+                throw new exception.Exception("Duplicate user name", exception.ErrorCodes.DUPLICATE_NAME);
             else if(e.code == "23502")
                 throw new exception.Exception("Missing mandatory field", exception.ErrorCodes.DATA_ERROR, e);
             throw e;
@@ -282,7 +282,7 @@ const pg = require('pg'),
             if(!_txc) await dbc.connect();
             const rdr = await dbc.query("SELECT users.* FROM users WHERE wallet_id = $1", [walletId]);
             if(rdr.rows.length == 0)
-                throw new exception.NotFoundException("wallet", walletId);
+                return null; // Wallet is an anonymous wallet
             else
                 return new User().fromData(rdr.rows[0]);
         }

@@ -28,6 +28,7 @@ module.exports = class ModelBase {
      */
     constructor() {
         this.stripHiddenFields = this.stripHiddenFields.bind(this);
+        this.copy = this.copy.bind(this);
     }
 
     /**
@@ -55,4 +56,20 @@ module.exports = class ModelBase {
     toJSON() {
         return this.stripHiddenFields();
     }
+
+    
+    /**
+     * @method
+     * @summary Copy all the values from other into this 
+     * @returns {ModelBase} This object with copied fields
+     * @param {ModelBase} other The object from which the values for this user should be copied
+     */
+    copy(other) {
+        if(this.fromData) this.fromData({});
+        for(var p in this)
+            if(!p.startsWith("_"))
+                this[p] = other[p] || this[p];
+        return this;
+    }
+
 }

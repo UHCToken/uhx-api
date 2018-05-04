@@ -20,9 +20,11 @@
 
  const config = require('./config'),
     repositories = require('./repository/repository'),
-    SecurityLogic = require('./logic/SecurityLogic');
+    SecurityLogic = require('./logic/SecurityLogic'),
+    TokenLogic = require('./logic/TokenLogic');
 
  // Exports section
  module.exports.SecurityLogic = new SecurityLogic();
+ module.exports.TokenLogic = new TokenLogic();
  module.exports.Config = config;
  module.exports.Repositories = new repositories.UhcRepositories(config.db.server);

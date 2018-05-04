@@ -63,7 +63,14 @@
          /**
           * @summary The preferred scheme
           */
-         scheme: "http",
+         scheme: "https",
+         /**
+          * @summary The SSL certificate information
+          */
+         ssl :{
+             key: "./privatekey.pem",
+             cert: "./certificate.pem",
+        },
          /**
           * @summary The link to the front-facing web site which users can interact with in order to do things like reset passwords, claim invites, etc.
           */
@@ -149,7 +156,11 @@
         /**
           * @summary The horizon endpoint
           */
-         horizon_server: "https://horizon-testnet.stellar.org"
+         horizon_server: "https://horizon-testnet.stellar.org",
+        /**
+         * @summary The home domain where the stellar TOML file is hosted
+         */
+        home_domain: "?.cooldomain.com"
      },
      /**
       * @summary Swagger configuration

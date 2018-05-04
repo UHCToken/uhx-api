@@ -17,17 +17,19 @@
  * 
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
- 
+
 const pg = require('pg'),
     exception = require('../exception'),
+    security = require('../security'),
     model = require('../model/model'),
-    Asset = require('../model/Asset');
+    Asset = require('../model/Asset'),
+    Offer = require('../model/Offer');
 
- /**
-  * @class
-  * @summary Represents the asset data repository logic
-  */
- module.exports = class AsssetRepository {
+/**
+ * @class
+ * @summary Represents the asset data repository logic
+ */
+module.exports = class AsssetRepository {
 
     /**
      * @constructor
@@ -37,6 +39,243 @@ const pg = require('pg'),
     constructor(connectionString) {
         this._connectionString = connectionString;
         this.get = this.get.bind(this);
+        this.insert = this.insert.bind(this);
+        this.query = this.query.bind(this);
+        this.lock = this.lock.bind(this);
+        this.unlock = this.unlock.bind(this);
+        this.insertOffer = this.insertOffer.bind(this);
+        this.removeOffer = this.removeOffer.bind(this);
+        this.getOffers = this.getOffers.bind(this);
+        this.getActiveOffer = this.getActiveOffer.bind(this);
+        this.updateOffer = this.updateOffer.bind(this);
+    }
+
+    /**
+     * @method
+     * @summary Inserts the specified asset into the database
+     * @param {Asset} asset The asset to be inserted
+     * @param {SecurityPrincipal} runAs The principal to run as
+     * @param {Client} _txc The transaction to run this in
+     * @returns {Asset} The inserted asset
+     */
+    async insert(asset, runAs, _txc) {
+
+        if (!runAs || !(runAs instanceof security.Principal))
+            throw new exception.ArgumentException("runAs");
+
+        var dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+
+            var dbAsset = asset.toData();
+            dbAsset.created_by = runAs.session.userId;
+            var insertCmd = model.Utils.generateInsert(dbAsset, "assets");
+            // Insert the asset
+            var rdr = await dbc.query(insertCmd.sql, insertCmd.args);
+            if (rdr.rows.length == 0)
+                throw new exception.Exception("Could not insert asset", exception.ErrorCodes.DATA_ERROR);
+            else
+                return asset.fromData(rdr.rows[0]);
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Locks the specified asset from sale
+     * @param {string} assetId The ID of the asset to lock
+     * @param {SecurityPrincipal} runAs The principal to run as
+     * @param {Client} _txc The transactional client
+     * @returns {Asset} The locked asset
+     */
+    async lock(assetId, runAs, _txc) {
+        if (!runAs || !(runAs instanceof security.Principal))
+            throw new exception.ArgumentException("runAs");
+
+        var dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+
+            // Update the asset
+            var rdr = await dbc.query("UPDATE assets SET locked = TRUE, updated_by = $1, updated_time = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *", [runAs.session.userId, assetId]);
+            if (rdr.rows.length == 0)
+                throw new exception.Exception("Could not lock asset", exception.ErrorCodes.DATA_ERROR);
+            else
+                return new Asset().fromData(rdr.rows[0]);
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Unlocks the specified asset from sale
+     * @param {string} assetId The ID of the asset to lock
+     * @param {SecurityPrincipal} runAs The principal to run as
+     * @param {Client} _txc The transactional client
+     * @returns {Asset} The locked asset
+     */
+    async unlock(assetId, runAs, _txc) {
+        if (!runAs || !(runAs instanceof security.Principal))
+            throw new exception.ArgumentException("runAs");
+
+        var dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+
+            // Update the asset
+            var rdr = await dbc.query("UPDATE assets SET locked = FALSE, updated_by = $1, updated_time = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *", [runAs.session.userId, assetId]);
+            if (rdr.rows.length == 0)
+                throw new exception.Exception("Could not unlock asset", exception.ErrorCodes.DATA_ERROR);
+            else
+                return new Asset().fromData(rdr.rows[0]);
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Adds an asset offer to the specified asset
+     * @param {string} assetId The ID of the asset to lock
+     * @param {Offer} offer The offer of the asset to be inserted
+     * @param {SecurityPrincipal} runAs The principal to run as
+     * @param {Client} _txc The transactional client
+     * @returns {Offer} The inserted asset sale
+     */
+    async insertOffer(assetId, offer, runAs, _txc) {
+        if (!runAs || !(runAs instanceof security.Principal))
+            throw new exception.ArgumentException("runAs");
+
+        var dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+
+            // Insert the asset sale
+            var dbOffer = offer.toData();
+            dbOffer.created_by = runAs.session.userId;
+            dbOffer.asset_id = assetId;
+            var insertCmd = model.Utils.generateInsert(dbOffer, "asset_offer");
+            // Insert the asset sale
+            var rdr = await dbc.query(insertCmd.sql, insertCmd.args);
+            if (rdr.rows.length == 0)
+                throw new exception.Exception("Could not insert asset offer", exception.ErrorCodes.DATA_ERROR);
+            else
+                return offer.fromData(rdr.rows[0]); 
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
+    }
+    
+    /**
+     * @method
+     * @summary Deletes an asset offer to the specified asset
+     * @param {string} offerId The offer of the asset to be removed
+     * @param {SecurityPrincipal} runAs The principal to run as
+     * @param {Client} _txc The transactional client
+     * @returns {Offer} The removed asset offer
+     */
+    async removeOffer(offerId, runAs, _txc) {
+        if (!runAs || !(runAs instanceof security.Principal))
+            throw new exception.ArgumentException("runAs");
+
+        var dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+
+            // Delete the asset sale
+            var rdr = await dbc.query("UPDATE asset_offer SET deactivated_time = CURRENT_TIMESTAMP, deactivated_by = $1 WHERE id = $2 RETURNING *", [ runAs.session.userId, offerId ]);
+            if (rdr.rows.length == 0)
+                throw new exception.Exception("Could not delete asset offer", exception.ErrorCodes.DATA_ERROR);
+            else
+                return new Offer().fromData(rdr.rows[0]); 
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
+    }
+
+        /**
+     * @method
+     * @summary Updates an asset offer 
+     * @param {Offer} offer The offering of the asset to be updated
+     * @param {SecurityPrincipal} runAs The principal to run as
+     * @param {Client} _txc The transactional client
+     * @returns {Offer} The removed asset offer
+     */
+    async updateOffer(offer, runAs, _txc) {
+        if (!runAs || !(runAs instanceof security.Principal))
+            throw new exception.ArgumentException("runAs");
+
+        var dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+
+            // Delete the asset offer
+            var dbOffer = offer.toData();
+            dbOffer.updated_by = runAs.session.userId;
+            var updateCmd = model.Utils.generateUpdate(dbOffer, "asset_offer", "updated_time");
+            var rdr = await dbc.query(updateCmd.sql, updateCmd.args);
+            if (rdr.rows.length == 0)
+                throw new exception.Exception("Could not update asset offer", exception.ErrorCodes.DATA_ERROR);
+            else
+                return offer.fromData(rdr.rows[0]); 
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Gets all offers for the specified asset id
+     * @param {string} assetId The id of the asset to get offers for
+     * @param {Client} _txc When present, the database transaction to use
+     * @returns {Offer} The asset offers with identifier matching
+     */
+    async getOffers(assetId, _txc) {
+        var dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+
+            // Get by ID
+            var rdr = await dbc.query("SELECT * FROM asset_offer WHERE asset_id = $1 ORDER BY start_date ASC", [assetId]);
+            var retVal = [];
+            rdr.rows.forEach((o)=>retVal.push(new Offer().fromData(o)));
+            return retVal;
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Gets active sale for the specified asset
+     * @param {string} assetId The id of the asset to get sales for
+     * @param {Client} _txc When present, the database transaction to use
+     * @returns {Offer} The asset sales with identifier matching
+     */
+    async getActiveOffer(assetId, _txc) {
+        var dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+
+            // Get by ID
+            var rdr = await dbc.query("SELECT * FROM asset_offer WHERE asset_id = $1 AND deactivation_time IS NULL AND CURRENT_TIMESTAMP BETWEEN COALESCE(start_date, CURRENT_DATE) AND COALESCE(stop_date, CURRENT_DATE)", [assetId]);
+            if(rdr.rows.length == 0)
+                return null;
+            else
+                return new Offer().fromData(rdr.rows[0]);
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
     }
 
     /**
@@ -49,17 +288,17 @@ const pg = require('pg'),
     async get(id, _txc) {
         var dbc = _txc || new pg.Client(this._connectionString);
         try {
-            if(!_txc) await dbc.connect();
+            if (!_txc) await dbc.connect();
 
             // Get by ID
             var rdr = await dbc.query("SELECT * FROM assets WHERE id = $1", [id]);
-            if(rdr.rows.length == 0)
+            if (rdr.rows.length == 0)
                 throw new exception.NotFoundException("asset", id);
-            else 
+            else
                 return new Asset().fromData(rdr.rows[0]);
         }
-        finally{
-            if(!_txc) dbc.end();
+        finally {
+            if (!_txc) dbc.end();
         }
     }
 
@@ -76,24 +315,24 @@ const pg = require('pg'),
 
         var dbc = _txc || new pg.Client(this._connectionString);
         try {
-            if(!_txc) await dbc.connect();
+            if (!_txc) await dbc.connect();
 
             var dbFilter = {};
             // User supplied filter
-            if(filter) {
+            if (filter) {
                 dbFilter = filter.toData();
-                if(!filter.deactivationTime)
+                if (!filter.deactivationTime)
                     dbFilter.deactivation_time = filter.deactivationTime;
             }
             var selectCmd = model.Utils.generateSelect(dbFilter, "assets", offset, count);
             var rdr = await dbc.query(selectCmd.sql, selectCmd.args);
             var retVal = [];
-            for(var r in rdr.rows)
+            for (var r in rdr.rows)
                 retVal.push(new Asset().fromData(rdr.rows[r]));
             return retVal;
         }
-        finally{
-            if(!_txc) dbc.end();
+        finally {
+            if (!_txc) dbc.end();
         }
     }
 }
