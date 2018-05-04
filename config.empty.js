@@ -222,3 +222,21 @@
 
     fnDump(module.exports, config, '');
 }
+else if(process.argv[2] == "merge") {
+    var config = require('./config');
+    console.log("// Merged Configuration")
+    
+    var fnMerge = function(a, b) {
+        for(var k in a)
+           if(!b[k]) 
+                b[k] = a[k];
+           else if(b[k] != a[k] && 
+             a[k].constructor.name != "String" &&
+             Object.keys(a[k]).length > 0) 
+                b[k] = fnMerge(a[k], b[k]);
+        return b;
+    };
+
+    console.log(JSON.stringify(fnMerge(module.exports, config), null, '\t'));
+
+}
