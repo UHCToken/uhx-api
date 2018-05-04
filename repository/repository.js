@@ -70,7 +70,7 @@ class UhcRepositories {
         }
         catch(e) {
             await dbc.query("ROLLBACK");
-            console.error(`Rolling back transaction due to: ${e.message}`);
+            uhc.log.error(`Rolling back transaction due to: ${e.message}`);
             throw new exception.Exception("Database transaction failed", exception.ErrorCodes.DATA_ERROR, e);
         }
         finally {

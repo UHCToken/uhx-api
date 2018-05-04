@@ -391,7 +391,7 @@ class UserApiResource {
     async acl(principal, req, res) {
 
         if(!(principal instanceof security.Principal)) {
-            console.error("ACL requires a security principal to be passed");
+            uhc.log.error("ACL requires a security principal to be passed");
             return false;
         }
 

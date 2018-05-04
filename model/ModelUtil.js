@@ -17,6 +17,8 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
+const uhc = require('../uhc');
+
 /**
   * @class
   * @summary Provides helper methods for dealing with model classes
@@ -53,10 +55,12 @@ module.exports = class ModelUtil {
         else
             updateSet = updateSet.substr(0, updateSet.length - 2);
             
-        return {
+        var retVal = {
             sql: `UPDATE ${tableName} SET ${updateSet} WHERE ${whereClause} RETURNING *`,
             args : parameters
         };
+        uhc.log.debug(`Generated update : ${retVal.sql}`);
+        return retVal;
     }
 
     /**
@@ -100,10 +104,13 @@ module.exports = class ModelUtil {
         if(count)
             control += `LIMIT ${count} `;
 
-        return {
+        var retVal = {
             sql: `SELECT * FROM ${tableName} ${whereClause} ${control}`,
             args : parameters
         };
+        uhc.log.debug(`Generated select : ${retVal.sql}`);
+        return retVal;
+
     }
 
     /**
@@ -133,9 +140,12 @@ module.exports = class ModelUtil {
             }
         }
 
-        return {
+        var retVal = {
             sql: `INSERT INTO ${tableName} (${colNames.substring(0, colNames.length - 1)}) VALUES (${values.substring(0, values.length - 1)}) RETURNING *`,
             args: parameters
         };
+        uhc.log.debug(`Generated insert : ${retVal.sql}`);
+        return retVal;
+
     }
  }

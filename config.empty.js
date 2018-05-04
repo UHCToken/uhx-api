@@ -17,6 +17,8 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
+ const winston = require('winston');
+
  /**
   * @class UHC API Configuration
   * @description Configuration parameters for the stellar API
@@ -196,6 +198,11 @@
             confirmation: "./templates/confirm",
             emailChange: "./templates/emailChange"
         } 
+    },
+    logging : {
+        level: 'info',
+        console: true,
+        file: 'uhc.log'
     }
  }
 

@@ -320,7 +320,7 @@
      * @param {*} e The exception to be handled 
      */
     async error(e, res) {
-      console.error(`Error executing OAUTH: ${JSON.stringify(e)} `);
+      uhc.log.error(`Error executing OAUTH: ${JSON.stringify(e)} `);
       if(e instanceof exception.Exception)
         res.status(400).json(new OAuthErrorResult(e.code, e.message));
       else

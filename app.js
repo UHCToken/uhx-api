@@ -80,3 +80,4 @@ else {
     https.createServer(uhc.Config.api.tls, app).listen(uhc.Config.api.port);
 }
 
+uhc.log.info(`UHC API started on ${uhc.Config.api.port}`);

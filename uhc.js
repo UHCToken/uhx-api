@@ -21,10 +21,18 @@
  const config = require('./config'),
     repositories = require('./repository/repository'),
     SecurityLogic = require('./logic/SecurityLogic'),
-    TokenLogic = require('./logic/TokenLogic');
+    TokenLogic = require('./logic/TokenLogic'),
+    winston = require('winston');
+
+winston.level = config.logging.level;
+
+if(config.logging.file) 
+    winston.add(winston.transports.File, { filename: config.logging.file, rotationFormat: true, json: false, tailable: true } );
+
 
  // Exports section
  module.exports.SecurityLogic = new SecurityLogic();
  module.exports.TokenLogic = new TokenLogic();
  module.exports.Config = config;
  module.exports.Repositories = new repositories.UhcRepositories(config.db.server);
+ module.exports.log = winston;

@@ -119,7 +119,7 @@ module.exports = class StellarClient {
             });
         }
         catch(e) {
-            console.error(`Account generation has failed : ${JSON.stringify(e)}`);
+            uhc.log.error(`Account generation has failed : ${JSON.stringify(e)}`);
             throw new StellarException(e);
         }
     }
@@ -134,7 +134,7 @@ module.exports = class StellarClient {
     async setOptions(userWallet, options) {
         try {
             
-            console.info(`setOptions() : Setting options on ${userWallet.address}`);
+            uhc.log.info(`setOptions() : Setting options on ${userWallet.address}`);
 
             var userAcct = await this.server.loadAccount(userWallet.address);
             
@@ -149,13 +149,13 @@ module.exports = class StellarClient {
             
             var optionsResult = await this._server.submitTransaction(optionsTx);
 
-            console.info(`setOptions(): Account ${userWallet.address} options updated on Horizon API`);
+            uhc.log.info(`setOptions(): Account ${userWallet.address} options updated on Horizon API`);
 
             return userWallet;
 
         }
         catch(e) {
-            console.error(`Set account options failed : ${JSON.stringify(e)}`);
+            uhc.log.error(`Set account options failed : ${JSON.stringify(e)}`);
             throw new StellarException(e);
         }
     }
@@ -173,7 +173,7 @@ module.exports = class StellarClient {
             
             asset = asset || await offer.loadAsset();
 
-            console.info(`createSellOffer() : Creating offer to sell ${offer.target} @ 1 ${asset.code} @ ${offer.price.value} ${offer.price.code}`);
+            uhc.log.info(`createSellOffer() : Creating offer to sell ${offer.target} @ 1 ${asset.code} @ ${offer.price.value} ${offer.price.code}`);
 
             var sellerAcct = await this.server.loadAccount(sellerWallet.address);
             
@@ -201,14 +201,14 @@ module.exports = class StellarClient {
             
             var offerResult = await this._server.submitTransaction(offerTx);
 
-            console.info(`createSellOffer(): ${sellerWallet.address} offer made on Horizon API`);
+            uhc.log.info(`createSellOffer(): ${sellerWallet.address} offer made on Horizon API`);
             offer.offerId = offerResult._links.transaction.href;
 
             return offer;
 
         }
         catch(e) {
-            console.error(`Create SELL offer failed : ${JSON.stringify(e)}`);
+            uhc.log.error(`Create SELL offer failed : ${JSON.stringify(e)}`);
             throw new StellarException(e);
         }
     }
@@ -229,7 +229,7 @@ module.exports = class StellarClient {
             if(e.constructor.name == "NotFoundException")
                 return null;
                 
-            console.error(`Account retrieval has failed : ${JSON.stringify(e)}`);
+            uhc.log.error(`Account retrieval has failed : ${JSON.stringify(e)}`);
             throw new StellarException(e);
         }
     }
@@ -246,7 +246,7 @@ module.exports = class StellarClient {
 
         try {
 
-            console.info(`activateAccount(): Activating ${userWallet.address} on Horizon API`);
+            uhc.log.info(`activateAccount(): Activating ${userWallet.address} on Horizon API`);
 
             // Generate the random KP
             var kp = Stellar.Keypair.fromSecret(userWallet.seed);
@@ -268,7 +268,7 @@ module.exports = class StellarClient {
             // Submit transaction
             var distResult = await this.server.submitTransaction(newAcctTx);
 
-            console.info(`activateAccount(): Account ${kp.publicKey()} activated on Horizon API`);
+            uhc.log.info(`activateAccount(): Account ${kp.publicKey()} activated on Horizon API`);
 
             // return 
             return new model.Wallet().copy({
@@ -277,7 +277,7 @@ module.exports = class StellarClient {
             });
         }
         catch(e) {
-            console.error(`Account creation has failed : ${JSON.stringify(e)}`);
+            uhc.log.error(`Account creation has failed : ${JSON.stringify(e)}`);
             throw new StellarException(e);
         }
     }
@@ -300,7 +300,7 @@ module.exports = class StellarClient {
 
             // Add trust operations
             if(asset) {
-                console.info(`createTrust(): Creating trust for ${asset.code} for ${userWallet.address}`);
+                uhc.log.info(`createTrust(): Creating trust for ${asset.code} for ${userWallet.address}`);
                 changeTrustTx.addOperation(Stellar.Operation.changeTrust({
                     asset : asset instanceof String ? this.getAssetByCode(asset) : new Stellar.Asset(asset.code, asset.issuer),
                     limit: limit ? "" + limit : undefined,
@@ -309,7 +309,7 @@ module.exports = class StellarClient {
             }
             else
                 for(var i in this.assets){
-                    console.info(`createTrust(): Creating trust for ${this.assets[i].code} for ${userWallet.address}`);
+                    uhc.log.info(`createTrust(): Creating trust for ${this.assets[i].code} for ${userWallet.address}`);
                     changeTrustTx.addOperation(Stellar.Operation.changeTrust({
                         asset: new Stellar.Asset(this.assets[i].code, this.assets[i].issuer),
                         limit: limit ? "" + limit : undefined,
@@ -326,12 +326,12 @@ module.exports = class StellarClient {
             // Submit transaction
             var distResult = await this.server.submitTransaction(changeTrustTx);
             
-            console.info(`createTrust(): Account ${userWallet.address} trust has been changed`);
+            uhc.log.info(`createTrust(): Account ${userWallet.address} trust has been changed`);
 
             return userWallet;
         }
         catch(e) {
-            console.error(`Account changeTrust has failed: ${JSON.stringify(e)}`);
+            uhc.log.error(`Account changeTrust has failed: ${JSON.stringify(e)}`);
             throw new StellarException(e);
         }
     }
@@ -346,7 +346,7 @@ module.exports = class StellarClient {
     async getAccount(userWallet) {
         try {
 
-            console.info(`getAccount(): Get account ${userWallet.address} from Horizon API`);
+            uhc.log.info(`getAccount(): Get account ${userWallet.address} from Horizon API`);
             
             // Load stellar user acct
             var stellarAcct = await this.server.loadAccount(userWallet.address);
@@ -360,7 +360,7 @@ module.exports = class StellarClient {
                 ));
             });
 
-            console.info(`getAccount(): Account ${userWallet.address} has been loaded from Horizon API`);
+            uhc.log.info(`getAccount(): Account ${userWallet.address} has been loaded from Horizon API`);
             
             // TODO: Should we wrap this?
             return userWallet;
@@ -369,7 +369,7 @@ module.exports = class StellarClient {
 
             if(e.data && e.data.status == 404)
                 throw new exception.NotFoundException("wallet", userWallet.id); // soft fail
-            console.error(`Account getAccount has failed: ${JSON.stringify(e)}`);
+            uhc.log.error(`Account getAccount has failed: ${JSON.stringify(e)}`);
             throw new StellarException(e);
         }
     }
@@ -388,7 +388,7 @@ module.exports = class StellarClient {
 
         try {
 
-            console.info(`createPayment() : ${payorWallet.address} > ${payeeWallet.address} [${amount.value} ${amount.code}]`);
+            uhc.log.info(`createPayment() : ${payorWallet.address} > ${payeeWallet.address} [${amount.value} ${amount.code}]`);
             // Load payor stellar account
             var payorStellarAcct = await this.server.loadAccount(payorWallet.address);
 
@@ -435,13 +435,13 @@ module.exports = class StellarClient {
             // Submit transaction
             var ref = null;
             var paymentResult = await this.server.submitTransaction(paymentTx);
-            console.info(`Payment ${payorWallet.address} > ${payeeWallet.address} (${amount.value} ${amount.code}) success`);
+            uhc.log.info(`Payment ${payorWallet.address} > ${payeeWallet.address} (${amount.value} ${amount.code}) success`);
             
             // Build transaction 
             return new model.Transaction(paymentResult.ledger, new Date(), await payorWallet.loadUser(), await payeeWallet.loadUser(), amount, null, paymentResult._links.transaction.href);
         }
         catch(e) {
-            console.error(`Account payment has failed: ${e.message}`);
+            uhc.log.error(`Account payment has failed: ${e.message}`);
             throw new StellarException(e);
         }
     }
@@ -501,7 +501,7 @@ module.exports = class StellarClient {
 
         }
         catch(e) {
-            console.error(`Fetch transaction history has failed: ${JSON.stringify(e)}`);
+            uhc.log.error(`Fetch transaction history has failed: ${JSON.stringify(e)}`);
             throw new StellarException(e);
         }
     }

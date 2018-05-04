@@ -102,7 +102,7 @@ const uhc = require('../uhc'),
                 throw new exception.Exception("Account has been deactivated", exception.ErrorCodes.UNAUTHORIZED);
         }
         catch(e) {
-            console.error("Error performing authentication: " + e.message);
+            uhc.log.error("Error performing authentication: " + e.message);
             // Attempt to increment the invalid login count
             var invalidUser = await uhc.Repositories.userRepository.incrementLoginFailure(username, uhc.Config.security.maxFailedLogin);
             if(invalidUser.lockout) 
@@ -126,7 +126,7 @@ const uhc = require('../uhc'),
             return new security.Principal(session);
         }
         catch(e) {
-            console.error("Error finalizing authentication: " + e.message);
+            uhc.log.error("Error finalizing authentication: " + e.message);
             throw new exception.Exception("Error finalizing authentication", exception.ErrorCodes.SECURITY_ERROR, e);
         }
     }
@@ -148,7 +148,7 @@ const uhc = require('../uhc'),
             return new security.Principal(session);
         }
         catch(e) {
-            console.error("Error finalizing client authentication " + e.message);
+            uhc.log.error("Error finalizing client authentication " + e.message);
             throw new exception.Exception("Error finalizing authentication", exception.ErrorCodes.SECURITY_ERROR, e);
         }
     }
@@ -192,7 +192,7 @@ const uhc = require('../uhc'),
             return new security.Principal(session);
         }
         catch(e) {
-            console.error("Error refreshing session: " + e.message);
+            uhc.log.error("Error refreshing session: " + e.message);
             throw new exception.Exception("Error refreshing session", exception.ErrorCodes.SECURITY_ERROR, e);
         }
     }
@@ -226,7 +226,7 @@ const uhc = require('../uhc'),
             return user;
         }
         catch(e) {
-            console.error("Error finalizing authentication: " + e.message);
+            uhc.log.error("Error finalizing authentication: " + e.message);
             throw new exception.Exception("Error registering user", exception.ErrorCodes.UNKNOWN, e);
         }
     }
@@ -267,7 +267,7 @@ const uhc = require('../uhc'),
             });
         }
         catch(e) {
-            console.error("Error finalizing authentication: " + e.message);
+            uhc.log.error("Error finalizing authentication: " + e.message);
             throw new exception.Exception("Error creating waller user", exception.ErrorCodes.UNKNOWN, e);
         }
     }
@@ -332,7 +332,7 @@ const uhc = require('../uhc'),
             });
         }
         catch(e) {
-            console.error("Error updating user: " + e.message);
+            uhc.log.error("Error updating user: " + e.message);
             throw new exception.Exception("Error updating user", exception.ErrorCodes.UNKNOWN, e);
         }
     }
@@ -362,7 +362,7 @@ const uhc = require('../uhc'),
 
         }
         catch(e) {
-            console.error(`Error sending confirmation e-mail: ${JSON.stringify(e)}`);
+            uhc.log.error(`Error sending confirmation e-mail: ${JSON.stringify(e)}`);
             throw e;
         }
     }
@@ -448,7 +448,7 @@ const uhc = require('../uhc'),
 
         }
         catch(e) {
-            console.error(`Error claiming invitation: ${JSON.stringify(e)}`);
+            uhc.log.error(`Error claiming invitation: ${JSON.stringify(e)}`);
             throw new exception.Exception("Error claiming invitation", e.code || exception.ErrorCodes.UNKNOWN, e);
         }
     }
@@ -509,7 +509,7 @@ const uhc = require('../uhc'),
             });
         }
         catch(e) {
-            console.error(`Error finalizing invitation: ${e.message}`);
+            uhc.log.error(`Error finalizing invitation: ${e.message}`);
             throw new exception.Exception("Error finalizing invitation", e.code || exception.ErrorCodes.UNKNOWN, e);
         }
     }

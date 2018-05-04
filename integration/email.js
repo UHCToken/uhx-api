@@ -76,7 +76,7 @@ module.exports = class EmailWrapper {
         options.cc = "justin.fyfe1@mohawkcollege.ca";
         var transport = nodemailer.createTransport(this._options);
         await transport.sendMail(options);
-        console.info(`E-Mail has successfully been sent to ${options.to}`);
+        uhc.log.info(`E-Mail has successfully been sent to ${options.to}`);
 
 
     }

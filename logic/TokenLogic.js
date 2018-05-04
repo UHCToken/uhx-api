@@ -181,7 +181,7 @@ module.exports = class TokenLogic {
 
         }
         catch (e) {
-            console.error(`Error creating asset: ${e.message}`);
+            uhc.log.error(`Error creating asset: ${e.message}`);
             throw new exception.Exception("Error creating asset", e.code || exception.ErrorCodes.UNKNOWN, e);
         }
     }
