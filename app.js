@@ -31,7 +31,9 @@
     asset = require('./controllers/asset'),
     invitation = require('./controllers/invitation'),
     swagger = require('./controllers/js-doc'),
-    toobusy = require('toobusy-js');
+    toobusy = require('toobusy-js'),
+    https = require('https'),
+    http = require('http');
     
 
 // Startup application
@@ -71,6 +73,10 @@ restApi.addResource(new invitation.InvitationApiResource());
 restApi.start();
 
 // Start the express instance
-var instance = app.listen(uhc.Config.api.port, () => {
-    console.log(`UHC API listening on ${uhc.Config.api.port}!`)
-})
+if(uhc.Config.api.scheme == "http") {
+    http.createServer(app).listen(uhc.Config.api.port);
+}
+else {
+    https.createServer(uhc.Config.api.tls, app).listen(uhc.Config.api.port);
+}
+

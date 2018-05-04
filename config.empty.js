@@ -63,13 +63,13 @@
          /**
           * @summary The preferred scheme
           */
-         scheme: "https",
+         scheme: "http",
          /**
           * @summary The SSL certificate information
           */
-         ssl :{
-             key: "./privatekey.pem",
-             cert: "./certificate.pem",
+         tls :{
+             key: "./mykey.pfx",
+             passphrase: "ABC123"
         },
          /**
           * @summary The link to the front-facing web site which users can interact with in order to do things like reset passwords, claim invites, etc.

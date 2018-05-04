@@ -111,8 +111,13 @@ module.exports = class TokenLogic {
                     for (var i in asset.offers) {
                         // If the asset is not public or there is a kyc requirement then the asset needs to be bought from the distributor here not on the exchange
                         if (!asset.offers[i].public || asset.kycRequirement) {
-                            suppAcct = suppAcct || await uhc.Repositories.walletRepository.insert(supplyAccount, principal, _txc);
-                            asset.offers[i]._walletId = suppAcct.id;
+                            if(asset.offers[i].useDistributorWallet) {
+                                asset.offers[i]._walletId = distributingAccount.id;
+                            }
+                            else {
+                                suppAcct = suppAcct || await uhc.Repositories.walletRepository.insert(supplyAccount, principal, _txc);
+                                asset.offers[i]._walletId = suppAcct.id;
+                            }
                         }
                         asset.offers[i] = await uhc.Repositories.assetRepository.insertOffer(asset.id, asset.offers[i], principal, _txc);
                     }
