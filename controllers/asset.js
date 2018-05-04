@@ -233,6 +233,8 @@ module.exports.AssetApiResource = class AssetApiResource {
      */
     async get(req, res) {
         var asset = await uhc.Repositories.assetRepository.get(req.params.id);
+        await asset.loadOffers();
+        await asset.loadDistributorWallet();
         res.status(200).json(asset);
         return true;
     }
@@ -294,8 +296,8 @@ module.exports.AssetApiResource = class AssetApiResource {
      * @param {Express.Request} req The HTTP request from the client
      * @param {Express.Response} res The HTTP response to the client
      * @swagger
-     * /asset:
-     *  get:
+     * /asset/quote:
+     *  post:
      *      tags:
      *      - "asset"
      *      summary: "Retrieves a market rate quote from the API"

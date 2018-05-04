@@ -26,6 +26,7 @@ const UserRepository = require('./userRepository'),
     AssetRepository = require('./assetRepository'),
     InvitationRepository = require('./invitationRepository'),
     pg = require('pg'),
+    uhc = require('../uhc'),
     exception = require('../exception');
 
 /**

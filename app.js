@@ -33,6 +33,7 @@
     swagger = require('./controllers/js-doc'),
     toobusy = require('toobusy-js'),
     https = require('https'),
+    helmet = require('helmet'),
     http = require('http');
     
 
@@ -46,6 +47,7 @@ app.use(function(req, res, next) {
     else
         next();
 });
+app.use(helmet());
 
 // Construct REST API
 var restApi = new api.RestApi(uhc.Config.api.base, app);
