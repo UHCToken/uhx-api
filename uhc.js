@@ -1,4 +1,4 @@
-/// <Reference path="./model/model.js"/>
+// <Reference path="./model/model.js"/>
 'use strict';
 
 /**
@@ -20,164 +20,19 @@
 
  const config = require('./config'),
     repositories = require('./repository/repository'),
-    exception = require('./exception'),
-    security = require('./security'),
-    model = require('./model/model');
+    SecurityLogic = require('./logic/SecurityLogic'),
+    TokenLogic = require('./logic/TokenLogic'),
+    winston = require('winston');
 
- const repository = new repositories.UhcRepositories(config.db.server);
- /**
-  * @class
-  * @summary Represents the core business logic of the UHC application
-  */
- class SecurityLogic {
+winston.level = config.logging.level;
 
-    /**
-     * @method
-     * @summary Authenticates the application
-     * @param {string} clientId The identity of the client
-     * @param {string} clientSecret The secret of the client
-     * @returns {Principal} The authenticated application
-     */
-    async authenticateClientApplication(clientId, clientSecret) {
-        // Get the application and verify
-        var application = await repository.applicationRepository.getByNameSecret(clientId, clientSecret);
-        if(application.deactivationTime)
-            throw new exception.Exception("Application has been deactivated", exception.ErrorCodes.SECURITY_ERROR);
-        return new security.Principal(application);
-    }
-
-    /**
-     * @method 
-     * @summary Performs the necessary business process of logging the user in
-     * @param {SecurityPrincipal} clientPrincipal The application or client that the user is using
-     * @param {string} username The username of the user wishing to login
-     * @param {string} password The password that the user entered
-     * @param {string} scope The scope which the session should be established for.
-     * @returns {Principal} The authenticated user principal
-     */
-    async establishSession(clientPrincipal, username, password, scope) {
-
-        // Ensure that the application information is loaded
-        await clientPrincipal.session.loadApplication();
-        var application = clientPrincipal.session.application;
-
-        try {
-            var user = await repository.userRepository.getByNameSecret(username, password);
-            
-            // User was successful but their account is still locked
-            if(user.lockout > new Date())
-                throw new exception.Exception("Account is locked", exception.ErrorCodes.ACCOUNT_LOCKED);
-            else if(user.deactivationTime && user.deactivationTime < new Date())
-                throw new exception.Exception("Account has been deactivated", exception.ErrorCodes.UNAUTHORIZED);
-        }
-        catch(e) {
-            console.error("Error performing authentication: " + e.message);
-            // Attempt to increment the invalid login count
-            var invalidUser = await repository.userRepository.incrementLoginFailure(username, config.security.maxFailedLogin);
-            if(invalidUser.lockout) 
-                throw new exception.Exception("Account is locked", exception.ErrorCodes.ACCOUNT_LOCKED, e);
-            throw e;
-        }
-
-        try {
-            // Success, reset the user invalid logins
-            user.invalidLogins = 0;
-            user.lastLogin = new Date();
-            
-            await repository.userRepository.update(user);
-
-            // Create the session object
-            var session = new model.Session(user, application, scope, config.security.sessionLength);
-            session = await repository.sessionRepository.insert(session);
-            await session.loadGrants();
-            return new security.Principal(session);
-        }
-        catch(e) {
-            console.error("Error finalizing authentication: " + e.message);
-            throw new exception.Exception("Error finalizing authentication", exception.ErrorCodes.SECURITY_ERROR, e);
-        }
-    }
-
-    /**
-     * @method
-     * @summary Refreshes the specified session to which the refreshToken belongs
-     * @param {SecurityPrincipal} clientPrincipal The principal of the application (must match the original application which the session was given to)
-     * @param {string} refreshToken The refresh token
-     */
-    async refreshSession(clientPrincipal, refreshToken) {
-
-        // Ensure that the application information is loaded
-        await clientPrincipal.session.loadApplication();
-        var application = clientPrincipal.session.application;
-    
-        try {
-            var session = await repository.sessionRepository.transact(async (_tx) => {
-
-                // Get session
-                var session = await repository.sessionRepository.getByRefreshToken(refreshToken, config.security.refreshValidity, _tx);
-                if(session == null)
-                    throw new exception.Exception("Invalid refresh token", exception.ErrorCodes.SECURITY_ERROR);
-                else if(session.applicationId != application.id)
-                    throw new exception.Exception("Refresh must be performed by originator", exception.ErrorCodes.SECURITY_ERROR);
-                // Abandon the existing session
-                await repository.sessionRepository.abandon(session.id, _tx);
-
-                // Establish a new session
-                return await repository.sessionRepository.insert(
-                    new model.Session(session.userId, session.applicationId, session.audience, config.security.sessionLength),
-                    null,
-                    _tx
-                );
-                
-            }); 
-
-            await session.loadGrants();
-            await session.loadUser();
-            return new security.Principal(session);
-        }
-        catch(e) {
-            console.error("Error refreshing session: " + e.message);
-            throw new exception.Exception("Error refreshing session", exception.ErrorCodes.SECURITY_ERROR, e);
-        }
-    }
-    /**
-     * @method
-     * @summary Register a regular user 
-     * @param {User} user The user to be registered
-     * @param {string} password The password to set on the user
-     */
-    async registerInternalUser(user, password) {
-
-        // First we register the user in our DB
-        try {
-            var retVal = await repository.userRepository.insert(user, password);
-
-            // TODO: Add user to group USERS
-            // TODO: Initialize Stellar wallet
-            return retVal;
-        }
-        catch(e) {
-            console.error("Error finalizing authentication: " + e.message);
-            throw new exception.Exception("Error registering user", exception.ErrorCodes.UNKNOWN, e);
-        }
-    }
-
-    /**
-     * @method
-     * @summary Registers a users from an external provider
-     * @param {*} identity Represents information about an external identity
-     * @param {string} identity.provider The provider key for the external identity
-     * @param {string} identity.username The user's identity name on the external provider
-     * @param {string} identity.password The user's identity name on the external provider
-     * @param {string} identity.key The key or token that was used to access the external provider
-     */
-    async registerExternalUser(identity) {
-        throw new exception.NotImplementedException();
-    }
- }
+if(config.logging.file) 
+    winston.add(winston.transports.File, { filename: config.logging.file, rotationFormat: true, json: false, tailable: true } );
 
 
  // Exports section
  module.exports.SecurityLogic = new SecurityLogic();
+ module.exports.TokenLogic = new TokenLogic();
  module.exports.Config = config;
- module.exports.Repositories = repository;
+ module.exports.Repositories = new repositories.UhcRepositories(config.db.server);
+ module.exports.log = winston;

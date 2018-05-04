@@ -22,53 +22,126 @@
     testRepo = require('../repository/repository'),
     exception = require('../exception'),
     model = require('../model/model'),
-    StellarClient = require('../integration/stellar');
+    StellarClient = require('../integration/stellar'),
+    Wallet = require("../model/Wallet");
 
 describe("Stellar API Wrapper", async function() {
 
+    this.timeout(0);
+
     // Test repository
     var testRepository = new testRepo.UhcRepositories(uhc.Config.db.test_server);
+    var initiatorWallet = null;
+    var sClient = null;
 
     // Stellar client
-    //var sClient = new StellarClient(uhc.Config.stellar.test_server, uhc.Config.stellar.assets, await testRepository.walletRepository.get(uhc.Config.stellar.distribution_wallet));
+    before(async function() {
+        sClient = new StellarClient("https://horizon-testnet.stellar.org", await testRepository.assetRepository.query(), true, uhc.Config.stellar.fee_collector);
+        initiatorWallet = await testRepository.walletRepository.get(uhc.Config.stellar.initiator_wallet_id);
+    })
 
-    /**
-     * @test
-     * @summary Tests that the stellar integration tool instantiates an account on the stellar network
-     */
-    it("Should instantiate an account properly", async function() {
+    // Get or create wallet under test
+    var tWalletUnderTest = null;
+    var getOrCreateWallet = async function() {
+        if(!tWalletUnderTest)
+            tWalletUnderTest = await sClient.generateAccount();
+        return tWalletUnderTest;
+    }
 
-    });
+    // only run in test network
+    if(uhc.Config.stellar.testnet_use) {
+        /**
+         * @test
+         * @summary Ensures that the stellar API generates a random keypair properly
+         */
+        it("Should create an account properly", async function() {
+            var wallet = await sClient.generateAccount();
+            assert.ok(wallet.seed);
+            assert.ok(wallet.address);
+        });
 
-    /**
-     * @test
-     * @summary Tests that the trust statement is successful
-     */
-    it("Should trust the stellar assets", async function() {
+        /**
+         * @test
+         * @summary Tests that the stellar integration tool instantiates an account on the stellar network
+         */
+        it("Should activate an account properly", async function() {
 
-    });
+            // Assert wallet is not active
+            var wallet = await sClient.generateAccount();
+            assert.ok(!(await sClient.isActive(wallet)));
 
-    /**
-     * @test
-     * @summary Tests that the stellar API retrieves an account successfully
-     */
-    it("Should retrieve account information properly", async function() {
+            // Activate the account with 1 XLM
+            wallet = await sClient.activateAccount(wallet, "1", initiatorWallet);
+            assert.ok(await sClient.isActive(wallet));
 
-    });
+            // Now we want to get balances
+            var acctWallet = await sClient.getAccount(wallet);
 
-    /**
-     * @test
-     * @summary Tests the payment transacts between two wallets successfully
-     */
-    it("Should make a payment to another wallet successfully", async function() {
+            assert.ok(acctWallet.address);
+            assert.ok(acctWallet.balances);
+            assert.equal(acctWallet.balances[0].value, 1);
+            assert.equal(acctWallet.balances[0].code, "XLM");
 
-    });
+            tWalletUnderTest = acctWallet;
+        });
 
-    /**
-     * @test
-     * @summary Tests that the stellar integration can retrieve history succesfully
-     */
-    it("Should retrieve the history of the user wallet successfully", async function() {
+        /**
+         * @test
+         * @summary Tests that the trust statement is successful
+         */
+        it("Should trust the stellar assets", async function() {
 
-    });
+            var wallet = await getOrCreateWallet();
+
+            if(!await sClient.isActive(wallet))
+                await sClient.activateAccount(wallet, "2", initiatorWallet);
+
+            // Now we want to get the balance
+            wallet = await sClient.getAccount(wallet);
+            var balBeforeTrust = wallet.balances[0];
+
+            // Now we will trust
+            await sClient.createTrust(wallet);
+
+            // Balance should be number of trust lines time stroops
+            wallet = await sClient.getAccount(wallet);
+            assert.equal(wallet.balances[1].value, balBeforeTrust.value - (sClient.assets.length * 0.00001));
+
+            tWalletUnderTest = wallet;
+        });
+
+        /**
+         * @test
+         * @summary Tests that the stellar API retrieves an account successfully
+         */
+        it("Should retrieve account information properly", async function() {
+
+            var wallet = await getOrCreateWallet();
+
+            if(!await sClient.isActive(wallet))
+                await sClient.activateAccount(wallet, "2", initiatorWallet);
+
+            wallet = await sClient.getAccount(wallet);
+            assert.ok(wallet.balances.length);
+            assert.ok(wallet.address);
+            assert.ok(wallet.balances[0].code);
+            assert.ok(wallet.balances[0].value);
+        });
+
+        /**
+         * @test
+         * @summary Tests the payment transacts between two wallets successfully
+         */
+        it("Should make a payment to another wallet successfully", async function() {
+
+        });
+
+        /**
+         * @test
+         * @summary Tests that the stellar integration can retrieve history succesfully
+         */
+        it("Should retrieve the history of the user wallet successfully", async function() {
+
+        });
+    }
 });

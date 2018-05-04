@@ -39,17 +39,27 @@ const pg = require('pg'),
         this.get = this.get.bind(this);
         this.getByNameSecret = this.getByNameSecret.bind(this);
         this.incrementLoginFailure = this.incrementLoginFailure.bind(this);
+        this.getExternalIds = this.getExternalIds.bind(this);
+        this.insert = this.insert.bind(this);
+        this.update = this.update.bind(this);
+        this.delete = this.delete.bind(this);
+        this.getClaims = this.getClaims.bind(this);
+        this.addClaim = this.addClaim.bind(this);
+        this.deleteClaim = this.deleteClaim.bind(this);
     }
 
 
     /**
-     * 
+     * @method
+     * @summary Get external identifiers for the user
      * @param {string} userId The user which external identifiers should be fetched for
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {*} External identities for the user
      */
-    async getExternalIds(userId) {
-        const dbc = new pg.Client(this._connectionString);
+    async getExternalIds(userId, _txc) {
+        const dbc =  _txc || new pg.Client(this._connectionString);
         try {
-            await dbc.connect();
+            if(!_txc) await dbc.connect();
             const rdr = await dbc.query("SELECT * FROM user_identity WHERE user_id = $1", [userId]);
             var retVal = [];
             for(var r in rdr.rows) 
@@ -57,7 +67,7 @@ const pg = require('pg'),
             return retVal;
         }
         finally {
-            dbc.end();
+            if(!_txc) dbc.end();
         }
     }
 
@@ -65,13 +75,14 @@ const pg = require('pg'),
      * @method
      * @summary Retrieve a specific user from the database
      * @param {uuid} id Gets the specified session
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {User} The retrieved user
      */
-    async get(id) {
+    async get(id, _txc) {
 
-        const dbc = new pg.Client(this._connectionString);
+        const dbc =  _txc || new pg.Client(this._connectionString);
         try {
-            await dbc.connect();
+            if(!_txc) await dbc.connect();
             const rdr = await dbc.query("SELECT * FROM users WHERE id = $1", [id]);
             if(rdr.rows.length == 0)
                 throw new exception.NotFoundException('user', id);
@@ -79,9 +90,31 @@ const pg = require('pg'),
                 return new User().fromData(rdr.rows[0]);
         }
         finally {
-            dbc.end();
+            if(!_txc) dbc.end();
         }
 
+    }
+
+    /**
+     * @method
+     * @summary Get claims for the specified user id
+     * @param {string} userId The user id for which claims should be fetched
+     * @param {Client} _txc When present, the postgresql connection to load claims on
+     * @returns {*} The claims for the user in key=value format
+     */
+    async getClaims(userId, _txc) {
+        var dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+            const rdr = await dbc.query("SELECT * FROM user_claims WHERE user_id = $1 WHERE expiry < CURRENT_TIMESTAMP", [userId]);
+            var retVal = {};
+            for(var r in rdr.rows)
+                retVal[rdr.rows[r].claim_type] = rdr.rows[r].claim_value;
+            return retVal;
+        }
+        finally {
+            if(!_txc) dbc.end();
+        }
     }
 
     /**
@@ -90,12 +123,13 @@ const pg = require('pg'),
      * @param {*} filter The query template to use
      * @param {number} offset When specified indicates the offset of the query
      * @param {number} count When specified, indicates the number of records to return
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {User} The matching users
      */
-    async query(filter, offset, count) {
-        const dbc = new pg.Client(this._connectionString);
+    async query(filter, offset, count, _txc) {
+        const dbc =  _txc || new pg.Client(this._connectionString);
         try {
-            await dbc.connect();
+            if(!_txc) await dbc.connect();
             
             var dbFilter = filter.toData();
             dbFilter.deactivation_time = filter.deactivationTime; // Filter for deactivation time?
@@ -109,7 +143,7 @@ const pg = require('pg'),
             return retVal;
         }
         finally {
-            dbc.end();
+            if(!_txc) dbc.end();
         }
     }
 
@@ -118,13 +152,14 @@ const pg = require('pg'),
      * @summary Get the user information by using the id and secret
      * @param {string} username The identifier of the user 
      * @param {string} password The password for the client
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {User} The fetched user
      */
-    async getByNameSecret(username, password) {
+    async getByNameSecret(username, password, _txc) {
         
-        const dbc = new pg.Client(this._connectionString);
+        const dbc =  _txc || new pg.Client(this._connectionString);
         try {
-            await dbc.connect();
+            if(!_txc) await dbc.connect();
 
             const rdr = await dbc.query("SELECT * FROM users WHERE name = $1 AND password = crypt($2, password)", [ username, password ]);
             if(rdr.rows.length == 0)
@@ -133,7 +168,7 @@ const pg = require('pg'),
                 return new User().fromData(rdr.rows[0]);
         }
         finally {
-            dbc.end();
+            if(!_txc) dbc.end();
         }
     }
 
@@ -142,12 +177,13 @@ const pg = require('pg'),
      * @summary Increments the login failures for the user account
      * @param {string} username The name of the user to increment the login failure attempts by
      * @param {number} lockoutThreshold The maximum number of invalid logins to permit
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {User} The updated user object.
      */
-    async incrementLoginFailure(username, lockoutThreshold) {
-        const dbc = new pg.Client(this._connectionString);
+    async incrementLoginFailure(username, lockoutThreshold, _txc) {
+        const dbc =  _txc || new pg.Client(this._connectionString);
         try {
-            await dbc.connect();
+            if(!_txc) await dbc.connect();
 
             const rdr = await dbc.query("UPDATE users SET invalid_login = invalid_login + 1, lockout = CASE WHEN invalid_login >= $2 THEN current_timestamp + '1 DAY'::interval ELSE null END WHERE name = $1 RETURNING *", [ username, lockoutThreshold ]);
             if(rdr.rows.length > 0) {
@@ -157,7 +193,7 @@ const pg = require('pg'),
                 return null;
         }
         finally {
-            dbc.end();
+            if(!_txc) dbc.end();
         }
     }
 
@@ -167,26 +203,32 @@ const pg = require('pg'),
      * @param {User} user The instance of the user that is to be updated
      * @param {string} password The new password to set for the user
      * @param {Principal} runAs The principal that is updating this user 
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {User} The updated user data from the database
      */
-    async update(user, password, runAs) {
-        const dbc = new pg.Client(this._connectionString);
+    async update(user, password, runAs, _txc) {
+        if(!user.id)
+            throw new exception.Exception("Target object must carry an identifier", exception.ErrorCodes.ARGUMENT_EXCEPTION);
+
+        const dbc =  _txc || new pg.Client(this._connectionString);
         try {
-            await dbc.connect();
+            if(!_txc) await dbc.connect();
 
             var dbUser = user.toData();
             if(password)
                 dbUser.$password = password;
-                
+            
+            delete(dbUser.name); // <-- Constraint : Cannot update name
+
             var updateCmd = model.Utils.generateUpdate(dbUser, 'users', 'updated_time');
             const rdr = await dbc.query(updateCmd.sql, updateCmd.args);
             if(rdr.rows.length == 0)
-                return null;
+               throw new exception.Exception("Could not update user in data store", exception.ErrorCodes.DATA_ERROR);
             else
                 return user.fromData(rdr.rows[0]);
         }
         finally {
-            dbc.end();
+            if(!_txc) dbc.end();
         }
     }
 
@@ -196,30 +238,34 @@ const pg = require('pg'),
      * @summary Insert  the specified user
      * @param {User} user The instance of the user that is to be inserted
      * @param {Principal} runAs The principal that is inserting this user
-     * @param {string} password The password to set on the user account  
+     * @param {string} password The password to set on the user account
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {User} The inserted user
      */
-    async insert(user, password, runAs) {
-        const dbc = new pg.Client(this._connectionString);
+    async insert(user, password, runAs, _txc) {
+        const dbc = _txc || new pg.Client(this._connectionString);
         try {
-            await dbc.connect();
+            if(!_txc) await dbc.connect();
 
             var dbUser = user.toData();
+            delete(dbUser.id);
             dbUser.$password = password;
             var updateCmd = model.Utils.generateInsert(dbUser, 'users');
             const rdr = await dbc.query(updateCmd.sql, updateCmd.args);
             if(rdr.rows.length == 0)
-                return null;
+                throw new exception.Exception("Could not register user in data store", exception.ErrorCodes.DATA_ERROR);
             else
                 return user.fromData(rdr.rows[0]);
         }
         catch(e) {
             if(e.code == '23505') // duplicate key
-                throw new exception.Exception("Duplicate user name", exception.ErrorCodes.DUPLICATE_USERNAME);
+                throw new exception.Exception("Duplicate user name", exception.ErrorCodes.DUPLICATE_NAME);
+            else if(e.code == "23502")
+                throw new exception.Exception("Missing mandatory field", exception.ErrorCodes.DATA_ERROR, e);
             throw e;
         }
         finally {
-            dbc.end();
+            if(!_txc) dbc.end();
         }
     }
 
@@ -227,20 +273,21 @@ const pg = require('pg'),
      * @method
      * @summary Retrieves a user from the database given their wallet ID
      * @param {string} walletId The identifier of the wallet to retrieve the user by
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {User} The user whom the wallet belongs to
      */
-    async getByWalletId(walletId) {
-        const dbc = new pg.Client(this._connectionString);
+    async getByWalletId(walletId, _txc) {
+        const dbc =  _txc ||new pg.Client(this._connectionString);
         try {
-            await dbc.connect();
+            if(!_txc) await dbc.connect();
             const rdr = await dbc.query("SELECT users.* FROM users WHERE wallet_id = $1", [walletId]);
             if(rdr.rows.length == 0)
-                throw new exception.NotFoundException("wallet", walletId);
+                return null; // Wallet is an anonymous wallet
             else
                 return new User().fromData(rdr.rows[0]);
         }
         finally {
-            dbc.end();
+            if(!_txc) dbc.end();
         }
     }
 
@@ -249,23 +296,80 @@ const pg = require('pg'),
      * @summary Delete / de-activate a user in the system
      * @param {string} userId The identity of the user to delete
      * @param {Principal} runAs The identity to run the operation as (for logging)
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {User} The deactivated user instance
      */
-    async delete(userId, runAs) {
+    async delete(userId, runAs, _txc) {
 
-        const dbc = new pg.Client(this._connectionString);
+        if(!userId)
+            throw new exception.Exception("Target object must carry an identifier", exception.ErrorCodes.ARGUMENT_EXCEPTION);
+
+        const dbc =  _txc || new pg.Client(this._connectionString);
         try {
-            await dbc.connect();
+            if(!_txc) await dbc.connect();
 
             const rdr = await dbc.query("UPDATE users SET deactivation_time = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *", [userId]);
             if(rdr.rows.length == 0)
-                return null;
+                throw new exception.Exception("Could not DEACTIVATE user in data store", exception.ErrorCodes.DATA_ERROR);
             else
                 return new User().fromData(rdr.rows[0]);
         }
         finally {
-            dbc.end();
+            if(!_txc) dbc.end();
         }
 
+    }
+
+    /**
+     * @method
+     * @summary Deletes a claim from the user's account
+     * @param {string} userId The id of the user from which to delete the claim
+     * @param {string} claimType The type of claim to remove
+     * @param {Client} _txc When populated, the transaction to execute as part of
+     */
+    async deleteClaim(userId, claimType, _txc) {
+        var dbc = _txc || new pg.Client(this._connectionString);
+        try{
+            if(!_txc) dbc.connect();
+            await dbc.query("DELETE FROM user_claims WHERE user_id = $1 AND claim_type = $2", [ userId, claimType ]);
+        }
+        finally{ 
+            if(!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Add a claim value to the user
+     * @param {string} userId The user to which the claim is being made
+     * @param {*} claim The claim which is to be added to the user
+     * @param {string} claim.typename The name of the claim
+     * @param {*} claim.value The value of the claim
+     * @param {date} claim.expiry The time that the claim will cease to be valid
+     * @param {Client} _txc When populated the transaction to execute under
+     */
+    async addClaim(userId, claim, _txc) {
+        // Validate parameters
+        if(!userId)
+            throw new exception.ArgumentException("userId");
+        if(!claim)
+            throw new exception.ArgumentException("claim");
+        if(!claim.type || !claim.value)
+            throw new exception.ArgumentException("claim.type || claim.value");
+        
+        var dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+
+            var sql = "INSERT INTO user_claims (claim_type, claim_value, expiry, user_id) VALUES ($1, $2, $3, $4)";
+            if(claim.type.startsWith("$")) // crypt
+                sql = "INSERT INTO user_claims (claim_type, claim_value, expiry, user_id) VALUES ($1, crypt($2, gen_salt('bf')), $3, $4)";
+            
+            await dbc.query(sql, [ claim.type, claim.value, claim.expiry, userId ]);
+
+        }
+        finally {
+            if(!_txc) dbc.end();
+        }
     }
 }

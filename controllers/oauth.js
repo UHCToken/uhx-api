@@ -22,11 +22,21 @@
   security = require('../security'),
   jwt = require('jsonwebtoken');
 
- const TOKEN_TYPE_JWT = "urn:ietf:params:oauth:token-type:jwt";
+ const TOKEN_TYPE_JWT = "bearer";
 
  /**
   * @class
   * @summary Represents an OAUTH2 Error Response
+  * @swagger
+  * definitions:
+  *   OAuthErrorResult:
+  *     properties:
+  *       error:
+  *         type: string
+  *         description: The codified error message
+  *       error_description:
+  *         type: string
+  *         description: A human readable error message
   */
  class OAuthErrorResult {
    /**
@@ -68,6 +78,22 @@
  /**
   * @class 
   * @summary Represents an OAUTH2 Token Response
+  * @swagger
+  * definitions:
+  *   OAuthTokenResult:
+  *     properties:
+  *       token:
+  *         type: string
+  *         description: The token that was issued to the client
+  *       tokenType:
+  *         type: string
+  *         description: The type of token that was issued (Default is JWT)
+  *       expiresIn:
+  *         type: number
+  *         description: The number of seconds before this session expires
+  *       refreshToken:
+  *         type: string
+  *         description: A token that can be used for a refresh of this session
   */
  class OAuthTokenResult {
    /**
@@ -131,6 +157,10 @@
  /**
   * @class
   * @summary Represents the OAUTH2 Token Service 
+  * @swagger
+  * tags:
+  *   - name: "auth"
+  *     description: "Represents the authorization for using methods on this service"
   */
  class OAuthTokenService {
     /**
@@ -157,6 +187,7 @@
         ]           
       }
     }
+
     /**
      * @method
      * @summary Overrides the underlying API authentication to use HTTP-Basic or client_id and client_secret body parameters
@@ -190,6 +221,7 @@
       return principal !== undefined;
 
     }
+
     /**
      * @method
      * @summary OAUTH 2.0 Token Service 
@@ -199,7 +231,7 @@
      * /auth/oauth2_token:
      *  post:
      *    description: OAUTH 2.0 token service for authentication. This service returns a JWT token
-     *    tags: [OAuth]
+     *    tags: [auth]
      *    produces:
      *      - application/json
      *    parameters:
@@ -208,15 +240,20 @@
      *        in: formData
      *        required: true
      *        type: string
+     *        enum: 
+     *          - password
+     *          - refresh_token
+     *          - client_credentials
+     *          - authorization_code
      *      - name: username
      *        description: The e-mail address of the UHC user
      *        in: formData
-     *        required: true
+     *        required: false
      *        type: string
      *      - name: password
      *        description: The user's current password
      *        in: formData
-     *        required: true
+     *        required: false
      *        type: string
      *      - name: scope
      *        description: The requested scope of the token
@@ -233,6 +270,20 @@
      *        in: formData
      *        required: true
      *        type: string
+     *      - name: refresh_token
+     *        description: If this is a refresh_token grant type then this is the refresh token
+     *        in: formData
+     *        required: false
+     *        type: string
+     *    responses:
+     *          200: 
+     *             description: "Authentication was successful"
+     *             schema: 
+     *                  $ref: "#/definitions/OAuthTokenResult"
+     *          400:
+     *              description: "Authorization was unsuccessful"
+     *              schema: 
+     *                  $ref: "#/definitions/OAuthErrorResult"
      */
     async post(req, res) {
       // HACK: The majority of work has been done on the authorization() method
@@ -243,13 +294,18 @@
       // GRANT TYPE
       switch(req.param("grant_type")){
         case "password":
-          userPrincipal = await uhc.SecurityLogic.establishSession(principal, req.param("username"), req.param("password"), req.param("scope"));
+          userPrincipal = await uhc.SecurityLogic.establishSession(principal, req.param("username"), req.param("password"), req.param("scope") || "*", req.ip);
           break;
         case "refresh_token":
-          userPrincipal = await uhc.SecurityLogic.refreshSession(principal, req.param("refresh_token"));
+          userPrincipal = await uhc.SecurityLogic.refreshSession(principal, req.param("refresh_token"), req.ip);
+          break;
+        case "client_credentials":
+          userPrincipal = await uhc.SecurityLogic.establishClientSession(principal, req.param("scope") || "*", req.ip);
+          break;
+        case "authorization_code":
           break;
         default:
-          throw new exception.NotSupportedException("Only password grants are supported");
+          throw new exception.NotSupportedException("Non supported grant type");
       }
 
       var payload = userPrincipal.toJSON();
@@ -264,10 +320,11 @@
      * @param {*} e The exception to be handled 
      */
     async error(e, res) {
+      uhc.log.error(`Error executing OAUTH: ${JSON.stringify(e)} `);
       if(e instanceof exception.Exception)
         res.status(400).json(new OAuthErrorResult(e.code, e.message));
       else
-        res.status(400).json(new OAuthErrorResult(exception.ErrorCodes.SECURITY_ERROR, e));
+        res.status(400).json(new OAuthErrorResult(exception.ErrorCodes.SECURITY_ERROR, e.message || e));
     }
  }
 

@@ -19,11 +19,17 @@
  
 const uhc = require('../uhc'),
     exception = require('../exception'),
-    security = require('../security');
+    security = require('../security'),
+    walletRepository = require('../repository/walletRepository'),
+    model = require('../model/model');
 
 /**
  * @class
  * @summary Represents a user payment service
+ * @swagger
+ * tags:
+ *  - name: "wallet"
+ *    description: "The wallet resource represents a single user's wallet (stellar or other blockchain account, etc.)"
  */
 class WalletApiResource {
 
@@ -45,51 +51,173 @@ class WalletApiResource {
                     "path" : "user/:uid/wallet",
                     "post": {
                         "demand" : security.PermissionType.WRITE,
-                        "method" : this.post
+                        "method" : this.put
                     },
                     "get" : {
                         "demand":security.PermissionType.LIST,
-                        "method": this.getAll
+                        "method": this.get
+                    },
+                    "delete" : {
+                        "demand":security.PermissionType.WRITE,
+                        "method": this.delete
                     }
                 },
-                {
-                    "path":"user/:uid/wallet/:txid",
-                    "get" :{
-                        "demand": security.PermissionType.READ,
-                        "method": this.get
-                    }
-                }
             ]
         };
     }
+
     /**
      * @method
      * @summary Posts a new transaction to the wallet
      * @param {Express.Request} req The request from the client
      * @param {Express.Response} res The response to send back to the client
+     * @swagger
+     * /user/{userid}/wallet:
+     *  put:
+     *      tags:
+     *      - "wallet"
+     *      summary: "Activates a new blockchain account for the specified user"
+     *      description: "This method will activate the user's wallet enabling the balances to appear"
+     *      consumes: 
+     *      - "application/json"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - in: "path"
+     *        name: "userid"
+     *        description: "The identity of the user to activate an account for"
+     *        required: true
+     *        type: string
+     *      - in: "body"
+     *        name: "body"
+     *        description: "The wallet to be created (note: Address is generated automatically, only balances is used to establish an initial balance if this service permits)"
+     *        required: true
+     *        schema:
+     *          $ref: "#/definitions/Wallet"
+     *      responses:
+     *          201: 
+     *             description: "The requested resource was created successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/Wallet"
+     *          422:
+     *              description: "The user object sent by the client was rejected"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhc_auth:
+     *          - "write:wallet"
      */
-    async post(req, res)  {
-        throw new exception.NotImplementedException();
-    }
-    /**
-     * @method
-     * @summary Get all transactions in a particular user's wallet
-     * @param {Express.Request} req The request from the client
-     * @param {Express.Response} res The response to the client
-     */
-    async getAll(req, res) {
-        throw new exception.NotImplementedException();
+    async put(req, res)  {
+        res.status(201).json(await uhc.SecurityLogic.activateStellarWalletForUser(req.params.uid));
+        return true;
     }
     /**
      * @method
      * @summary Get a single transaction posted to a user's wallet
      * @param {Express.Reqeust} req The request from the client 
      * @param {Express.Response} res The response from the client
+     * @swagger
+     * /user/{userid}/wallet:
+     *  get:
+     *      tags:
+     *      - "wallet"
+     *      summary: "Gets summary information about the user's wallet"
+     *      description: "This method will return summary information for the user's wallet including balances, public address, etc."
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - in: "path"
+     *        name: "userid"
+     *        description: "The identity of the user to create a wallet for"
+     *        required: true
+     *        type: string
+     *      responses:
+     *          200: 
+     *             description: "The user's wallet information"
+     *             schema: 
+     *                  $ref: "#/definitions/Wallet"
+     *          404: 
+     *             description: "The user has not bought any UHC yet and does not have an active wallet"
+     *             schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhc_auth:
+     *          - "read:wallet"
      */
     async get(req, res) {
-        throw new exception.NotImplementedException();
+        res.status(200).json(await uhc.Repositories.walletRepository.getByUserId(req.params.uid));
     }
 
+    /**
+     * @method
+     * @summary Deactivates a wallet
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to the client
+    * @swagger
+     * /user/{userid}/wallet:
+     *  delete:
+     *      tags:
+     *      - "wallet"
+     *      summary: "Deactivates the specified user wallet"
+     *      description: "This method will set the deactivation time of the user's wallet"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - in: "path"
+     *        name: "userid"
+     *        description: "The identity of the user to deactivate a wallet for"
+     *        required: true
+     *        type: string
+     *      responses:
+     *          201: 
+     *             description: "The deactivation was successful"
+     *             schema: 
+     *                  $ref: "#/definitions/Wallet"
+     *          404: 
+     *             description: "The user has not bought any UHC yet and does not have an active wallet"
+     *             schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhc_auth:
+     *          - "write:wallet"
+     */
+    async delete(req, res) {
+        res.status(201).json(await uhc.Repositories.walletRepository.deleteByUserId(req.params.uid));
+        return true;
+    }
+
+    /**
+     * @method
+     * @summary Determines additional access control on the wallet resource
+     * @param {security.Principal} principal The JWT principal data that has authorization information
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to the client
+     * @returns {boolean} An indicator of whether the user has access to the resource
+     */
+    async acl(principal, req, res) {
+
+        if(!(principal instanceof security.Principal)) {
+            uhc.log.error("ACL requires a security principal to be passed");
+            return false;
+        }
+
+        // if the token has OWNER set for USER permission then this user must be SELF
+        return (principal.grant.wallet & security.PermissionType.OWNER && req.params.uid == principal.session.userId) // the permission on the principal is for OWNER only
+                ^ !(principal.grant.wallet & security.PermissionType.OWNER); // XOR the owner grant flag is not set.
+                
+    }
 }
 
 // Module exports

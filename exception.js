@@ -37,10 +37,11 @@
     INSUFFICIENT_FUNDS : "ERR_NSF",
     INVALID_ACCOUNT : "ERR_ACCOUNT_UNKNOWN",
     PASSWORD_COMPLEXITY : "ERR_PASSWD_COMPLEXITY",
-    INVALID_USERNAME : "ERR_INVALID_USERNAME",
-    DUPLICATE_USERNAME : "ERR_DUPLICATE_USERNAME",
+    INVALID_NAME : "ERR_INVALID_NAME",
+    DUPLICATE_NAME : "ERR_DUPLICATE_NAME",
     COM_FAILURE: "ERR_COMMUNICATIONS_FAILURE",
-    API_RATE_EXCEEDED : "ERR_RATE_LIMIT_EXCEEDED"
+    API_RATE_EXCEEDED : "ERR_RATE_LIMIT_EXCEEDED",
+    DATA_ERROR: "ERR_DATA_STOR"
  }
 
  /**
@@ -130,6 +131,16 @@
       */
     constructor() {
         super("Not Implemented", ErrorCodes.NOT_IMPLEMENTED);
+    }
+ }
+
+ /**
+  * @class
+  * @summary Represents an argument exception
+  */
+ class ArgumentException extends Exception {
+    constructor(argName) {
+        super("Improper argument value for " + argName, ErrorCodes.ARGUMENT_EXCEPTION);
     }
  }
 
@@ -239,3 +250,4 @@ module.exports.NotFoundException = NotFoundException;
 module.exports.NotSupportedException = NotSupportedException;
 module.exports.RuleViolation = RuleViolation;
 module.exports.RuleViolationSeverity = RuleViolationSeverity;
+module.exports.ArgumentException = ArgumentException;

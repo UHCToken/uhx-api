@@ -152,7 +152,6 @@
 
         return true;
     }
-
  }
 
  /**
@@ -177,7 +176,13 @@
         else if(sessionOrUser instanceof model.Application) // application principal
         {
             user = {};
-            session = { application: sessionOrUser, loadApplication: async () => {} };
+            session = { 
+                application: sessionOrUser, 
+                applicationId: sessionOrUser.id, 
+                notBefore: new Date(),
+                notAfter: new Date(new Date().getTime() + uhc.Config.security.sessionLength),
+                grant: sessionOrUser._grants,
+                loadApplication: async () => { } };
         }
         else {
             session = sessionOrUser;
@@ -189,7 +194,7 @@
         this._claims = {
             mail: user.email,
             telephoneNumber: user.tel,
-            displayName: user.givenName || user.email
+            displayName: user.givenName ? user.givenName + " " + user.familyName : user.email
         };
 
         this._session = session;

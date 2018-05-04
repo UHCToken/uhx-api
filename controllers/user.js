@@ -38,6 +38,7 @@ class UserApiResource {
     constructor() {
 
     }
+
     /**
      * @method
      * @summary Get routing information for this class
@@ -64,17 +65,25 @@ class UserApiResource {
                         "method": this.get
                     },
                     "put" : {
-                        "demand": security.PermissionType.WRITE,
+                        "demand": security.PermissionType.WRITE | security.PermissionType.READ,
                         "method": this.put
                     },
                     "delete" : {
-                        "demand":security.PermissionType.WRITE,
+                        "demand":security.PermissionType.WRITE | security.PermissionType.READ,
                         "method": this.delete
+                    }
+                },
+                {
+                    "path": "user/:uid/reset",
+                    "post": {
+                        "demand": security.PermissionType.EXECUTE | security.PermissionType.WRITE,
+                        "method": this.reset
                     }
                 }
             ]
         };
     }
+
     /**
      * @method
      * @summary Creates a new user
@@ -119,18 +128,12 @@ class UserApiResource {
         
         // Verify the request
         var ruleViolations = [];
-        if(!req.body)
-            ruleViolations.push(new exception.RuleViolation("Missing body", exception.ErrorCodes.MISSING_PAYLOAD, exception.RuleViolationSeverity.ERROR));
-        if(!((!req.body.name || !req.body.password) ^ (!req.body.externalIds)))
-            ruleViolations.push(new exception.RuleViolation("Must have either username & password OR externalId", exception.ErrorCodes.MISSING_PROPERTY, exception.RuleViolationSeverity.ERROR));
-        if(req.body.name && !new RegExp(uhc.Config.security.username_regex).test(req.body.name))
-            ruleViolations.push(new exception.RuleViolation("Username format invalid", exception.ErrorCodes.INVALID_USERNAME, exception.RuleViolationSeverity.ERROR));
-        if(req.body.password && !new RegExp(uhc.Config.security.password_regex).test(req.body.password))
-            ruleViolations.push(new exception.RuleViolation("Password does not meet complexity requirements", exception.ErrorCodes.PASSWORD_COMPLEXITY, exception.RuleViolationSeverity.ERROR));
-        
-        if(ruleViolations.length > 0)
-            throw new exception.BusinessRuleViolationException(ruleViolations);
 
+        if(!req.body)
+            throw new exception.Exception("Missing body", exception.ErrorCodes.MISSING_PAYLOAD);
+        if(!((!req.body.name || !req.body.password) ^ (!req.body.externalIds)))
+            throw new exception.Exception("Must have either username & password OR externalId", exception.ErrorCodes.MISSING_PROPERTY);
+        
         var user = new model.User().copy(req.body);
         
         // USE CASE 1: User has passed up a username and password
@@ -170,7 +173,7 @@ class UserApiResource {
      *        schema:
      *          $ref: "#/definitions/User"
      *      responses:
-     *          200: 
+     *          201: 
      *             description: "The requested resource was updated successfully"
      *             schema: 
      *                  $ref: "#/definitions/User"
@@ -189,9 +192,14 @@ class UserApiResource {
      *      security:
      *      - uhc_auth:
      *          - "write:user"
+     *          - "read:user"
      */
     async put(req, res) {
-        throw new exception.NotImplementedException();
+        
+        // does the request have a password if so we want to ensure that get's passed
+        req.body.id = req.params.uid;
+        res.status(201).json(await uhc.SecurityLogic.updateUser(new model.User().copy(req.body), req.body.password));
+        return true;
     }
     /**
      * @method
@@ -233,7 +241,11 @@ class UserApiResource {
     async get(req, res) {
         var user = await uhc.Repositories.userRepository.get(req.params.uid);
         await user.loadWallet();
+
+        user._wallet = await uhc.SecurityLogic.getStellarClient().isActive(user._wallet) || user._wallet;
+        
         await user.loadExternalIds();
+        await user.loadClaims();
         res.status(200).json(user);
         return true;
     }
@@ -350,22 +362,36 @@ class UserApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhc_auth:
+     *          - "write:user"
      *          - "read:user"
      */
     async delete(req, res) {
         res.status(201).json(await uhc.Repositories.userRepository.delete(req.param("uid")));
         return true;
     }
+
     /**
-     * 
+     * @method
+     * @summary Generates a reset password email
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to the client
+     */
+    async reset(req, res) {
+
+    }
+
+    /**
+     * @method
+     * @summary Determines additional access control on the user resource
      * @param {security.Principal} principal The JWT principal data that has authorization information
      * @param {Express.Request} req The HTTP request from the client
      * @param {Express.Response} res The HTTP response to the client
+     * @returns {boolean} An indicator of whether the user has access to the resource
      */
     async acl(principal, req, res) {
 
         if(!(principal instanceof security.Principal)) {
-            console.error("ACL requires a security principal to be passed");
+            uhc.log.error("ACL requires a security principal to be passed");
             return false;
         }
 

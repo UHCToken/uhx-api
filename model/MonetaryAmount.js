@@ -22,6 +22,16 @@ const ModelBase = require('./ModelBase');
 /**
  * @class
  * @summary Represents a wallet balance 
+ * @swagger
+ * definitions:
+ *  MonetaryAmount:
+ *      properties:
+ *          value: 
+ *              type: string
+ *              description: Indicates the value of the monetary amount
+ *          code:
+ *              type: string
+ *              description: The currency or digital asset code for the monetary amount
  */
 module.exports = class MonetaryAmount extends ModelBase {
 
@@ -32,7 +42,8 @@ module.exports = class MonetaryAmount extends ModelBase {
      * @param {number} amount The amount
      */
     constructor(value, code) {
-        this.code = code;
+        super();
+        this.code = code == "native" ? "XLM" : code;
         this.value = value;
     }
 

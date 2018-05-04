@@ -25,7 +25,7 @@
     model = require('../model/model'),
     express = require('express');
 
-describe("User Repository Test Suite", function() {
+describe("Session Repository Test Suite", function() {
 
     var testRepository = new testRepo.UhcRepositories(uhc.Config.db.test_server);
 
@@ -50,6 +50,7 @@ describe("User Repository Test Suite", function() {
 
         // Create session
         var session = await testRepository.sessionRepository.insert(new model.Session(user, application, "*", 1000));
+     
         assert.ok(session.id, "Session was not created");
         assert.notEqual(session.notBefore, session.notAfter);
         assert.equal(session.notAfter.getTime() - session.notBefore.getTime(), 1000);

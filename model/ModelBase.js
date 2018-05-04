@@ -28,6 +28,7 @@ module.exports = class ModelBase {
      */
     constructor() {
         this.stripHiddenFields = this.stripHiddenFields.bind(this);
+        this.copy = this.copy.bind(this);
     }
 
     /**
@@ -36,16 +37,39 @@ module.exports = class ModelBase {
      * @summary Strips hidden fields for JSON from instance
      * @returns {*} An instance with all private fields stripped
      */
-    stripHiddenFields() {
+    stripHiddenFields(obj) {
+        obj = obj || this;
         var retVal = {
             $type : this.constructor.name
         };
 
         for(var k in this) 
-            if(!k.startsWith("_"))
+            if(!k.startsWith("_") && !k.startsWith("$"))
                 retVal[k] = this[k];
 
         return retVal;
+    }
+    
+    /**
+     * @summary Represet this object as JSON
+     */
+    toJSON() {
+        return this.stripHiddenFields();
+    }
+
+    
+    /**
+     * @method
+     * @summary Copy all the values from other into this 
+     * @returns {ModelBase} This object with copied fields
+     * @param {ModelBase} other The object from which the values for this user should be copied
+     */
+    copy(other) {
+        if(this.fromData) this.fromData({});
+        for(var p in this)
+            if(!p.startsWith("_"))
+                this[p] = other[p] || this[p];
+        return this;
     }
 
 }

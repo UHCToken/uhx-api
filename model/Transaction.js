@@ -26,6 +26,59 @@ const uhc = require('../uhc'),
 /**
  * @class
  * @summary Represents a common class for transactions (fiat, onchain, offchain etc.)
+ * @swagger
+ * definitions:
+ *  Transaction:
+ *      properties:
+ *          id:
+ *              type: string
+ *              description: The unique identifier for the transaction record
+ *          type:
+ *              type: number
+ *              description: The type of transaction
+ *              enum:
+ *                  - Payment
+ *                  - Trust
+ *                  - Refund 
+ *                  - Deposit
+ *                  - Account Management
+ *          test: 
+ *              type: boolean
+ *              description: When present, does not commit the transaction, rather validates that a transaction is most likely to succeed
+ *          memo:
+ *              type: string
+ *              description: A textual memorandum applied to the transaction at time of processing
+ *          postingDate:
+ *              type: Date
+ *              description: The date that this transaction was posted
+ *          payorId:
+ *              type: string    
+ *              description: The identity of the user which made the payment
+ *          payeeId:
+ *              type: string
+ *              description: The identity of the user which was paid
+ *          payor:
+ *              $ref: "#/definitions/User"
+ *              description: On transaction detail, contains the detailed user information for the payor
+ *          payee:
+ *              $ref: "#/definitions/User"
+ *              description: On transaction detail, contains the detailed user information for the payee
+ *          amount:
+ *              $ref: "#/definitions/MonetaryAmount"
+ *              description: The amount which the transaction was worth
+ *          fee:
+ *              $ref: "#/definitions/MonetaryAmount"  
+ *              description: If present, indicates any fees that were collected for the transaction
+ *          status:
+ *              type: number
+ *              description: The status of the transaction
+ *              enum:
+ *                  - Pending (1)
+ *                  - Complete (2)
+ *                  - Failed (3)
+ *          ref:
+ *              type: string
+ *              description: A reference to the transaction. Can be a link or source information contained on the transaction. 
  */
 module.exports = class Transaction extends ModelBase {
 

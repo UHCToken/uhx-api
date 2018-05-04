@@ -118,7 +118,7 @@ module.exports = class StripeClient {
                 });
             }
             catch (e) {
-                console.error(`Stripe API charge failed: ${JSON.stringify(e)}`);
+                uhc.log.error(`Stripe API charge failed: ${JSON.stringify(e)}`);
                 reject(exception.Exception("Transaction on payment processor failed", exception.ErrorCodes.COM_FAILURE, e));
             }
         });

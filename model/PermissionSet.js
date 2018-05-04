@@ -32,6 +32,37 @@ const ModelBase = require('./ModelBase');
  * @property {string} updatedBy The user that updated  the application
  * @property {Date} deactivatedTime The time that the user was deactivated
  * @property {string} deactivatedBy The user that deactivated the application
+ * @swagger
+ * definitions:
+ *  Permission:
+ *      properties:
+ *          id: 
+ *              type: string
+ *              description: The unique identifier for the permission
+ *          name:
+ *              type: string
+ *              description: The unique system name for the permission
+ *          description: 
+ *              type: string
+ *              description: The human readable description for the permission
+ *          creationTime:
+ *               type: Date
+ *               description: The time that this user account was created
+ *          createdBy:
+ *              type: string
+ *              description: The identifier of the user which created this group
+ *          updatedTime:
+ *               type: Date
+ *               description: The time that the user account was last updated
+ *          updatedBy:
+ *              type: string
+ *              description: The identifier of the user which created this group
+ *          deactivatedTime:
+ *               type: Date
+ *               description: The time that the user account did or will become deactivated
+ *          deactivatedBy:
+ *               type: Date
+ *               description: The time that the user account did or will become deactivated
  */
 module.exports = class PermissionSet extends ModelBase {
 
@@ -58,10 +89,11 @@ module.exports = class PermissionSet extends ModelBase {
         this.updatedTime = dbPermission.updated_time;
         this.updatedBy = dbPermission.updated_by;
         this.deactivationTime = dbPermission.deactivation_time;
-        this.deactivatedBy = dbPermission.deactived_by;
+        this.deactivatedBy = dbPermission.deactivated_by;
         return this;
     }
 
+   
     /**
      * @method
      * @summary Creates an instance of the application in data layer structure
@@ -75,10 +107,4 @@ module.exports = class PermissionSet extends ModelBase {
         }
     }
 
-    /**
-     * @summary Represet this object as JSON
-     */
-    toJSON() {
-        return this.stripHiddenFields();
-    }
 }

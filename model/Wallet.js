@@ -19,11 +19,28 @@
 
 const ModelBase = require('./ModelBase'),
     User = require('./User'),
+    MonetaryAmount = require('./MonetaryAmount'),
     uhc = require('../uhc');
 
 /**
  * @class
  * @summary Represents a wallet in the UHC data store
+ * @swagger
+ * definitions:
+ *  Wallet:
+ *      properties:
+ *          address:
+ *              type: string
+ *              description: The public address of the stellar account this UHC wallet represents
+ *          id:
+ *              type: string
+ *              description: The unique identifier for the wallet in the UHC user database
+ *          balances:
+ *              $ref: "#/definitions/MonetaryAmount"
+ *              description: The balance of assets held within the account
+ *          transactions:
+ *              $ref: "#/definitions/Transaction"
+ *              description: The transactions that have been executed on the specified wallet
  */
 module.exports = class Wallet extends ModelBase {
 
@@ -31,6 +48,7 @@ module.exports = class Wallet extends ModelBase {
      * @constructor
      */
     constructor() {
+        super();
         this.fromData = this.fromData.bind(this);
         this.toData = this.toData.bind(this);
         this.copy = this.copy.bind(this);
@@ -38,6 +56,15 @@ module.exports = class Wallet extends ModelBase {
         this.transactions = [];
     }
 
+    /**
+     * @method
+     * @summary Get the balance of the particular code
+     * @param {string} code The monetary amount code to use
+     * @returns {MonetaryAmount} The balance of the specified asset or null if not trusted
+     */
+    getBalanceOf(code) {
+        return this.balances.find( (m) => m.code == code );
+    }
     /**
      * @method
      * @summary Loads the user associated with this wallet
@@ -86,6 +113,7 @@ module.exports = class Wallet extends ModelBase {
         this.id = otherWallet.id;
         this.balances = otherWallet.balances;
         this.transactions = otherWallet.transactions;
+        return this;
     }
 
     /**
