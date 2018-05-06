@@ -74,10 +74,21 @@ class UserApiResource {
                     }
                 },
                 {
-                    "path": "user/:uid/reset",
+                    "path": "user/reset",
                     "post": {
                         "demand": security.PermissionType.EXECUTE | security.PermissionType.WRITE,
                         "method": this.reset
+                    },
+                    "put": {
+                        "demand": security.PermissionType.EXECUTE | security.PermissionType.WRITE,
+                        "method": this.resetComplete
+                    }
+                },
+                {
+                    "path": "user/confirm",
+                    "post": {
+                        "demand": security.PermissionType.EXECUTE | security.PermissionType.WRITE,
+                        "method": this.confirm
                     }
                 }
             ]
@@ -122,6 +133,8 @@ class UserApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhc_auth:
+     *          - "write:user"
+     *      - app_auth
      *          - "write:user"
      */
     async post(req, res)  {
@@ -375,11 +388,143 @@ class UserApiResource {
      * @summary Generates a reset password email
      * @param {Express.Request} req The HTTP request from the client
      * @param {Express.Response} res The HTTP response to the client
-     */
+     * @swagger
+     * /user/reset:
+     *  post:
+     *      tags:
+     *      - "user"
+     *      summary: "Creates a new password reset claim"
+     *      description: "This method will create a new password reset claim on the user's account."
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "email"
+     *        in: "formData"
+     *        description: "The e-mail address of the user being reset"
+     *        required: false
+     *        type: "string"
+     *      - name: "tel"
+     *        in: "formData"
+     *        description: "The SMS address of the user being reset"
+     *        required: false
+     *        type: "string"
+     *      responses:
+     *          204: 
+     *             description: "The reset request was successful and no content is required to be returned"
+     *          404:
+     *              description: "The specified user cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - app_auth:
+     *          - "write:user"
+     *          - "execute:user"
+    */
     async reset(req, res) {
-
+        await uhc.SecurityLogic.initiatePasswordReset(req.body.email, req.body.tel);
+        res.status(204).send();
+        return true;
     }
 
+    /**
+     * @method
+     * @summary Fulfills a password reset request 
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to the client
+     * @swagger
+     * /user/reset:
+     *  put:
+     *      tags:
+     *      - "user"
+     *      summary: "Completes a user password reset claim"
+     *      description: "This method will allow the user to change their password"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "email"
+     *        in: "formData"
+     *        description: "The e-mail address of the user being reset"
+     *        required: false
+     *        type: "string"
+     *      - name: "tel"
+     *        in: "formData"
+     *        description: "The SMS address of the user being reset"
+     *        required: false
+     *        type: "string"
+     *      - name: "code"
+     *        in: "formData"
+     *        required: true
+     *        description: "The reset code sent to the user"
+     *        type: "string"
+     *      - name: "password"
+     *        in: "formData"
+     *        required: true
+     *        description: "The new password to set on the user"
+     *        type:"string"
+     *      responses:
+     *          204: 
+     *             description: "The reset request was successful and no content is required to be returned"
+     *          404:
+     *              description: "The specified user cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - app_auth:
+     *          - "write:user"
+     *          - "execute:user"
+    */
+    async resetComplete(req, res) {
+        throw new exception.NotImplementedException();
+    }
+
+    /**
+     * @method
+     * @summary Fulfills a confirmation of email request
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to the client
+     * @swagger
+     * /user/confirm:
+     *  post:
+     *      tags:
+     *      - "user"
+     *      summary: "Completes a user contact confirmation"
+     *      description: "This method will allow the user to fulfill a contact confirmation request"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "code"
+     *        in: "formData"
+     *        description: "The confirmation code sent to the contact address"
+     *        required: true
+     *        type: "string"
+     *      responses:
+     *          204: 
+     *             description: "The reset request was successful and no content is required to be returned"
+     *          404:
+     *              description: "The specified user cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - app_auth:
+     *          - "write:user"
+     *          - "execute:user"
+    */
+    async confirm(req, res) {
+        throw new exception.NotImplementedException();
+    }
+    
     /**
      * @method
      * @summary Determines additional access control on the user resource

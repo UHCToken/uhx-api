@@ -275,6 +275,11 @@
      *        in: formData
      *        required: false
      *        type: string
+     *      - name: tfa_secret
+     *        description: The user's TFA secret
+     *        in: formData
+     *        required: false
+     *        type: string
      *    responses:
      *          200: 
      *             description: "Authentication was successful"
@@ -294,7 +299,7 @@
       // GRANT TYPE
       switch(req.param("grant_type")){
         case "password":
-          userPrincipal = await uhc.SecurityLogic.establishSession(principal, req.param("username"), req.param("password"), req.param("scope") || "*", req.ip);
+          userPrincipal = await uhc.SecurityLogic.establishSession(principal, req.param("username"), req.param("password"), req.param("scope") || "*", req.body.tfa_secret, req.ip);
           break;
         case "refresh_token":
           userPrincipal = await uhc.SecurityLogic.refreshSession(principal, req.param("refresh_token"), req.ip);

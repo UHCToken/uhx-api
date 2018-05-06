@@ -11,8 +11,8 @@ CREATE TABLE tfa_methods (
     CONSTRAINT pk_tfa_methods PRIMARY KEY (id)
 );
 
-INSERT INTO tfa_methods (id, name, moduleName, display) VALUES (1, 'sms', './tfa/SmsTfaMechansim', 'Send me a Text Message');
-INSERT INTO tfa_methods (id, name, moduleName, display) VALUES (2, 'email', './tfa/EmailTfaMechansim', 'Send me an E-Mail');
+INSERT INTO tfa_methods (id, name, moduleName, display) VALUES (1, 'sms', '../tfa/Sms', 'Send me a Text Message');
+INSERT INTO tfa_methods (id, name, moduleName, display) VALUES (2, 'email', '../tfa/Email', 'Send me an E-Mail');
 
 -- ALTER TABLE USERS TO USE TFA METHOD
 ALTER TABLE users ADD COLUMN tfa_method NUMERIC(2);

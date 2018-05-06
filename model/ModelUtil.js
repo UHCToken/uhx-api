@@ -70,8 +70,11 @@ module.exports = class ModelUtil {
      * @param {string} tableName The name of the database table to query
      * @param {number} offset The starting record number
      * @param {number} count The number of records to return
+     * @param {*} order The order control 
+     * @param {string} order.order The ordering (asc or desc)
+     * @param {Array} order.col The columns to sort on
      */
-    generateSelect(filter, tableName, offset, count) {
+    generateSelect(filter, tableName, offset, count, order) {
         var dbModel = filter.toData ? filter.toData() : filter;
 
         var parmId = 1, parameters = [], whereClause = "";
@@ -98,7 +101,10 @@ module.exports = class ModelUtil {
         else if(whereClause.trim() == "")
             whereClause = "";
 
+        // Order? 
         var control = "";
+        if(order) 
+            control += `ORDER BY ${order.col.join(',')} ${order.order} `;
         if(offset)
             control += `OFFSET ${offset} `;
         if(count)

@@ -91,6 +91,14 @@
           */
          refreshValidity: 30000000,
          /**
+          * @summary The validity period for password resets
+          */
+         resetValidity:  30000000,
+         /**
+          * @summary The validity of a TFA code
+          */
+         tfaValidity: 300000,
+         /**
           * @summary Maximum failed login attempts
           */
          maxFailedLogin: 4,
@@ -171,7 +179,7 @@
          swaggerDefinition: {
              info: {
              title: "Universal Health Coin API",
-             version: "1.0-alpha",
+             version: "1.0-alpha3",
              description: "The Universal Health Coin API"
          },
          basePath: "/api/v1",
@@ -191,12 +199,18 @@
                 pass: 'mypass'
             }
         },
+        sms: {
+            auth: "XXXXx",
+            sid: ""
+        },
         from: "no-reply@domain.com",
         templates: {
             invitation: "./templates/invitation",
             welcome: "./templates/welcome",
             confirmation: "./templates/confirm",
-            emailChange: "./templates/emailChange"
+            emailChange: "./templates/emailChange",
+            resetPassword: "./templates/resetPassword",
+            tfa: "./templates/tfa"
         } 
     },
     logging : {

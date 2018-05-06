@@ -172,6 +172,7 @@ const uhc = require('../uhc'),
         this.profileText = dbUser.description;
         this.tel = dbUser.tel;
         this.telVerified = dbUser.tel_verified;
+        this.tfaMethod = dbUser.tfa_method;
         this.address = {
             street: dbUser.street,
             unitOrSuite: dbUser.unit_suite,
@@ -205,6 +206,7 @@ const uhc = require('../uhc'),
             description: this.profileText,
             tel: this.tel,
             tel_verified: this.telVerified,
+            tfa_method: this.tfaMethod
             // creation timestamp properites are skipped beecause they are set by repo
         };
 
@@ -259,6 +261,16 @@ const uhc = require('../uhc'),
         return this._groups;
     }
 
+    /**
+     * @method
+     * @summary Load the tfa method of the user
+     */
+    async loadTfaMethod() {
+        if(!this.tfaMethod)
+            return null;
+        return await uhc.Repositories.userRepository.getTfaMethod(this.tfaMethod);
+    }
+    
     /**
      * @summary Gets the user groups for this user
      * @property

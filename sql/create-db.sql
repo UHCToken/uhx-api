@@ -102,6 +102,21 @@ CREATE TABLE IF NOT EXISTS user_claims(
 
 CREATE UNIQUE INDEX user_claim_name_value_idx ON user_claims(user_id, claim_type) WHERE expiry IS NULL;
 
+
+-- REPRESENTS CLAIMS ABOUT A USER
+CREATE TABLE IF NOT EXISTS invitation_claims(
+    id uuid NOT NULL DEFAULT uuid_generate_v4(),
+    claim_type VARCHAR(256) NOT NULL, -- THE TYPE OF CLAIM EXAMPLE: FACEBOOK AUTH, RESET TOKEN
+    claim_value VARCHAR(256) NOT NULL, -- THE VALUE OF THE CLAIM
+    creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expiry TIMESTAMPTZ, -- WHEN PRESENT THE EXPIRATION OF THIS CLAIM
+    invitation_id uuid NOT NULL, -- THE USER TO WHICH THE CLAIM BELONGS
+    CONSTRAINT pk_invitation_claims PRIMARY KEY (id),
+    CONSTRAINT fk_invitation_claims_user FOREIGN KEY (invitation_id) REFERENCES invitations(id)
+);
+
+CREATE UNIQUE INDEX invitation_claim_name_value_idx ON invitation_claims(invitation_id, claim_type) WHERE expiry IS NULL;
+
 -- REPRESENTS EXTERNAL IDENTITIES 
 CREATE TABLE IF NOT EXISTS user_identity (
     id uuid NOT NULL DEFAULT uuid_generate_v4(),

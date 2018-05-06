@@ -18,23 +18,18 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
- const config = require('./config'),
-    repositories = require('./repository/repository'),
-    SecurityLogic = require('./logic/SecurityLogic'),
-    TokenLogic = require('./logic/TokenLogic'),
-    winston = require('winston'),
-    Mailer = require('./integration/mail');
+ const uhc = require('../uhc');
 
-winston.level = config.logging.level;
-
-if(config.logging.file) 
-    winston.add(winston.transports.File, { filename: config.logging.file, rotationFormat: true, json: false, tailable: true } );
-
-
- // Exports section
- module.exports.SecurityLogic = new SecurityLogic();
- module.exports.TokenLogic = new TokenLogic();
- module.exports.Config = config;
- module.exports.Repositories = new repositories.UhcRepositories(config.db.server);
- module.exports.log = winston;
- module.exports.Mailer = new Mailer(config.mail);
+ /**
+  * @method
+  * @summary Execute the TFA
+  * @param {string} code The TFA code to use
+  */
+ module.exports = async function(to, code) {
+    if(to.emailVerified)
+        await uhc.Mailer.sendEmail({
+            to: to.email, 
+            subject: "Your UHX TFA secret",
+            template: uhc.Config.mail.templates.tfa
+        }, { user: to, token: code });
+ }
