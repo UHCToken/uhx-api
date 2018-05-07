@@ -127,6 +127,7 @@ const pg = require('pg'),
      */
     async insert(wallet, runAs, _txc) {
         const dbc = _txc || new pg.Client(this._connectionString);
+        console.log(wallet)
         try {
             if(!_txc) await dbc.connect();
             var dbWallet = wallet.toData();

@@ -22,6 +22,7 @@ const uhc = require('../uhc'),
     exception = require('../exception'),
     security = require('../security'),
     StellarClient = require('../integration/stellar'),
+    Web3Client = require('../integration/web3'),
     model = require('../model/model'),
     User = require('../model/User'),
     crypto = require('crypto'),
@@ -48,6 +49,7 @@ const uhc = require('../uhc'),
         this.validateUser = this.validateUser.bind(this);
         this.createInvitation = this.createInvitation.bind(this);
         this.getStellarClient = this.getStellarClient.bind(this);
+        this.getWeb3Client = this.getWeb3Client.bind(this);
     }
 
     /**
@@ -58,6 +60,16 @@ const uhc = require('../uhc'),
         if(!this._stellarClient)
             this._stellarClient = new StellarClient(uhc.Config.stellar.horizon_server, await uhc.Repositories.assetRepository.query(), uhc.Config.stellar.testnet_use);
         return this._stellarClient;
+    }
+
+    /**
+     * @method
+     * @summary Gets or creates the web3 client
+     */
+    async getWeb3Client() {
+        if(!this._web3Client)
+            this._web3Client = new Web3Client("http://localhost:8545");
+        return this._web3Client;
     }
 
     /**
@@ -206,18 +218,28 @@ const uhc = require('../uhc'),
 
         // First we register the user in our DB
         try {
-
+                
             // Validate the user
             this.validateUser(user, password);
-
             await uhc.Repositories.transaction(async (_txc) => {
 
                 // Insert the user
+                var web3Client = await this.getWeb3Client();
+                var ethWallet = await web3Client.generateAccount()
                 var stellarClient = await this.getStellarClient();
-                var wallet = await stellarClient.generateAccount();
-                wallet = await uhc.Repositories.walletRepository.insert(wallet, null, _txc);
-                user.walletId = wallet.id;
+                var strWallet = await stellarClient.generateAccount();
+                
+                ethWallet = await uhc.Repositories.walletRepository.insert(ethWallet, null, _txc);
+                strWallet = await uhc.Repositories.walletRepository.insert(strWallet, null, _txc);
+                user.walletId = strWallet.id;
+
                 var retVal = await uhc.Repositories.userRepository.insert(user, password, null, _txc);
+                ethWallet.userId = retVal.id;
+                strWallet.userId = retVal.id;
+                
+                web3Client.getBalance(ethWallet)
+                await uhc.Repositories.walletRepository.update(ethWallet, null, _txc);
+                await uhc.Repositories.walletRepository.update(strWallet, null, _txc);
                 await uhc.Repositories.groupRepository.addUser(uhc.Config.security.sysgroups.users, retVal.id, null, _txc);
                 return retVal;
             });

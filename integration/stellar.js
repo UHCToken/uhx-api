@@ -103,7 +103,8 @@ module.exports = class StellarClient {
             var kp = Stellar.Keypair.random();
             return new Wallet().copy({
                 address: kp.publicKey(),
-                seed: kp.secret()
+                seed: kp.secret(),
+                network: "STELLAR"
             });
         }
         catch(e) {
@@ -173,7 +174,8 @@ module.exports = class StellarClient {
             // return 
             return new model.Wallet().copy({
                 seed: kp.secret(),
-                address: kp.publicKey()
+                address: kp.publicKey(),
+                network: "STELLAR"
             });
         }
         catch(e) {
