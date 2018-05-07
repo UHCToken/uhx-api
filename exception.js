@@ -133,8 +133,8 @@
       * @constructor
       * @summary Constructs a new not implemented exception
       */
-    constructor() {
-        super("Not Implemented", ErrorCodes.NOT_IMPLEMENTED);
+    constructor(message) {
+        super(message || "Not Implemented", ErrorCodes.NOT_IMPLEMENTED);
     }
  }
 

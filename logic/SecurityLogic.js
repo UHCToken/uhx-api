@@ -245,7 +245,7 @@ const uhc = require('../uhc'),
                 await uhc.Repositories.userRepository.deleteClaim(user.id, "$reset.password", _txc);
 
                 // Generate the token
-                var claimToken = this.generateSignedClaimToken('tfa');
+                var claimToken = this.generateSignedClaimToken();
                 await uhc.Repositories.userRepository.addClaim(user.id, {
                     type: "$reset.password",
                     value: claimToken,
@@ -260,15 +260,17 @@ const uhc = require('../uhc'),
                         subject: "Reset your UHX password",
                         template: uhc.Config.mail.templates.resetPassword
                     };
-                    await uhc.Mailer.sendEmail(options, { user: user, token: claimToken });
+                    await uhc.Mailer.sendEmail(options, { user: user, token: claimToken, ui_base: uhc.Config.api.ui_base });
                 }
-                else if(tel && user.telVerified) {
-                    var options = {
-                        to: user.tel,
-                        template: uhc.Config.mail.templates.resetPassword
-                    };
-                    await uhc.Mailer.sendSms(options, { user: user, token: claimToken });
-                }
+                else if(tel)
+                    throw new exception.NotImplementedException("SMS password resets are disabled");
+                // else if(tel && user.telVerified) {
+                //     var options = {
+                //         to: user.tel,
+                //         template: uhc.Config.mail.templates.resetPassword
+                //     };
+                //     await uhc.Mailer.sendSms(options, { user: user, token: claimToken, ui_base: uhc.Config.api.ui_base });
+                // }
                 
             });
 

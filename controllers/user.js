@@ -445,16 +445,6 @@ class UserApiResource {
      *      produces:
      *      - "application/json"
      *      parameters:
-     *      - name: "email"
-     *        in: "formData"
-     *        description: "The e-mail address of the user being reset"
-     *        required: false
-     *        type: "string"
-     *      - name: "tel"
-     *        in: "formData"
-     *        description: "The SMS address of the user being reset"
-     *        required: false
-     *        type: "string"
      *      - name: "code"
      *        in: "formData"
      *        required: true
