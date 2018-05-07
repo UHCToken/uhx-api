@@ -464,7 +464,7 @@ class UserApiResource {
      *        in: "formData"
      *        required: true
      *        description: "The new password to set on the user"
-     *        type:"string"
+     *        type: "string"
      *      responses:
      *          204: 
      *             description: "The reset request was successful and no content is required to be returned"

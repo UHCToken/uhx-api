@@ -301,7 +301,7 @@ module.exports.AssetApiResource = class AssetApiResource {
      *      tags:
      *      - "asset"
      *      summary: "Retrieves a market rate quote from the API"
-     *      description: "This method will return an exchange rate (market rate) between two asset classes"
+     *      description: "This method will return an exchange rate (market rate) between two asset classes. Note that all quotes on fixed USD offers are quoted as USDT>BTC>ASSET and USDT>ETH>ASSET (the exception being ETH and BTC quotes)"
      *      produces:
      *      - "application/json"
      *      parameters:
@@ -319,25 +319,7 @@ module.exports.AssetApiResource = class AssetApiResource {
      *          200: 
      *             description: "The requested resource was retrieved successfully"
      *             schema: 
-     *                  properties:
-     *                      from: 
-     *                          description: "The asset code which is the buying asset"
-     *                          type: "string"
-     *                      to: 
-     *                          description: "The asset code which is being bought"
-     *                          type: "string"
-     *                      buy: 
-     *                          description: "The buy rate of exchange being offered"
-     *                          type: "number"
-     *                      sell: 
-     *                          description: "The sell rate of exchange being offered"
-     *                          type: "number"
-     *                      source: 
-     *                          description: "Where the quote was obtained"
-     *                          type: "string"
-      *                      path: 
-     *                          description: "If a path was obtained to get the quote (i.e. from USD to UHX quote may be: USD > XLM > UHX)"
-     *                          type: "string"
+     *                  $ref: "#/definitions/AssetQuote"
     *          404:
      *              description: "The specified asset does not exist"
      *              schema: 
@@ -354,7 +336,9 @@ module.exports.AssetApiResource = class AssetApiResource {
         if(!req.param("to"))
             throw new exception.ArgumentException("to");
         
-        throw new exception.NotImplementedException();
-
+        // The asset
+        var quote = await uhc.TokenLogic.createAssetQuote(req.query.to, req.query.from);
+        res.status(201).json(quote);
+        return true;
     }
 }

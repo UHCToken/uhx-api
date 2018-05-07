@@ -23,6 +23,7 @@ const pg = require('pg'),
     security = require('../security'),
     model = require('../model/model'),
     Asset = require('../model/Asset'),
+    AssetQuote = require('../model/AssetQuote'),
     Offer = require('../model/Offer');
 
 /**
@@ -48,6 +49,8 @@ module.exports = class AsssetRepository {
         this.getOffers = this.getOffers.bind(this);
         this.getActiveOffer = this.getActiveOffer.bind(this);
         this.updateOffer = this.updateOffer.bind(this);
+        this.insertQuote = this.insertQuote.bind(this);
+        this.getQuote = this.getQuote.bind(this);
     }
 
     /**
@@ -333,6 +336,51 @@ module.exports = class AsssetRepository {
         }
         finally {
             if (!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Inserts the specified quote into the database
+     * @param {AssetQuote} quote The quote to be inserted into the database
+     * @param {Client} _txc When present, the transaction to run as
+     */
+    async insertQuote(quote, _txc) {
+        var dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+            
+            var insertCmd = model.Utils.generateInsert(quote, "asset_quote");
+            var rdr = await dbc.query(insertCmd.sql, insertCmd.args);
+            if(rdr.rows.length == 0)
+                throw new exception.Exception("Could not insert the asset quote", exception.ErrorCodes.DATA_ERROR);
+            else 
+                return quote.fromData(rdr.rows[0]);
+        }
+        finally { 
+            if(!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @summary
+     * @method Retrieves the specified quote from the database
+     * @param {string} quoteId The ID of the quote to retrieve
+     * @param {Client} _txc When present, the transaction to run as
+     */
+    async getQuote(quoteId, _txc) {
+        var dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+            
+            var rdr = await dbc.query("SELECT * FROM asset_quote WHERE id = $1", [quoteId]);
+            if(rdr.rows.length == 0)
+                throw new exception.Exception("Could not insert the asset quote", exception.ErrorCodes.DATA_ERROR);
+            else 
+                return new AssetQuote().fromData(rdr.rows[0]);
+        }
+        finally { 
+            if(!_txc) dbc.end();
         }
     }
 }

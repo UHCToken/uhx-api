@@ -23,9 +23,11 @@ const uhc = require('../uhc'),
     exception = require('../exception'),
     security = require('../security'),
     StellarClient = require('../integration/stellar'),
+    Bittrex = require("../integration/bittrex"),
     model = require('../model/model'),
     User = require('../model/User'),
     Asset = require('../model/Asset'),
+    AssetQuote = require('../model/AssetQuote'),
     Offer = require('../model/Offer'),
     Wallet = require('../model/Wallet'),
     MonetaryAmount = require('../model/MonetaryAmount'),
@@ -44,6 +46,7 @@ module.exports = class TokenLogic {
     constructor() {
         this.getStellarClient = this.getStellarClient.bind(this);
         this.createAsset = this.createAsset.bind(this);
+        this.createAssetQuote = this.createAssetQuote.bind(this);
     }
 
     /**
@@ -183,6 +186,75 @@ module.exports = class TokenLogic {
         catch (e) {
             uhc.log.error(`Error creating asset: ${e.message}`);
             throw new exception.Exception("Error creating asset", e.code || exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
+
+
+    /**
+     * @method
+     * @summary Creates a quote for an asset
+     * @param {string} sellCurrency The asset that is being quoted
+     * @param {string} purchaseCurrency The currency with which the user is buying
+     * @returns {AssetQuote} The asset quote itself
+     */
+    async createAssetQuote(sellCurrency, purchaseCurrency) {
+
+        try {
+            var asset = await uhc.Repositories.assetRepository.query(new Asset().copy({sellCurrency}), 0, 1);
+            asset = asset[0];
+            if(!asset)
+                throw new exception.Exception(`Invalid asset : ${sellCurrency}, only assets configured on this service can be quoted`, exception.ErrorCodes.RULES_VIOLATION);
+            else if (asset.locked)
+                throw new exception.Exception(`Selling of ${asset.code} from this distributor is currently locked`, exception.ErrorCodes.ASSET_LOCKED);
+            // Get current offer
+            var currentOffer = await uhc.Repositories.assetRepository.getActiveOffer(asset.id);
+            if(!currentOffer)
+                throw new exception.BusinessRuleViolationException(new exception.RuleViolation("The requested asset is not for sale at the moment", exception.ErrorCodes.NO_OFFER, exception.RuleViolationSeverity.ERROR));
+            
+            // Price?
+            var retVal  = new AssetQuote().copy({
+                assetId: asset.id,
+                from: purchaseCurrency,
+                creationTime: new Date()
+            });
+            retVal._asset = asset;
+
+            // Offer matches the purchase? 1..1 ...
+            if(currentOffer.price && purchaseCurrency == currentOffer.price.code)
+            {
+                retVal.rate = currentOffer.price.value;
+                retVal.expiry = currentOffer.stopDate;
+            }
+            else if(currentOffer.price) {
+                // We're reaching out to bittrex so we should use ETH and BTC average offer to come up with a reasonable price for our asset
+                var path = { from: currentOffer.price.code, to: purchaseCurrency };
+                if(purchaseCurrency != "ETH" && purchaseCurrency != "BTC")
+                    path = [
+                        { from: currentOffer.price.code, to: purchaseCurrency, via: ["BTC"]},
+                        { from: currentOffer.price.code, to: purchaseCurrency, via: ["ETH"]}
+                    ];
+
+                var exchange = await new Bittrex().getExchange(path);
+                retVal.rate =  currentOffer.price.value/(exchange.reduce((a,b)=>a+b) / exchange.length); 
+                retVal.expiry = new Date(new Date().getTime() + uhc.Config.stellar.market_offer_validity);
+            }
+            else { // Just a market rate offer
+                // We're reaching out to bittrex so we should use ETH and BTC average offer to come up with a reasonable price for our asset
+                var exchange = await new Bittrex().getExchange([
+                    { from: asset.code , to: purchaseCurrency }
+                ]);
+                retVal.rate = exchange[0];
+                retVal.expiry = new Date(new Date().getTime() + uhc.Config.stellar.market_offer_validity);
+            }
+
+            // Insert the offer
+            retVal = await uhc.Repositories.assetRepository.insertQuote(retVal);
+
+            return retVal;
+        }
+        catch(e) {
+            uhc.log.error(`Error creating asset quote: ${e.message}`);
+            throw new exception.Exception("Error creating asset quote", e.code || exception.ErrorCodes.UNKNOWN, e);
         }
     }
 }

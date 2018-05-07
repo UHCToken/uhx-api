@@ -170,7 +170,11 @@
         /**
          * @summary The home domain where the stellar TOML file is hosted
          */
-        home_domain: "?.cooldomain.com"
+        home_domain: "?.cooldomain.com",
+        /**
+         * @summary When using market rate quotes the validity of the offer.
+         */
+        market_offer_validity: 60000,
      },
      /**
       * @summary Swagger configuration
