@@ -472,12 +472,21 @@ class UserApiResource {
      *          - "execute:user"
     */
     async resetComplete(req, res) {
-        throw new exception.NotImplementedException();
+
+        if(!req.body.code)
+            throw new exception.ArgumentException("code");
+        else if(!req.body.password)
+            throw new exception.ArgumentException("password");
+
+        // Reset password 
+        await uhc.SecurityLogic.resetPassword(req.body.code, req.body.password);
+        res.status(204).send();
+        return true;
     }
 
     /**
      * @method
-     * @summary Fulfills a confirmation of email request
+     * @summary Fulfills a confirmation of contact information request
      * @param {Express.Request} req The HTTP request from the client
      * @param {Express.Response} res The HTTP response to the client
      * @swagger
@@ -512,7 +521,13 @@ class UserApiResource {
      *          - "execute:user"
     */
     async confirm(req, res) {
-        throw new exception.NotImplementedException();
+        
+        if(!req.body.code)
+            throw new exception.ArgumentException("code");
+        
+        await uhc.SecurityLogic.confirmContact(req.body.code, req.principal);
+        res.status(204).send();
+        return true;
     }
     
     /**

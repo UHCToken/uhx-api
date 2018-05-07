@@ -212,9 +212,10 @@
             invitation: "./templates/invitation",
             welcome: "./templates/welcome",
             confirmation: "./templates/confirm",
-            emailChange: "./templates/emailChange",
+            contactChange: "./templates/contactChange",
             resetPassword: "./templates/resetPassword",
-            tfa: "./templates/tfa"
+            tfa: "./templates/tfa",
+            passwordChange: "./templates/passwordChanged"
         } 
     },
     logging : {

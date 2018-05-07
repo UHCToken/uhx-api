@@ -315,21 +315,20 @@ const pg = require('pg'),
 
      /**
      * @method
-     * @summary Retrieves a user from the database given a secure claim
+     * @summary Retrieves a user from the database given a secure claim (note, secure claims are claims which start with $)
      * @param {string} claimType The type of claim 
      * @param {string} claimValue The value of the claim
      * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {User} The user whom the wallet belongs to
      */
-    async getByClaim(walletId, _txc) {
+    async getByClaim(claimType, claimValue, _txc) {
         const dbc =  _txc ||new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
             const rdr = await dbc.query("SELECT users.* FROM user_claims INNER JOIN users ON (user_claims.user_id = users.id) WHERE expiry > CURRENT_TIMESTAMP AND claim_type = $1 AND claim_value = crypt($2, claim_value) LIMIT 1", [claimType, claimValue]);
-            if(rdr.rows.length == 0)
-                return null; // Wallet is an anonymous wallet
-            else
-                return new User().fromData(rdr.rows[0]);
+            var retVal = [];
+            rdr.rows.forEach((r) => retVal.push(new User().fromData(r)));
+            return retVal;
         }
         finally {
             if(!_txc) dbc.end();
