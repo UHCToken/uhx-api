@@ -49,35 +49,15 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
         this.refreshSession = this.refreshSession.bind(this);
         this.registerInternalUser = this.registerInternalUser.bind(this);
         this.createStellarWallet = this.activateStellarWalletForUser.bind(this);
+        this.getAllBalancesForUser = this.getAllBalancesForUser.bind(this);
         this.updateUser = this.updateUser.bind(this);
         this.validateUser = this.validateUser.bind(this);
         this.createInvitation = this.createInvitation.bind(this);
-        this.getStellarClient = this.getStellarClient.bind(this);
         this.initiatePasswordReset = this.initiatePasswordReset.bind(this);
         this.resetPassword = this.resetPassword.bind(this);
         this.confirmContact = this.confirmContact.bind(this);
-	this.getWeb3Client = this.getWeb3Client.bind(this);
     }
 
-    /**
-     * @method
-     * @summary Gets or creates the stellar client
-     */
-    async getStellarClient() {
-        if(!this._stellarClient)
-            this._stellarClient = new StellarClient(uhc.Config.stellar.horizon_server, await uhc.Repositories.assetRepository.query(), uhc.Config.stellar.testnet_use);
-        return this._stellarClient;
-    }
-
-    /**
-     * @method
-     * @summary Gets or creates the web3 client
-     */
-    async getWeb3Client() {
-        if(!this._web3Client)
-            this._web3Client = new Web3Client("http://localhost:8545");
-        return this._web3Client;
-    }
 
     /**
      * @method
@@ -423,9 +403,9 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
             await uhc.Repositories.transaction(async (_txc) => {
 
                 // Insert the user
-                var web3Client = await this.getWeb3Client();
+                var web3Client = uhc.Web3Client;
                 var ethWallet = await web3Client.generateAccount()
-                var stellarClient = await this.getStellarClient();
+                var stellarClient = uhc.StellarClient;
                 var strWallet = await stellarClient.generateAccount();
                 
                 ethWallet = await uhc.Repositories.walletRepository.insert(ethWallet, null, _txc);
@@ -440,7 +420,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                 await uhc.Repositories.walletRepository.update(ethWallet, null, _txc);
                 await uhc.Repositories.walletRepository.update(strWallet, null, _txc);
                 await uhc.Repositories.groupRepository.addUser(uhc.Config.security.sysgroups.users, retVal.id, null, _txc);
-		await this.sendConfirmationEmail(user, _txc);
+		        await this.sendConfirmationEmail(user, _txc);
 
                 if(user.tel)
                     await this.sendConfirmationSms(user, _txc);
@@ -464,7 +444,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
 
         try {
 
-            return await uhc.Repositories.transact(async (_txc) => {
+            return await uhc.Repositories.transaction(async (_txc) => {
                 
                 // Create stellar client
                 var stellarClient = uhc.StellarClient;
@@ -493,6 +473,37 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
         catch(e) {
             uhc.log.error("Error finalizing authentication: " + e.message);
             throw new exception.Exception("Error creating waller user", exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
+
+
+        /**
+     * @method
+     * @summary Gets all balances for the user wallet
+     * @param {Wallet} userWallet The wallet for which the balances should be added to
+     */
+    async getAllBalancesForUser(userWallet) {
+
+        try {
+
+            return await uhc.Repositories.transaction(async (_txc) => {
+                
+                if(userWallet.network == "STELLAR"){
+                    var stellarClient = uhc.StellarClient;
+                    return await stellarClient.getAccount(userWallet)
+                }
+                else if(userWallet.network == "ETHEREUM"){
+                    var web3Client = uhc.web3Client;
+                    return await web3Client.getBalance(userWallet)
+                }
+                else{
+                    throw "Wallet network is not supported";
+                }
+            });
+        }
+        catch(e) {
+            uhc.log.error("Error getting balance: " + e.message);
+            throw new exception.Exception("Error getting balance:", exception.ErrorCodes.UNKNOWN, e);
         }
     }
 
@@ -627,7 +638,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
             await uhc.Repositories.userRepository.addClaim(user.id, {
                 type: EMAIL_CONFIRM_CLAIM,
                 value: confirmToken,
-                expiry: new Date(new Date().getTime() + uhc.Config.security.confirmationValidaty)
+                expiry: new Date(new Date().getTime() + uhc.Config.security.confirmationValidity)
             }, _txc);
 
             // We want to send an e-mail to the previous e-mail address notifying the user of the change

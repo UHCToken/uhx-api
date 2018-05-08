@@ -176,6 +176,17 @@
          */
         market_offer_validity: 60000,
      },
+
+     /**
+      * @summary Configuration settings related to interaction with the ethereum network
+      */
+     ethereum: {
+
+        geth_server: "http://localhost:8545",
+
+        geth_net_server: "ws://localhost:8546"
+     },
+     
      /**
       * @summary Swagger configuration
       */

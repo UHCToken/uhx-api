@@ -54,10 +54,10 @@ module.exports = class WebClient {
      * @summary Creates a new ethereum client with the specified base API
      * @param {string} provider The provider endpoint to use
      */
-    constructor(provider) {
+    constructor(provider, net_provider) {
         // "private" members
         this._server = new Web3(new Web3.providers.HttpProvider(provider));
-        this._net = new Web3Net('ws://localhost:8546');
+        this._net = new Web3Net(net_provider);
     }
 
     /**
@@ -119,11 +119,10 @@ module.exports = class WebClient {
         
         try {
             var balance = await this.server.eth.getBalance(wallet.address)
-            var ethWallet = await this.server.eth.accounts.create();
             wallet.balances = [];
 
-            userWallet.balances.push(new model.MonetaryAmount(
-                this.round(balance),
+            wallet.balances.push(new model.MonetaryAmount(
+                balance,
                 "eth"
             ));
             

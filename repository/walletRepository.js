@@ -77,7 +77,7 @@ const pg = require('pg'),
             if(!_txc) await dbc.connect();
             const rdr = await dbc.query("SELECT wallets.* FROM wallets INNER JOIN users ON (users.wallet_id = wallets.id) WHERE users.id = $1", [userId]);
             if(rdr.rows.length == 0)
-                throw new exception.NotFoundException('wallet', id);
+                throw new exception.NotFoundException('wallet', userId);
             else
                 return new model.Wallet().fromData(rdr.rows[0]);
         }

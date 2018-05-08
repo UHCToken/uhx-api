@@ -94,7 +94,7 @@ module.exports = class TokenLogic {
             }
 
             // User's wallet
-            var userWallet = await uhc.Repositories.walletRepository.getByUserId(principal.session.userId);
+            var userWallet = await uhc.Repositories.walletRepository.getByUserId("29adebb5-3ab5-4ea3-b564-ac617b57c55c");
 
             // Verify that the user wallet is valid and has sufficient balance to continue
             if (!(await stellarClient.isActive(userWallet)) || userWallet.getBalanceOf("XLM").value < 6)

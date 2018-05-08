@@ -424,13 +424,13 @@ module.exports.AssetApiResource = class AssetApiResource {
      */
     async quote(req, res) {
 
-        if(!req.query.from)
+        if(!req.body.from)
             throw new exception.ArgumentException("from");
-        if(!req.query.to)
+        if(!req.body.to)
             throw new exception.ArgumentException("to");
         
         // The asset
-        var quote = await uhc.TokenLogic.createAssetQuote(req.query.to, req.query.from);
+        var quote = await uhc.TokenLogic.createAssetQuote(req.body.to, req.body.from);
 
         // current offer info & remaining tokens
         var activeOffer = await uhc.Repositories.assetRepository.getActiveOffer(quote.assetId);

@@ -153,7 +153,10 @@ class WalletApiResource {
      *          - "read:wallet"
      */
     async get(req, res) {
-        res.status(200).json(await uhc.Repositories.walletRepository.getByUserId(req.params.uid));
+        var userWallet = await uhc.Repositories.walletRepository.getByUserId(req.params.uid)
+        userWallet = await uhc.SecurityLogic.getAllBalancesForUser(userWallet)
+        res.status(200).json(userWallet)
+        return true
     }
 
     /**

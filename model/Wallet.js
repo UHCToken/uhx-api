@@ -87,6 +87,7 @@ module.exports = class Wallet extends ModelBase {
         this.seed = dbWallet.seed;
         this.id = dbWallet.id;
         this.userId = dbWallet.user_id;
+        this.network = dbWallet.network;
         return this;
     }
 
