@@ -318,7 +318,10 @@ const uhc = require('../uhc'),
         var retVal = this.stripHiddenFields();
         retVal.externalIds = this._externIds;
         retVal.wallet = this._wallet;
-        retVal.claims = this.stripHiddenFields(this._claims);
+        retVal.claims = {};
+        for(var k in this._claims)
+            if(!k.startsWith("$"))
+                retVal.claims[k] = this._claims[k];
         retVal.groups = this._groups;
         return retVal;
     }

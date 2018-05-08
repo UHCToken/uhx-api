@@ -129,7 +129,9 @@ class PurchaseApiResource {
 
         req.body.buyerId = req.params.uid;
         var purchase = await uhc.TokenLogic.createPurchase(new Purchase().copy(req.body), req.principal);
-        res.status(201).json(purchase);
+        res.status(201)
+            .set("Location", `${uhc.Config.api.scheme}://${uhc.Config.api.host}:${uhc.Config.api.port}${uhc.Config.api.base}/user/${req.params.uid}/purchase/${purchase.id}`)
+            .json(purchase);
         return true;
     }
     /**

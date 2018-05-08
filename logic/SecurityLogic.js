@@ -50,19 +50,9 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
         this.updateUser = this.updateUser.bind(this);
         this.validateUser = this.validateUser.bind(this);
         this.createInvitation = this.createInvitation.bind(this);
-        this.getStellarClient = this.getStellarClient.bind(this);
         this.initiatePasswordReset = this.initiatePasswordReset.bind(this);
         this.resetPassword = this.resetPassword.bind(this);
         this.confirmContact = this.confirmContact.bind(this);
-    }
-
-    /**
-     * @method
-     * @summary Gets or creates the stellar client
-     * @returns {StellarClient} The stellar client
-     */
-    async getStellarClient() {
-        return uhc.StellarClient;
     }
 
     /**
@@ -410,7 +400,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
             await uhc.Repositories.transaction(async (_txc) => {
 
                 // Insert the user
-                var stellarClient = await this.getStellarClient();
+                var stellarClient = uhc.StellarClient;
                 var wallet = await stellarClient.generateAccount();
                 wallet = await uhc.Repositories.walletRepository.insert(wallet, principal, _txc);
                 user.walletId = wallet.id;
@@ -443,7 +433,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
             return await uhc.Repositories.transact(async (_txc) => {
                 
                 // Create stellar client
-                var stellarClient = await this.getStellarClient();
+                var stellarClient = uhc.StellarClient;
                 
                 // Verify user
                 var user = await uhc.Repositories.userRepository.get(userId, _txc);
@@ -505,7 +495,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
 
                 // Delete fields which can't be set by clients 
                 delete(user.walletId);
-                
+
                 // Was the user's e-mail address verified? 
                 if(newPassword) {
                     if(existingUser.telVerified && existingUser.tel)

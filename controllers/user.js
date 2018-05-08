@@ -262,7 +262,8 @@ class UserApiResource {
         var user = await uhc.Repositories.userRepository.get(req.params.uid);
         await user.loadWallet();
 
-        user._wallet = await uhc.SecurityLogic.getStellarClient().isActive(user._wallet) || user._wallet;
+        // Load balances from blockchain
+        user._wallet = await uhc.StellarClient.isActive(user._wallet) || user._wallet;
         
         await user.loadExternalIds();
         await user.loadClaims();

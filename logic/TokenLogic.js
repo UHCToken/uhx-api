@@ -350,6 +350,7 @@ module.exports = class TokenLogic {
 
                     // 8. Update purchase information
                     purchaseInfo = await uhc.Repositories.purchaseRepository.update(purchaseInfo, principal, _txc);
+
                 } 
                 else if(purchaseInfo.state == model.PurchaseState.ACTIVE) // We are just recording an ACTIVE purchase which means we just want to deposit 
                 {
@@ -409,7 +410,10 @@ module.exports = class TokenLogic {
                     }
                 }
                 else 
-                    await uhc.Repositories.purchaseRepository.insert(purchaseInfo, principal, _txc);
+                    purchaseInfo = await uhc.Repositories.purchaseRepository.insert(purchaseInfo, principal, _txc);
+
+                return purchaseInfo;
+                    
             });
         }
         catch(e) {
