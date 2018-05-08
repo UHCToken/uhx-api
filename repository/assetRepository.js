@@ -167,6 +167,14 @@ module.exports = class AsssetRepository {
             else
                 return offer.fromData(rdr.rows[0]); 
         }
+        catch(e) {
+            switch(e.constraint || null) {
+                case "ck_asset_sale_sell":
+                    throw new exception.BusinessRuleViolationException(new exception.RuleViolation(`Start date exceeds stop date of offer for ${JSON.stringify(offer.price)}`, exception.ErrorCodes.ARGUMENT_EXCEPTION, exception.RuleViolationSeverity.ERROR));
+                default:
+                    throw e;
+            }
+        }
         finally {
             if (!_txc) dbc.end();
         }

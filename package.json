@@ -20,7 +20,7 @@
     "mongodb": "^3.0.5",
     "nodemailer": "^4.6.4",
     "nyc": "^11.7.1",
-    "pg": "^7.4.1",
+    "pg": "^7.4.3",
     "request": "^2.85.0",
     "request-promise": "^4.2.2",
     "stellar-sdk": "^0.8.0",

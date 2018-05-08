@@ -253,17 +253,6 @@ module.exports.AssetApiResource = class AssetApiResource {
      *      description: "This method will return a collection of assets this API can work with"
      *      produces:
      *      - "application/json"
-     *      parameters:
-     *      - in: "query"
-     *        name: "code"
-     *        description: "The code of the asset to filter on"
-     *        required: false
-     *        type: string
-     *      - in: "query"
-     *        name: "type"
-     *        description: "The type of the asset to filter on"
-     *        required: false
-     *        type: string
      *      responses:
      *          200: 
      *             description: "The requested resource was retrieved successfully"
@@ -281,11 +270,11 @@ module.exports.AssetApiResource = class AssetApiResource {
     async getAll(req, res) {
 
         var assetFilter = new Asset().copy({
-            code: req.param("code"),
-            type: req.param("type"),
-            deactivationTime: req.param("_all") == "true" ? null : "null"
+            code: req.query.code,
+            type: req.query.type,
+            deactivationTime: req.query("_all") == "true" ? null : "null"
         });
-        res.status(200).json(await uhc.Repositories.assetRepository.query(assetFilter, req.param("_offset"), req.param("_count")));
+        res.status(200).json(await uhc.Repositories.assetRepository.query(assetFilter, req.query._offset, req.query._count));
         return true;
 
     }
@@ -349,9 +338,9 @@ module.exports.AssetApiResource = class AssetApiResource {
      */
     async quote(req, res) {
 
-        if(!req.param("from"))
+        if(!req.query.from)
             throw new exception.ArgumentException("from");
-        if(!req.param("to"))
+        if(!req.query.to)
             throw new exception.ArgumentException("to");
         
         throw new exception.NotImplementedException();

@@ -315,14 +315,14 @@ class UserApiResource {
     async getAll(req, res) {
         
         var filterUser = new model.User().copy({
-            name: req.param("name"),
-            email: req.param("email"),
-            givenName: req.param("givenName"),
-            familyName: req.param("familyName"),
-            deactivationTime: req.param("_all") ? null : "null"
+            name: req.query.name,
+            email: req.query.email,
+            givenName: req.query.givenName,
+            familyName: req.query.familyName,
+            deactivationTime: req.query._all ? null : "null"
         });
         
-        var results = await uhc.Repositories.userRepository.query(filterUser, req.param("_offset"), req.param("_count"));
+        var results = await uhc.Repositories.userRepository.query(filterUser, req.query._offset, req.query._count);
         results.forEach((o)=>{ o.externalIds = null;});
         res.status(200).json(results);
         return true;
@@ -366,7 +366,7 @@ class UserApiResource {
      *          - "read:user"
      */
     async delete(req, res) {
-        res.status(201).json(await uhc.Repositories.userRepository.delete(req.param("uid")));
+        res.status(201).json(await uhc.Repositories.userRepository.delete(req.params.uid));
         return true;
     }
 

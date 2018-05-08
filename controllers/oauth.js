@@ -208,7 +208,7 @@
         }
       }
       else { // There is no authorization, is it in the body as client_id and client_secret
-        clientAuthentication = [req.param("client_id"), req.param("client_secret")];
+        clientAuthentication = [req.body.client_id, req.body.client_secret];
       }
 
       // Authorization
@@ -292,15 +292,15 @@
       var userPrincipal = null;
     
       // GRANT TYPE
-      switch(req.param("grant_type")){
+      switch(req.body.grant_type){
         case "password":
-          userPrincipal = await uhc.SecurityLogic.establishSession(principal, req.param("username"), req.param("password"), req.param("scope") || "*", req.ip);
+          userPrincipal = await uhc.SecurityLogic.establishSession(principal, req.body.username, req.body.password, req.body.scope || "*", req.ip);
           break;
         case "refresh_token":
-          userPrincipal = await uhc.SecurityLogic.refreshSession(principal, req.param("refresh_token"), req.ip);
+          userPrincipal = await uhc.SecurityLogic.refreshSession(principal, req.body.refresh_token, req.ip);
           break;
         case "client_credentials":
-          userPrincipal = await uhc.SecurityLogic.establishClientSession(principal, req.param("scope") || "*", req.ip);
+          userPrincipal = await uhc.SecurityLogic.establishClientSession(principal, req.body.scope || "*", req.ip);
           break;
         case "authorization_code":
           break;
