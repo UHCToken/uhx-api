@@ -20,13 +20,14 @@
     "mongodb": "^3.0.5",
     "nodemailer": "^4.6.4",
     "nyc": "^11.7.1",
-    "pg": "^7.4.3",
+    "pg": "^7.4.2",
     "request": "^2.85.0",
     "request-promise": "^4.2.2",
     "stellar-sdk": "^0.8.0",
     "stripe": "^5.7.0",
     "swagger-jsdoc": "^1.9.7",
     "toobusy-js": "^0.5.1",
+    "twilio": "^3.16.0",
     "winston": "^2.4.2"
   }
 }

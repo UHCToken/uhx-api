@@ -25,7 +25,9 @@
     exception = require('../exception'),
     Transaction = require('../model/Transaction'),
     MonetaryAmount = require('../model/MonetaryAmount'),
-    Offer = require('../model/Offer');
+    Offer = require('../model/Offer'),
+    crypto = require("crypto");
+
 /**
  * @class
  * @summary Represents a stellar exception
@@ -85,7 +87,7 @@ module.exports = class StellarClient {
      * @param {number} number The number to be rounded
      */
     round(number) {
-        var factor = Math.pow(10, 8);
+        var factor = Math.pow(10, 7);
         return Math.round(number * factor) / factor;
     }
 
@@ -448,10 +450,109 @@ module.exports = class StellarClient {
 
     /**
      * @method
+     * @summary Creats a payment between the payor and payee
+     * @param {Wallet} sellerWallet The wallet from which the payment should be made
+     * @param {Wallet} buyerWallet The wallet to which the payment should be made
+     * @param {MonetaryAmount} selling The amount to be paid from source > dest
+     * @param {MonetaryAmount} buying The amount to be paid from dest > source
+     * @param {string} ref A memo to add to the transaction
+     * @returns {Transaction} The transaction information for the operation
+     * @example UserA wallet wishes to swap 100 UHX for 20 XLM from UserB wallet
+     * client.exchangeAsset(userA, userB, new MonetaryAmount(20, "XLM"), new MonetaryAmount(100, "UHX"), "ID")
+     */
+    async exchangeAsset(sellerWallet, buyerWallet, selling, buying, ref) {
+
+        try {
+
+            selling.value = this.round(selling.value);
+            buying.value = this.round(buying.value);
+
+            uhc.log.info(`exchangeAsset() : ${sellerWallet.address} > ${buyerWallet.address} [${selling.value} ${selling.code} for ${buying.value} ${buying.code}]`);
+            
+            // Load payor stellar account
+            var sellerStellarAcct = await this.server.loadAccount(sellerWallet.address);
+            var buyerStellarAcct = await this.server.loadAccount(buyerWallet.address);
+
+            // New tx
+            var exchangeTx = new Stellar.TransactionBuilder(sellerStellarAcct, {
+                timebounds: { 
+                    minTime: Math.trunc((new Date().getTime() - 10000) / 1000),
+                    maxTime: Math.trunc((new Date().getTime() + 10000) / 1000)
+                }
+            });
+            
+            // Find the asset type
+            var buyingAsset = this.getAssetByCode(buying.code),
+                sellingAsset = this.getAssetByCode(selling.code);
+
+            // Asset type not found
+            if(!buyingAsset)
+                throw new exception.NotFoundException("asset", buying.code);
+            if(!sellingAsset)
+                throw new exception.NotFoundException("asset", selling.code);
+
+            // Create exchange - Two offers in one TX
+            exchangeTx.addOperation(Stellar.Operation.manageOffer({
+                    source: sellerWallet.address,
+                    selling: sellingAsset,
+                    buying: buyingAsset,
+                    amount: "" + selling.value,
+                    offerId: "0",
+                    price: "" + (buying.value / selling.value)
+                })).addOperation(Stellar.Operation.manageOffer({
+                    source: buyerWallet.address, 
+                    selling: buyingAsset,
+                    buying: sellingAsset,
+                    amount: "" + buying.value,
+                    offerId:"0", 
+                    price: "" + (selling.value / buying.value) 
+                }));
+
+            // Memo field if memo is present
+            if(ref) {
+                var memoObject = Stellar.Memo.hash(crypto.createHash('sha256').update(ref).digest('hex'));
+                exchangeTx.addMemo(memoObject);
+            }
+
+            // Sign the transaction
+            exchangeTx = exchangeTx.build();
+
+            // Load signing key
+            exchangeTx.sign(Stellar.Keypair.fromSecret(sellerWallet.seed));
+            exchangeTx.sign(Stellar.Keypair.fromSecret(buyerWallet.seed));
+
+            // Submit transaction
+            var paymentResult = await this.server.submitTransaction(exchangeTx);
+            uhc.log.info(`exchangeAsset(): ${sellerWallet.address} > ${buyerWallet.address} (${selling.value} ${selling.code} for ${buying.value} ${buying.code}) success`);
+            
+            // Build transaction 
+            return new model.Transaction(
+                paymentResult.ledger, 
+                model.TransactionType.Payment,
+                null,
+                new Date(), 
+                await sellerWallet.loadUser(), 
+                await buyerWallet.loadUser(), 
+                selling, 
+                null, 
+                paymentResult._links.transaction.href);
+        }
+        catch(e) {
+            uhc.log.error(`Account payment has failed: ${e.message}`);
+            throw new StellarException(e);
+        }
+    }
+
+    /**
+     * @method
      * @summary Gets the stellar asset instance by code
      * @param {string} code The asset code to find
      */
     getAssetByCode(code) {
+        // Code is native so it is XLM
+        if(code == "XLM")
+            return Stellar.Asset.native();
+
         var retVal = this.assets.find((o) => o.code == code);
         if(retVal) 
             return new Stellar.Asset(retVal.code, retVal.issuer);

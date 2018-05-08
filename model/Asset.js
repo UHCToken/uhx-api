@@ -153,7 +153,7 @@
      */
     async loadDistributorWallet() {
         if(!this._distWallet)
-            this._distWallet = uhc.Repositories.walletRepository.get(this._distWalletId);
+            this._distWallet = await uhc.Repositories.walletRepository.get(this._distWalletId);
         return this._distWallet;
     }
 
@@ -162,7 +162,7 @@
      */
     async loadOffers() {
         if(!this._offerInfo)
-            this._offerInfo = uhc.Repositories.assetRepository.getOffers(this.id);
+            this._offerInfo = await uhc.Repositories.assetRepository.getOffers(this.id);
         return this._offerInfo;
     }
 

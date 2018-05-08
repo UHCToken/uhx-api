@@ -102,6 +102,21 @@ CREATE TABLE IF NOT EXISTS user_claims(
 
 CREATE UNIQUE INDEX user_claim_name_value_idx ON user_claims(user_id, claim_type) WHERE expiry IS NULL;
 
+
+-- REPRESENTS CLAIMS ABOUT A USER
+CREATE TABLE IF NOT EXISTS invitation_claims(
+    id uuid NOT NULL DEFAULT uuid_generate_v4(),
+    claim_type VARCHAR(256) NOT NULL, -- THE TYPE OF CLAIM EXAMPLE: FACEBOOK AUTH, RESET TOKEN
+    claim_value VARCHAR(256) NOT NULL, -- THE VALUE OF THE CLAIM
+    creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expiry TIMESTAMPTZ, -- WHEN PRESENT THE EXPIRATION OF THIS CLAIM
+    invitation_id uuid NOT NULL, -- THE USER TO WHICH THE CLAIM BELONGS
+    CONSTRAINT pk_invitation_claims PRIMARY KEY (id),
+    CONSTRAINT fk_invitation_claims_user FOREIGN KEY (invitation_id) REFERENCES invitations(id)
+);
+
+CREATE UNIQUE INDEX invitation_claim_name_value_idx ON invitation_claims(invitation_id, claim_type) WHERE expiry IS NULL;
+
 -- REPRESENTS EXTERNAL IDENTITIES 
 CREATE TABLE IF NOT EXISTS user_identity (
     id uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -260,9 +275,9 @@ CREATE TABLE IF NOT EXISTS asset_offer (
     start_date DATE, -- THE START DATE OF THE SCHEDULE
     stop_date DATE, -- THE STOP DATE OF THE SCHEDULE
     wallet_id UUID NOT NULL, -- THE WALLET FROM WHICH ASSETS SHOULD BE PURCHASED DURING THIS OFFER
-    price NUMERIC(20,5), -- THE OFFER DURING THIS SCHEDULE (IF NULL NO FIXED EXCHANGE) 
+    price NUMERIC(20, 7), -- THE OFFER DURING THIS SCHEDULE (IF NULL NO FIXED EXCHANGE) 
     price_code VARCHAR(12), -- THE OFFER CODE ()
-    amount NUMERIC(20, 5), -- WHEN POPULATED AND START DATE HAS PASSED THE BALANCE OF THE ACCOUNT SHOULD BE X 
+    amount NUMERIC(20, 7), -- WHEN POPULATED AND START DATE HAS PASSED THE BALANCE OF THE ACCOUNT SHOULD BE X 
     creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by UUID NOT NULL, -- THE USER WHICH CREATED THE GROUP
     updated_time TIMESTAMPTZ, -- THE TIME THAT THE OBJECT WAS UPDATED
@@ -320,7 +335,7 @@ INSERT INTO group_permissions (group_id, permission_set_id, acl_flags)
 INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('330d2fb4-ba61-4b48-a0a1-8162a4708e96', '29b52e3b-52d6-4108-bb6e-f4c692cb4145', 22);
 INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('330d2fb4-ba61-4b48-a0a1-8162a4708e96', 'c428ff6a-0d07-424f-802b-b51a040d023b', 31);
 INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('330d2fb4-ba61-4b48-a0a1-8162a4708e96', '5245dff0-9b79-4ddb-b3bd-9dd733afd678', 31);
-INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('330d2fb4-ba61-4b48-a0a1-8162a4708e96', '20a97388-5b6a-43e7-ac07-911ceee7e0d6', 30);
+INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('330d2fb4-ba61-4b48-a0a1-8162a4708e96', '20a97388-5b6a-43e7-ac07-911ceee7e0d6', 11);
 INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('330d2fb4-ba61-4b48-a0a1-8162a4708e96', '76818f0a-2caa-4c46-83f5-064248001821', 4);
 
 -- CREATE A TEST USER

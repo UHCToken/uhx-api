@@ -18,31 +18,17 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
- const config = require('./config'),
-    repositories = require('./repository/repository'),
-    SecurityLogic = require('./logic/SecurityLogic'),
-    TokenLogic = require('./logic/TokenLogic'),
-    winston = require('winston'),
-    Mailer = require('./integration/mail'),
-    StellarClient = require("./integration/stellar");
+ const uhc = require('../uhc');
 
-winston.level = config.logging.level;
-
-if(config.logging.file) 
-    winston.add(winston.transports.File, { filename: config.logging.file, rotationFormat: true, json: false, tailable: true } );
-
- var repository = new repositories.UhcRepositories(config.db.server);
-
- // Exports section
- module.exports.SecurityLogic = new SecurityLogic();
- module.exports.TokenLogic = new TokenLogic();
- module.exports.Config = config;
- module.exports.Repositories = repository;
- module.exports.log = winston;
- module.exports.Mailer = new Mailer(config.mail);
-
- repository.assetRepository.query().then(function(result) {
-     winston.info("Stellar Client Initialized...")
-     module.exports.StellarClient = new StellarClient(config.stellar.horizon_server, result, config.stellar.testnet_use);
- });
- 
+ /**
+  * @method
+  * @summary Execute the TFA
+  * @param {string} code The TFA code to use
+  */
+ module.exports = async function(to, code) {
+     if(to.telVerified)
+        await uhc.Mailer.sendSms({
+            to: to.tel, 
+            template: uhc.Config.mail.templates.tfa
+        }, { user: to, token: code });
+ }

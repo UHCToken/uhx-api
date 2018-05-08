@@ -45,6 +45,19 @@ const TransactionType = {
 
 /**
  * @enum
+ * @summary Identifies the purchase state
+ */
+const PurchaseState = {
+    NEW: 1, 
+    COMPLETE: 2,
+    CANCEL: 3,
+    REJECT: 4,
+    HOLD: 5,
+    ACTIVE: 6
+}
+
+/**
+ * @enum
  * @summary Identifies the status of the transaction
  */
 const TransactionStatus = {
@@ -66,3 +79,4 @@ module.exports.MonetaryAmount = MonetaryAmount;
 module.exports.Transaction = Transaction;
 module.exports.TransactionType = TransactionType;
 module.exports.TransactionStatus = TransactionStatus;
+module.exports.PurchaseState = PurchaseState;

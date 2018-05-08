@@ -130,11 +130,22 @@
      * @summary Loads the asset this offer belongs to
      * @returns {Asset} The loaded asset
      */
-    async loadAsset() {
+    async loadAsset(_txc) {
         if(!this._asset)
-            this._asset = await uhc.Repositories.assetRepository.get(this.assetId);
+            this._asset = await uhc.Repositories.assetRepository.get(this.assetId, _txc);
         return this._asset;
     }
 
+    /**
+     * @method
+     * @summary Loads the wallet for this offering
+     * @param {Client} _txc The postgresql transaction to run this load request on
+     * @returns {Wallet} The wallet for the offering
+     */
+    async loadWallet(_txc) {
+        if(!this._wallet)
+            this._wallet = await uhc.Repositories.walletRepository.get(this._walletId, _txc);
+        return this._wallet;
+    }
 
  }

@@ -1,5 +1,4 @@
-// <Reference path="./model/model.js"/>
-'use strict';
+'use strict'
 
 /**
  * Copyright 2018 Universal Health Coin
@@ -18,31 +17,28 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
- const config = require('./config'),
-    repositories = require('./repository/repository'),
-    SecurityLogic = require('./logic/SecurityLogic'),
-    TokenLogic = require('./logic/TokenLogic'),
-    winston = require('winston'),
-    Mailer = require('./integration/mail'),
-    StellarClient = require("./integration/stellar");
+const assert = require('assert'),
+    bittrex = require("../integration/bittrex");
 
-winston.level = config.logging.level;
+describe("BitTrex API Test Suite", function() {
 
-if(config.logging.file) 
-    winston.add(winston.transports.File, { filename: config.logging.file, rotationFormat: true, json: false, tailable: true } );
+    /**
+     * @summary Ensure that the client will get a quote between two currencies
+     */
+    it("Should get a quote directly between two currencies", async function() {
+        var exchange = await new bittrex().getExchange({ from: "USDT",  to: "BTC" });
+        assert.ok(exchange);
+    });
 
- var repository = new repositories.UhcRepositories(config.db.server);
-
- // Exports section
- module.exports.SecurityLogic = new SecurityLogic();
- module.exports.TokenLogic = new TokenLogic();
- module.exports.Config = config;
- module.exports.Repositories = repository;
- module.exports.log = winston;
- module.exports.Mailer = new Mailer(config.mail);
-
- repository.assetRepository.query().then(function(result) {
-     winston.info("Stellar Client Initialized...")
-     module.exports.StellarClient = new StellarClient(config.stellar.horizon_server, result, config.stellar.testnet_use);
- });
- 
+    /**
+     * @summary Ensure that the client will get a quote between three currencies
+     */
+    it("Should get a quote between an intermediary currency", async function() {
+        // XLM<>BTC ; BTC<>USD
+        var exchange = await new bittrex().getExchange([
+            { from: "USDT", to: "XLM", via: ["BTC"] },
+            { from: "USDT", to: "XLM", via: ["ETH"] }
+        ]);
+        assert.ok(exchange);
+    });
+});

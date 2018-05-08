@@ -91,6 +91,14 @@
           */
          refreshValidity: 30000000,
          /**
+          * @summary The validity period for password resets
+          */
+         resetValidity:  30000000,
+         /**
+          * @summary The validity of a TFA code
+          */
+         tfaValidity: 300000,
+         /**
           * @summary Maximum failed login attempts
           */
          maxFailedLogin: 4,
@@ -162,7 +170,11 @@
         /**
          * @summary The home domain where the stellar TOML file is hosted
          */
-        home_domain: "?.cooldomain.com"
+        home_domain: "?.cooldomain.com",
+        /**
+         * @summary When using market rate quotes the validity of the offer.
+         */
+        market_offer_validity: 60000,
      },
      /**
       * @summary Swagger configuration
@@ -171,7 +183,7 @@
          swaggerDefinition: {
              info: {
              title: "Universal Health Coin API",
-             version: "1.0-alpha",
+             version: "1.0-alpha3",
              description: "The Universal Health Coin API"
          },
          basePath: "/api/v1",
@@ -191,12 +203,20 @@
                 pass: 'mypass'
             }
         },
+        sms: {
+            auth: "XXXXx",
+            sid: ""
+        },
         from: "no-reply@domain.com",
         templates: {
             invitation: "./templates/invitation",
             welcome: "./templates/welcome",
             confirmation: "./templates/confirm",
-            emailChange: "./templates/emailChange"
+            contactChange: "./templates/contactChange",
+            resetPassword: "./templates/resetPassword",
+            tfa: "./templates/tfa",
+            tfaChange: "./templates/tfaChanged",
+            passwordChange: "./templates/passwordChanged"
         } 
     },
     logging : {
