@@ -302,7 +302,7 @@ module.exports = class TokenLogic {
                 // If the purchase is PENDING it needs to be processed - We need a quote and to deduct user account
                 if(purchaseInfo.state == model.PurchaseState.NEW) {
                     // 1. Does the quote exist and is it still valid? 
-                    var quote = await uhc.Repositories.assetRepository.getQuote(purchaseInfo.quoteId, _txc);
+                    var quote = await purchaseInfo.loadQuote(_txc);
                     var asset = await purchaseInfo.loadAsset(_txc);
                     if(quote.assetId != asset.id)
                         throw new exception.BusinessRuleViolationException(new exception.RuleViolation(`Quote asset ${quote.assetId} does not match purchase order asset ${purchaseInfo.assetId}`, exception.ErrorCodes.DATA_ERROR, exception.RuleViolationSeverity.error));

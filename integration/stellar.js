@@ -87,7 +87,7 @@ module.exports = class StellarClient {
      * @param {number} number The number to be rounded
      */
     round(number) {
-        var factor = Math.pow(10, 8);
+        var factor = Math.pow(10, 7);
         return Math.round(number * factor) / factor;
     }
 
@@ -463,6 +463,9 @@ module.exports = class StellarClient {
     async exchangeAsset(sellerWallet, buyerWallet, selling, buying, ref) {
 
         try {
+
+            selling.value = this.round(selling.value);
+            buying.value = this.round(buying.value);
 
             uhc.log.info(`exchangeAsset() : ${sellerWallet.address} > ${buyerWallet.address} [${selling.value} ${selling.code} for ${buying.value} ${buying.code}]`);
             

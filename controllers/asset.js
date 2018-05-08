@@ -252,7 +252,7 @@ module.exports.AssetApiResource = class AssetApiResource {
             throw new exception.NotFoundException("offer", "__current");
         var offerInfo = await uhc.StellarClient.getAccount(await activeOffer.loadWallet());
         var asset = await activeOffer.loadAsset();
-        activeOffer.remain = offerInfo.balances.find(o=>o.code == asset.code);
+        activeOffer.remain = offerInfo.balances.find(o=>o.code == asset.code).value;
         res.status(200).json(activeOffer);
         return true;
     }
@@ -442,6 +442,15 @@ module.exports.AssetApiResource = class AssetApiResource {
         
         // The asset
         var quote = await uhc.TokenLogic.createAssetQuote(req.query.to, req.query.from);
+
+        // current offer info & remaining tokens
+        var activeOffer = await uhc.Repositories.assetRepository.getActiveOffer(quote.assetId);
+        if(activeOffer)
+        {
+            var offerInfo = await uhc.StellarClient.getAccount(await activeOffer.loadWallet());
+            activeOffer.remain = offerInfo.balances.find(o=>o.code == quote._asset.code).value;       
+            quote.currentOffer = activeOffer;
+        }
         res.status(201).json(quote);
         return true;
     }
