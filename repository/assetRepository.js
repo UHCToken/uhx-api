@@ -373,9 +373,9 @@ module.exports = class AsssetRepository {
         try {
             if(!_txc) await dbc.connect();
             
-            var rdr = await dbc.query("SELECT * FROM asset_quote WHERE id = $1", [quoteId]);
+            var rdr = await dbc.query(`SELECT * FROM asset_quote WHERE id = $1`, [quoteId]);
             if(rdr.rows.length == 0)
-                throw new exception.Exception("Could not insert the asset quote", exception.ErrorCodes.DATA_ERROR);
+                throw new exception.Exception("Could not get the asset quote", exception.ErrorCodes.DATA_ERROR);
             else 
                 return new AssetQuote().fromData(rdr.rows[0]);
         }

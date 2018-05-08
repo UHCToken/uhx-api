@@ -44,9 +44,11 @@ module.exports = class ModelUtil {
                     whereClause += `${k} = $${parmId++}`;
                 else if(k.startsWith("$"))
                     updateSet += `${k.substring(1)} = crypt($${parmId++}, gen_salt('bf')), `;
-                else
+                else if(dbModel[k] !== undefined)
                     updateSet += `${k} = $${parmId++}, `;
-                parameters.push(dbModel[k]);
+                
+                if(dbModel[k]  !== undefined)
+                    parameters.push(dbModel[k]);
             }
 
         // Append timestamp?

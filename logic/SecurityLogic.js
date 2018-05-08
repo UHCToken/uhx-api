@@ -21,7 +21,6 @@
 const uhc = require('../uhc'),
     exception = require('../exception'),
     security = require('../security'),
-    StellarClient = require('../integration/stellar'),
     model = require('../model/model'),
     User = require('../model/User'),
     crypto = require('crypto'),
@@ -63,9 +62,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
      * @returns {StellarClient} The stellar client
      */
     async getStellarClient() {
-        if(!this._stellarClient)
-            this._stellarClient = new StellarClient(uhc.Config.stellar.horizon_server, await uhc.Repositories.assetRepository.query(), uhc.Config.stellar.testnet_use);
-        return this._stellarClient;
+        return uhc.StellarClient;
     }
 
     /**
@@ -204,7 +201,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
             }
             else  // Confirm e-mail anonymously
                 success = await uhc.Repositories.transaction(async (_txc) => {
-                    user = await uhc.Repositories.userRepository.getByClaim(EMAIL_CONFIRM_CLAIM, code, _txc);
+                    var user = await uhc.Repositories.userRepository.getByClaim(EMAIL_CONFIRM_CLAIM, code, _txc);
                     if(user.length > 0) {
                         user[0].emailVerified = true;
                         await uhc.Repositories.userRepository.update(user[0], null, principal, _txc);
@@ -400,8 +397,9 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
      * @summary Register a regular user 
      * @param {User} user The user to be registered
      * @param {string} password The password to set on the user
+     * @param {SecurityPrincipal} principal The user which is creating this user
      */
-    async registerInternalUser(user, password) {
+    async registerInternalUser(user, password, principal) {
 
         // First we register the user in our DB
         try {
@@ -414,11 +412,14 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                 // Insert the user
                 var stellarClient = await this.getStellarClient();
                 var wallet = await stellarClient.generateAccount();
-                wallet = await uhc.Repositories.walletRepository.insert(wallet, null, _txc);
+                wallet = await uhc.Repositories.walletRepository.insert(wallet, principal, _txc);
                 user.walletId = wallet.id;
-                var retVal = await uhc.Repositories.userRepository.insert(user, password, null, _txc);
-                await uhc.Repositories.groupRepository.addUser(uhc.Config.security.sysgroups.users, retVal.id, null, _txc);
+                var retVal = await uhc.Repositories.userRepository.insert(user, password, principal, _txc);
+                await uhc.Repositories.groupRepository.addUser(uhc.Config.security.sysgroups.users, retVal.id, principal, _txc);
                 await this.sendConfirmationEmail(user, _txc);
+
+                if(user.tel)
+                    await this.sendConfirmationSms(user, _txc);
                 return retVal;
             });
 
@@ -502,6 +503,9 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                 // Get existing user
                 var existingUser = await uhc.Repositories.userRepository.get(user.id);
 
+                // Delete fields which can't be set by clients 
+                delete(user.walletId);
+                
                 // Was the user's e-mail address verified? 
                 if(newPassword) {
                     if(existingUser.telVerified && existingUser.tel)
@@ -517,7 +521,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                             subject: "Did you change your UHX password?"
                         }, { user: existingUser });
                 }
-                else if(existingUser.telVerified && existingUser.tel != user.tel) {
+                else if(user.tel && existingUser.telVerified && existingUser.tel != user.tel) {
 
                     await uhc.Mailer.sendSms({
                         to: existingUser.tel,
@@ -528,7 +532,12 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
 
                     user.telVerified = false;
                 }
-                else if(existingUser.emailVerified && existingUser.email != user.email) {
+                else if(user.tel && !user.telVerified) {
+                    user.givenName = user.givenName || existingUser.givenName;
+                    user.familyName = user.familyName || existingUser.familyName;
+                    await this.sendConfirmationSms(user);
+                }
+                else if(user.email && existingUser.emailVerified && existingUser.email != user.email) {
 
                     var undoToken = this.generateSignedClaimToken();
                     await uhc.Repositories.userRepository.addClaim(user.id, {
@@ -548,6 +557,28 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                     // TODO: We want to send a confirmation e-mail to the e-mail address
                     await this.sendConfirmationEmail(user);
                     user.emailVerified = false;
+                }
+                else if(user.tfaMethod && user.tfaMethod != existingUser.tfaMethod) {
+                    // Confirm to user that TFA was set
+                    if(user.tfaMethod == 1)
+                    {
+                        if(!existingUser.telVerified)
+                            throw new exception.BusinessRuleViolationException(new exception.RuleViolation("SMS Two-Factor requires a verified phone number", exception.ErrorCodes.RULES_VIOLATION, exception.RuleViolationSeverity.ERROR));
+                        await uhc.Mailer.sendSms({
+                            to: existingUser.tel,
+                            template: uhc.Config.mail.templates.tfaChange
+                        }, { old: existingUser, new: user, token: undoToken, ui_base: uhc.Config.api.ui_base });
+                    }
+                    else if(user.tfaMethod == 2) {
+                        if(!existingUser.emailVerified)
+                            throw new exception.BusinessRuleViolationException(new exception.RuleViolation("E-Mail Two-Factor requires a verified e-mail address", exception.ErrorCodes.RULES_VIOLATION, exception.RuleViolationSeverity.ERROR));
+                        await uhc.Mailer.sendEmail({
+                            to: existingUser.email,
+                            from: uhc.Config.mail.from,
+                            subject: "UHX Two-factor authentication setup successful",
+                            template: uhc.Config.mail.templates.tfaChange
+                        }, { old: existingUser, new: user, token: undoToken, ui_base: uhc.Config.api.ui_base });
+                    }
                 }
                 // Update the user
                 return await uhc.Repositories.userRepository.update(user, newPassword, null, _txc);
@@ -606,7 +637,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
             }, _txc);
 
             // We want to send an sms address to verify
-            await uhc.Mailer.sendEmail({
+            await uhc.Mailer.sendSms({
                 to: user.tel,
                 template: uhc.Config.mail.templates.confirmation
             }, { user: user, token: confirmToken, ui_base: uhc.Config.api.ui_base });
@@ -713,7 +744,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                 throw new exception.Exception("Token has failed validation", exception.ErrorCodes.SECURITY_ERROR);
         }
         else {
-            var tokenParts = code.split(".");
+            var tokenParts = token.split(".");
             if(tokenParts.length != 2)
                 throw new exception.ArgumentException("code");
             else if(tokenParts[1] != crypto.createHmac('sha256', uhc.Config.security.hmac256secret).update(tokenParts[0]).digest('hex'))

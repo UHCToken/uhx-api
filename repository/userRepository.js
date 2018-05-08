@@ -128,7 +128,7 @@ const pg = require('pg'),
         var dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM user_claims WHERE user_id = $1 WHERE expiry < CURRENT_TIMESTAMP", [userId]);
+            const rdr = await dbc.query("SELECT * FROM user_claims WHERE user_id = $1 AND expiry > CURRENT_TIMESTAMP", [userId]);
             var retVal = {};
             for(var r in rdr.rows)
                 retVal[rdr.rows[r].claim_type] = rdr.rows[r].claim_value;

@@ -74,6 +74,13 @@ class UserApiResource {
                     }
                 },
                 {
+                    "path": "user/:uid/confirm",
+                    "post":{
+                        "demand": security.PermissionType.EXECUTE | security.PermissionType.WRITE,
+                        "method": this.confirm
+                    }
+                },
+                {
                     "path": "user/reset",
                     "post": {
                         "demand": security.PermissionType.EXECUTE | security.PermissionType.WRITE,
@@ -134,7 +141,7 @@ class UserApiResource {
      *      security:
      *      - uhc_auth:
      *          - "write:user"
-     *      - app_auth
+     *      - app_auth:
      *          - "write:user"
      */
     async post(req, res)  {
@@ -151,9 +158,9 @@ class UserApiResource {
         
         // USE CASE 1: User has passed up a username and password
         if(req.body.password && req.body.name) 
-            res.status(201).json(await uhc.SecurityLogic.registerInternalUser(user, req.body.password));
+            res.status(201).json(await uhc.SecurityLogic.registerInternalUser(user, req.body.password, req.principal));
         else // USE CASE 2: User is attempting to sign up with an external identifier
-            res.status(201).json(await uhc.SecurityLogic.registerExternalUser(req.body.externalIds));
+            res.status(201).json(await uhc.SecurityLogic.registerExternalUser(req.body.externalIds, req.principal));
 
         return true;
     }
@@ -517,6 +524,40 @@ class UserApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - app_auth:
+     *          - "write:user"
+     *          - "execute:user"
+     * /user/{userId}/confirm:
+     *  post:
+     *      tags:
+     *      - "user"
+     *      summary: "Completes a user contact confirmation"
+     *      description: "This method will allow the user to fulfill a contact confirmation request - This is for short codes"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "userId"
+     *        in: "path"
+     *        description: "The user that is confirming their e-mail or SMS address"
+     *        required: true
+     *        type: "string"
+     *      - name: "code"
+     *        in: "formData"
+     *        description: "The confirmation code sent to the contact address"
+     *        required: true
+     *        type: "string"
+     *      responses:
+     *          204: 
+     *             description: "The reset request was successful and no content is required to be returned"
+     *          404:
+     *              description: "The specified user cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhc_auth:
      *          - "write:user"
      *          - "execute:user"
     */

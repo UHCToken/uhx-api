@@ -215,6 +215,7 @@
             contactChange: "./templates/contactChange",
             resetPassword: "./templates/resetPassword",
             tfa: "./templates/tfa",
+            tfaChange: "./templates/tfaChanged",
             passwordChange: "./templates/passwordChanged"
         } 
     },

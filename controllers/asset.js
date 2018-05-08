@@ -43,7 +43,7 @@ module.exports.AssetApiResource = class AssetApiResource {
                 {
                     "path": "asset",
                     "get": {
-                        demand: null,
+                        demand: security.PermissionType.LIST,
                         method: this.getAll
                     }, 
                     "post" : {
@@ -54,14 +54,14 @@ module.exports.AssetApiResource = class AssetApiResource {
                 {
                     "path":"asset/quote",
                     "post": {
-                        demand: null, 
+                        demand: security.PermissionType.EXECUTE, 
                         method: this.quote
                     }
                 },
                 {
                     "path":"asset/:id",
                     "get": {
-                        demand: null, 
+                        demand: security.PermissionType.READ, 
                         method: this.get
                     },
                     "lock": {
@@ -80,8 +80,15 @@ module.exports.AssetApiResource = class AssetApiResource {
                 {
                     "path":"asset/:id/offer",
                     "get": {
-                        demand: null, 
+                        demand: security.PermissionType.READ, 
                         method: this.getOffer
+                    }
+                },
+                {
+                    "path":"asset/:id/offer/current",
+                    "get": {
+                        demand: security.PermissionType.READ, 
+                        method: this.getActiveOffer
                     }
                 }
             ]
@@ -158,11 +165,94 @@ module.exports.AssetApiResource = class AssetApiResource {
      * @summary Gets the active offer for purchasing the coin
      * @param {Express.Request} req The HTTP request from the client
      * @param {Express.Response} res The HTTP response to the client
+     * @swagger
+     * /asset/{assetId}/offer:
+     *  get:
+     *      tags:
+     *      - "asset"
+     *      summary: "Gets the offers for the specified asset"
+     *      description: "This method will retrieve all offers for the specified asset type (past and future)"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - in: "path"
+     *        name: "assetId"
+     *        description: "The identity of the asset"
+     *        required: true
+     *        type: string
+     *      responses:
+     *          200: 
+     *             description: "The requested resource was retrieved successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/AssetOffer"
+     *          404:
+     *              description: "The specified asset does not exist"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - app_auth:
+     *          - read:asset
+     *      - uhc_auth:
+     *          - read:asset
      */
     async getOffer(req, res) {
+        var activeOffer = await uhc.Repositories.assetRepository.getOffers(req.params.id);
+        if(!activeOffer)
+            throw new exception.NotFoundException("offer", "__current");
+        res.status(200).json(activeOffer);
+        return true;
+    }
+
+        /**
+     * @method
+     * @summary Gets the active offer for purchasing the coin
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to the client
+     * @swagger
+     * /asset/{assetId}/offer/current:
+     *  get:
+     *      tags:
+     *      - "asset"
+     *      summary: "Gets the current active offer for the specified asset (this is the current supply for sale)"
+     *      description: "This method will retrieve the current offers for the specified asset type (past and future)"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - in: "path"
+     *        name: "assetId"
+     *        description: "The identity of the asset"
+     *        required: true
+     *        type: string
+     *      responses:
+     *          200: 
+     *             description: "The requested resource was retrieved successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/AssetOffer"
+     *          404:
+     *              description: "The specified asset does not exist"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - app_auth:
+     *          - read:asset
+     *      - uhc_auth:
+     *          - read:asset
+     */
+    async getActiveOffer(req, res) {
         var activeOffer = await uhc.Repositories.assetRepository.getActiveOffer(req.params.id);
         if(!activeOffer)
             throw new exception.NotFoundException("offer", "__current");
+        var offerInfo = await uhc.StellarClient.getAccount(await activeOffer.loadWallet());
+        var asset = await activeOffer.loadAsset();
+        activeOffer.remain = offerInfo.balances.find(o=>o.code == asset.code);
         res.status(200).json(activeOffer);
         return true;
     }
@@ -174,7 +264,7 @@ module.exports.AssetApiResource = class AssetApiResource {
      * @param {Express.Response} res The HTTP response to the client
      */
     async lock(req, res) {
-
+        throw new exception.NotImplementedException();
     }
 
     /**
@@ -184,7 +274,7 @@ module.exports.AssetApiResource = class AssetApiResource {
      * @param {Express.Response} res The HTTP response to the client
      */
     async unlock(req, res) {
-
+        throw new exception.NotImplementedException();
     }
 
     /**
@@ -194,7 +284,7 @@ module.exports.AssetApiResource = class AssetApiResource {
      * @param {Express.Response} res The HTTP response to the client
      */
     async put(req, res) {
-
+        throw new exception.NotImplementedException();
     }
     
     /**
@@ -230,10 +320,14 @@ module.exports.AssetApiResource = class AssetApiResource {
      *              description: "An internal server error occurred"
      *              schema:
      *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - app_auth:
+     *          - read:asset
+     *      - uhc_auth:
+     *          - read:asset
      */
     async get(req, res) {
         var asset = await uhc.Repositories.assetRepository.get(req.params.id);
-        await asset.loadOffers();
         await asset.loadDistributorWallet();
         res.status(200).json(asset);
         return true;
@@ -277,6 +371,11 @@ module.exports.AssetApiResource = class AssetApiResource {
      *              description: "An internal server error occurred"
      *              schema:
      *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - app_auth:
+     *          - list:asset
+     *      - uhc_auth:
+     *          - list:asset
      */
     async getAll(req, res) {
 
@@ -328,6 +427,11 @@ module.exports.AssetApiResource = class AssetApiResource {
      *              description: "An internal server error occurred"
      *              schema:
      *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - app_auth:
+     *          - execute:asset
+     *      - uhc_auth:
+     *          - execute:asset
      */
     async quote(req, res) {
 

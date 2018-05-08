@@ -18,11 +18,35 @@
  */
 
  const ModelBase = require('./ModelBase'),
-    uhc = require('../uhc');
+    uhc = require('../uhc'),
+    MonetaryAmount = require("./MonetaryAmount");
 
  /**
   * @class
   * @summary Represents a quote for an internal asset to an external symbol or fiat
+  * @swagger
+  * definitions:
+  *     AssetQuote:
+  *         description: "Represents a quote of an internal managed asset against an external asset or fiat"
+  *         properties:
+  *             id: 
+  *                 type: string
+  *                 description: The unique identifier for the quote
+  *             assetId:
+  *                 type: string
+  *                 description: The asset being represented in the quote
+  *             asset:
+  *                 $ref: "#/definitions/Asset"
+  *                 description: The asset which is being quoted
+  *             rate:
+  *                 $ref: "#/definitions/MonetaryAmount"
+  *                 description: The monetary amount of the quote
+  *             creationTime:
+  *                 type: date
+  *                 description: The time the quote was created
+  *             expiry:
+  *                 type: date
+  *                 description: The time the quote will expire
   */
  module.exports = class AssetQuote extends ModelBase {
 
@@ -45,8 +69,7 @@
     fromData(dbAsset) {
         this.id = dbAsset.id;
         this.assetId = dbAsset.asset_id;
-        this.from = dbAsset.from_code;
-        this.rate = dbAsset.rate;
+        this.rate = new MonetaryAmount(dbAsset.rate, dbAsset.from_code);
         this.creationTime = dbAsset.creation_time;
         this.expiry = dbAsset.expiry;
         return this;
@@ -60,8 +83,8 @@
         return {
             id: this.id,
             asset_id: this.assetId,
-            from_code: this.from,
-            rate: this.rate,
+            from_code: this.rate.code,
+            rate: this.rate.value,
             creation_time: this.creationTime,
             expiry: this.expiry
         };
