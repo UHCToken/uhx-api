@@ -19,6 +19,7 @@
 
 const ModelBase = require('./ModelBase'),
     User = require('./User'),
+    MonetaryAmount = require('./MonetaryAmount'),
     uhc = require('../uhc');
 
 /**
@@ -55,6 +56,15 @@ module.exports = class Wallet extends ModelBase {
         this.transactions = [];
     }
 
+    /**
+     * @method
+     * @summary Get the balance of the particular code
+     * @param {string} code The monetary amount code to use
+     * @returns {MonetaryAmount} The balance of the specified asset or null if not trusted
+     */
+    getBalanceOf(code) {
+        return this.balances.find( (m) => m.code == code );
+    }
     /**
      * @method
      * @summary Loads the user associated with this wallet

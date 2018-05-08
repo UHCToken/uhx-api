@@ -1,0 +1,3 @@
+Hi {{old.givenName}},
+
+This is UHX just sending you a friendly message letting you know two-factor authentication has been setup on your account. From now on whenever you log in you will receive a 9 digit code at this address.

@@ -19,7 +19,8 @@
  */
 
  const ModelBase = require('./ModelBase'),
-    uhc = require('../uhc');
+    uhc = require('../uhc'),
+    Offer = require('./Offer');
 
  /**
   * @class
@@ -34,27 +35,45 @@
   *             code:
   *                 type: string
   *                 description: The codified identifier for the asset
-  *             type:
+  *             name:
   *                 type: string
   *                 description: A textual description of the type of asset
+  *             "description":
+  *                 type: string
+  *                 description: The description of the asset
+  *             displayDecimals:
+  *                 type: number
+  *                 description: "The number of decimals to display"
+  *             imageUrl:
+  *                 type: string
+  *                 description: A link to the image where this asset can be represented
+  *             locked:
+  *                 type: boolean
+  *                 description: Indicates whether users can purchase (directly) assets from the main distributor account
+  *             kycRequirement:
+  *                 type: boolean
+  *                 description: Identifies whether only whitelisted individuals can purchase this asset
   *             creationTime:
-  *               type: Date
-  *               description: The time that this user account was created
+  *                 type: date
+  *                 description: The time that this user account was created
   *             createdBy:
-  *              type: string
-  *              description: The identifier of the user which created this group
+  *                 type: string
+  *                 description: The identifier of the user which created this group
   *             updatedTime:
-  *               type: Date
-  *               description: The time that the user account was last updated
+  *                 type: Date
+  *                 description: The time that the user account was last updated
   *             updatedBy:
-  *              type: string
-  *              description: The identifier of the user which created this group
+  *                 type: string
+  *                 description: The identifier of the user which created this group
   *             deactivatedTime:
-  *               type: Date
-  *               description: The time that the user account did or will become deactivated
+  *                 type: Date
+  *                 description: The time that the user account did or will become deactivated
   *             deactivatedBy:
-  *               type: Date
-  *               description: The time that the user account did or will become deactivated
+  *                 type: Date
+  *                 description: The time that the user account did or will become deactivated
+  *             offers:
+  *                 $ref: "#/definitions/Offer"
+  *                 description: Details about the offer scheduled for the asset
   */
  module.exports = class Asset extends ModelBase {
 
@@ -77,8 +96,11 @@
     fromData(dbAsset) {
         this.id = dbAsset.id;
         this.code = dbAsset.code;
-        this.type = dbAsset.type;
-        this._issuer = dbAsset.issuer;
+        this.name = dbAsset.name;
+        this.description = dbAsset.description;
+        this.displayDecimals = dbAsset.display_decimals;
+        this.imageUrl = dbAsset.img;
+        this.issuer = dbAsset.issuer;
         this._distWalletId = dbAsset.dist_wallet_id;
         this.creationTime = dbAsset.creation_time;
         this.createdBy = dbAsset.created_by;
@@ -87,6 +109,7 @@
         this.deactivationTime = dbAsset.deactivation_time;
         this.deactivatedBy = dbAsset.deactivated_by;
         this.kycRequirement = dbAsset.kyc_req;
+        this.locked = dbAsset.locked;
         return this;
     }
 
@@ -98,10 +121,13 @@
         return {
             id : this.id,
             code: this.code,
-            type: this.type,
-            issuer: this._issuer,
+            name: this.name,
+            issuer: this.issuer,
             dist_wallet_id: this._distWalletId,
-            kyc_req: this.kycRequirement
+            kyc_req: this.kycRequirement,
+            img : this.imageUrl,
+            display_decimals: this.displayDecimals,
+            description: this.description
         };
     }
 
@@ -115,7 +141,10 @@
         this.fromData({});
         for(var p in this)
            if(!p.startsWith("_") && !(this[p] instanceof Function))
-            this[p] = otherAsset[p] || this[p];
+                this[p] = otherAsset[p] || this[p];
+        this.offers = [];
+        for(var i in otherAsset.offers)
+            this.offers.push(otherAsset.offers[i] instanceof Offer ? otherAsset.offers[i] : new Offer().copy(otherAsset.offers[i]));
         return this;
     }
 
@@ -124,7 +153,26 @@
      */
     async loadDistributorWallet() {
         if(!this._distWallet)
-            this._distWallet = uhc.Repositories.walletRepository.get(this._distWalletId);
+            this._distWallet = await uhc.Repositories.walletRepository.get(this._distWalletId);
         return this._distWallet;
+    }
+
+    /**
+     * @summary Load sales information
+     */
+    async loadOffers() {
+        if(!this._offerInfo)
+            this._offerInfo = await uhc.Repositories.assetRepository.getOffers(this.id);
+        return this._offerInfo;
+    }
+
+    /**
+     * @method
+     * @summary Converts this asset to JSON
+     */
+    toJSON() {
+        var retVal = this.stripHiddenFields();
+        retVal.offers = this._offerInfo;
+        return retVal;
     }
  }

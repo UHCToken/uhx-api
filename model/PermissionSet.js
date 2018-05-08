@@ -93,19 +93,7 @@ module.exports = class PermissionSet extends ModelBase {
         return this;
     }
 
-    /**
-     * @method
-     * @summary Copy this instance's property values from another instance
-     * @param {PermissionSet} other The other permission set instance to copy from
-     * @returns {PermissionSet} This instance of the permission set with the copied values
-     */
-    copy(other) {
-        this.fromData({});
-        for(var p in this)
-            if(!p.startsWith("_") && !(this[p] instanceof Function))
-              this[p] = other[p] || this[p];
-        return this;
-    }
+   
     /**
      * @method
      * @summary Creates an instance of the application in data layer structure

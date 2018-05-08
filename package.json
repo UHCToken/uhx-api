@@ -12,17 +12,23 @@
     "body-parser": "^1.18.2",
     "express": "^4.16.3",
     "handlebars": "^4.0.11",
+    "helmet": "^3.12.0",
+    "http": "0.0.0",
+    "https": "^1.0.0",
     "jsonwebtoken": "^8.2.1",
     "mocha": "^5.1.1",
     "mongodb": "^3.0.5",
     "nodemailer": "^4.6.4",
     "nyc": "^11.7.1",
-    "pg": "^7.4.1",
+    "pg": "^7.4.2",
     "request": "^2.85.0",
     "request-promise": "^4.2.2",
     "stellar-sdk": "^0.8.0",
     "stripe": "^5.7.0",
-    "swagger-jsdoc": "^1.9.7",
-    "web3": "^1.0.0-beta.34"
-  }
+    "swagger-jsdoc": "^1.9.7"
+    "toobusy-js": "^0.5.1",
+    "twilio": "^3.16.0",
+    "web3": "^1.0.0-beta.34",
+    "winston": "^2.4.2" 
+ }
 }

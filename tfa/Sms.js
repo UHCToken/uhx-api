@@ -1,3 +1,4 @@
+// <Reference path="./model/model.js"/>
 'use strict';
 
 /**
@@ -17,34 +18,17 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
-const ModelBase = require('./ModelBase');
+ const uhc = require('../uhc');
 
-/**
- * @class
- * @summary Represents a wallet balance 
- * @swagger
- * definitions:
- *  MonetaryAmount:
- *      properties:
- *          value: 
- *              type: string
- *              description: Indicates the value of the monetary amount
- *          code:
- *              type: string
- *              description: The currency or digital asset code for the monetary amount
- */
-module.exports = class MonetaryAmount extends ModelBase {
-
-    /**
-     * @constructor
-     * @summary Instantiates the monetary amount object 
-     * @param {string} code The code of the monetary amount (example: USD)
-     * @param {number} amount The amount
-     */
-    constructor(value, code) {
-        super();
-        this.code = code == "native" ? "XLM" : code;
-        this.value = value;
-    }
-
-}
+ /**
+  * @method
+  * @summary Execute the TFA
+  * @param {string} code The TFA code to use
+  */
+ module.exports = async function(to, code) {
+     if(to.telVerified)
+        await uhc.Mailer.sendSms({
+            to: to.tel, 
+            template: uhc.Config.mail.templates.tfa
+        }, { user: to, token: code });
+ }

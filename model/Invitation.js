@@ -130,20 +130,6 @@ module.exports = class Invitation extends ModelBase {
         return this;
     }
 
-     /** 
-     * @method
-     * @summary Copy all the values from otherInvitation into this invitation
-     * @returns {Invitation} This invitation with copied fields
-     * @param {Invitation} otherInvitation The invitation from which the values for this user should be copied
-     */
-    copy(otherInvitation) {
-
-        this.fromData({});
-        for(var p in this)
-        if(!p.startsWith("_") && !(this[p] instanceof Function))
-            this[p] = otherInvitation[p] || this[p];
-        return this;
-    }
 
     /**
      * @method

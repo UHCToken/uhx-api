@@ -74,10 +74,28 @@ class UserApiResource {
                     }
                 },
                 {
-                    "path": "user/:uid/reset",
+                    "path": "user/:uid/confirm",
+                    "post":{
+                        "demand": security.PermissionType.EXECUTE | security.PermissionType.WRITE,
+                        "method": this.confirm
+                    }
+                },
+                {
+                    "path": "user/reset",
                     "post": {
                         "demand": security.PermissionType.EXECUTE | security.PermissionType.WRITE,
                         "method": this.reset
+                    },
+                    "put": {
+                        "demand": security.PermissionType.EXECUTE | security.PermissionType.WRITE,
+                        "method": this.resetComplete
+                    }
+                },
+                {
+                    "path": "user/confirm",
+                    "post": {
+                        "demand": security.PermissionType.EXECUTE | security.PermissionType.WRITE,
+                        "method": this.confirm
                     }
                 }
             ]
@@ -123,6 +141,8 @@ class UserApiResource {
      *      security:
      *      - uhc_auth:
      *          - "write:user"
+     *      - app_auth:
+     *          - "write:user"
      */
     async post(req, res)  {
         
@@ -138,9 +158,9 @@ class UserApiResource {
         
         // USE CASE 1: User has passed up a username and password
         if(req.body.password && req.body.name) 
-            res.status(201).json(await uhc.SecurityLogic.registerInternalUser(user, req.body.password));
+            res.status(201).json(await uhc.SecurityLogic.registerInternalUser(user, req.body.password, req.principal));
         else // USE CASE 2: User is attempting to sign up with an external identifier
-            res.status(201).json(await uhc.SecurityLogic.registerExternalUser(req.body.externalIds));
+            res.status(201).json(await uhc.SecurityLogic.registerExternalUser(req.body.externalIds, req.principal));
 
         return true;
     }
@@ -241,6 +261,10 @@ class UserApiResource {
     async get(req, res) {
         var user = await uhc.Repositories.userRepository.get(req.params.uid);
         await user.loadWallet();
+
+        // Load balances from blockchain
+        user._wallet = await uhc.StellarClient.isActive(user._wallet) || user._wallet;
+        
         await user.loadExternalIds();
         await user.loadClaims();
         res.status(200).json(user);
@@ -312,14 +336,14 @@ class UserApiResource {
     async getAll(req, res) {
         
         var filterUser = new model.User().copy({
-            name: req.param("name"),
-            email: req.param("email"),
-            givenName: req.param("givenName"),
-            familyName: req.param("familyName"),
-            deactivationTime: req.param("_all") ? null : "null"
+            name: req.query.name,
+            email: req.query.email,
+            givenName: req.query.givenName,
+            familyName: req.query.familyName,
+            deactivationTime: req.query._all ? null : "null"
         });
         
-        var results = await uhc.Repositories.userRepository.query(filterUser, req.param("_offset"), req.param("_count"));
+        var results = await uhc.Repositories.userRepository.query(filterUser, req.query._offset, req.query._count);
         results.forEach((o)=>{ o.externalIds = null;});
         res.status(200).json(results);
         return true;
@@ -363,7 +387,7 @@ class UserApiResource {
      *          - "read:user"
      */
     async delete(req, res) {
-        res.status(201).json(await uhc.Repositories.userRepository.delete(req.param("uid")));
+        res.status(201).json(await uhc.Repositories.userRepository.delete(req.params.uid));
         return true;
     }
 
@@ -372,11 +396,182 @@ class UserApiResource {
      * @summary Generates a reset password email
      * @param {Express.Request} req The HTTP request from the client
      * @param {Express.Response} res The HTTP response to the client
-     */
+     * @swagger
+     * /user/reset:
+     *  post:
+     *      tags:
+     *      - "user"
+     *      summary: "Creates a new password reset claim"
+     *      description: "This method will create a new password reset claim on the user's account."
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "email"
+     *        in: "formData"
+     *        description: "The e-mail address of the user being reset"
+     *        required: false
+     *        type: "string"
+     *      - name: "tel"
+     *        in: "formData"
+     *        description: "The SMS address of the user being reset"
+     *        required: false
+     *        type: "string"
+     *      responses:
+     *          204: 
+     *             description: "The reset request was successful and no content is required to be returned"
+     *          404:
+     *              description: "The specified user cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - app_auth:
+     *          - "write:user"
+     *          - "execute:user"
+    */
     async reset(req, res) {
-
+        await uhc.SecurityLogic.initiatePasswordReset(req.body.email, req.body.tel);
+        res.status(204).send();
+        return true;
     }
 
+    /**
+     * @method
+     * @summary Fulfills a password reset request 
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to the client
+     * @swagger
+     * /user/reset:
+     *  put:
+     *      tags:
+     *      - "user"
+     *      summary: "Completes a user password reset claim"
+     *      description: "This method will allow the user to change their password"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "code"
+     *        in: "formData"
+     *        required: true
+     *        description: "The reset code sent to the user"
+     *        type: "string"
+     *      - name: "password"
+     *        in: "formData"
+     *        required: true
+     *        description: "The new password to set on the user"
+     *        type: "string"
+     *      responses:
+     *          204: 
+     *             description: "The reset request was successful and no content is required to be returned"
+     *          404:
+     *              description: "The specified user cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - app_auth:
+     *          - "write:user"
+     *          - "execute:user"
+    */
+    async resetComplete(req, res) {
+
+        if(!req.body.code)
+            throw new exception.ArgumentException("code");
+        else if(!req.body.password)
+            throw new exception.ArgumentException("password");
+
+        // Reset password 
+        await uhc.SecurityLogic.resetPassword(req.body.code, req.body.password);
+        res.status(204).send();
+        return true;
+    }
+
+    /**
+     * @method
+     * @summary Fulfills a confirmation of contact information request
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to the client
+     * @swagger
+     * /user/confirm:
+     *  post:
+     *      tags:
+     *      - "user"
+     *      summary: "Completes a user contact confirmation"
+     *      description: "This method will allow the user to fulfill a contact confirmation request"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "code"
+     *        in: "formData"
+     *        description: "The confirmation code sent to the contact address"
+     *        required: true
+     *        type: "string"
+     *      responses:
+     *          204: 
+     *             description: "The reset request was successful and no content is required to be returned"
+     *          404:
+     *              description: "The specified user cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - app_auth:
+     *          - "write:user"
+     *          - "execute:user"
+     * /user/{userId}/confirm:
+     *  post:
+     *      tags:
+     *      - "user"
+     *      summary: "Completes a user contact confirmation"
+     *      description: "This method will allow the user to fulfill a contact confirmation request - This is for short codes"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "userId"
+     *        in: "path"
+     *        description: "The user that is confirming their e-mail or SMS address"
+     *        required: true
+     *        type: "string"
+     *      - name: "code"
+     *        in: "formData"
+     *        description: "The confirmation code sent to the contact address"
+     *        required: true
+     *        type: "string"
+     *      responses:
+     *          204: 
+     *             description: "The reset request was successful and no content is required to be returned"
+     *          404:
+     *              description: "The specified user cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhc_auth:
+     *          - "write:user"
+     *          - "execute:user"
+    */
+    async confirm(req, res) {
+        
+        if(!req.body.code)
+            throw new exception.ArgumentException("code");
+        
+        await uhc.SecurityLogic.confirmContact(req.body.code, req.principal);
+        res.status(204).send();
+        return true;
+    }
+    
     /**
      * @method
      * @summary Determines additional access control on the user resource
@@ -388,7 +583,7 @@ class UserApiResource {
     async acl(principal, req, res) {
 
         if(!(principal instanceof security.Principal)) {
-            console.error("ACL requires a security principal to be passed");
+            uhc.log.error("ACL requires a security principal to be passed");
             return false;
         }
 

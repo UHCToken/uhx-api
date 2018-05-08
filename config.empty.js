@@ -17,6 +17,8 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
+ const winston = require('winston');
+
  /**
   * @class UHC API Configuration
   * @description Configuration parameters for the stellar API
@@ -65,6 +67,13 @@
           */
          scheme: "http",
          /**
+          * @summary The SSL certificate information
+          */
+         tls :{
+             key: "./mykey.pfx",
+             passphrase: "ABC123"
+        },
+         /**
           * @summary The link to the front-facing web site which users can interact with in order to do things like reset passwords, claim invites, etc.
           */
          ui_base: "http://localhost:4004/"
@@ -81,6 +90,14 @@
           * @summary Refresh vailidity in ms
           */
          refreshValidity: 30000000,
+         /**
+          * @summary The validity period for password resets
+          */
+         resetValidity:  30000000,
+         /**
+          * @summary The validity of a TFA code
+          */
+         tfaValidity: 300000,
          /**
           * @summary Maximum failed login attempts
           */
@@ -149,7 +166,15 @@
         /**
           * @summary The horizon endpoint
           */
-         horizon_server: "https://horizon-testnet.stellar.org"
+         horizon_server: "https://horizon-testnet.stellar.org",
+        /**
+         * @summary The home domain where the stellar TOML file is hosted
+         */
+        home_domain: "?.cooldomain.com",
+        /**
+         * @summary When using market rate quotes the validity of the offer.
+         */
+        market_offer_validity: 60000,
      },
      /**
       * @summary Swagger configuration
@@ -158,7 +183,7 @@
          swaggerDefinition: {
              info: {
              title: "Universal Health Coin API",
-             version: "1.0-alpha",
+             version: "1.0-alpha3",
              description: "The Universal Health Coin API"
          },
          basePath: "/api/v1",
@@ -178,13 +203,26 @@
                 pass: 'mypass'
             }
         },
+        sms: {
+            auth: "XXXXx",
+            sid: ""
+        },
         from: "no-reply@domain.com",
         templates: {
             invitation: "./templates/invitation",
             welcome: "./templates/welcome",
             confirmation: "./templates/confirm",
-            emailChange: "./templates/emailChange"
+            contactChange: "./templates/contactChange",
+            resetPassword: "./templates/resetPassword",
+            tfa: "./templates/tfa",
+            tfaChange: "./templates/tfaChanged",
+            passwordChange: "./templates/passwordChanged"
         } 
+    },
+    logging : {
+        level: 'info',
+        console: true,
+        file: 'uhc.log'
     }
  }
 
@@ -203,4 +241,22 @@
     };
 
     fnDump(module.exports, config, '');
+}
+else if(process.argv[2] == "merge") {
+    var config = require('./config');
+    console.log("// Merged Configuration")
+    
+    var fnMerge = function(a, b) {
+        for(var k in a)
+           if(!b[k]) 
+                b[k] = a[k];
+           else if(b[k] != a[k] && 
+             a[k].constructor.name != "String" &&
+             Object.keys(a[k]).length > 0) 
+                b[k] = fnMerge(a[k], b[k]);
+        return b;
+    };
+
+    console.log(JSON.stringify(fnMerge(module.exports, config), null, '\t'));
+
 }

@@ -1,4 +1,4 @@
-'use strict';
+'use strict'
 
 /**
  * Copyright 2018 Universal Health Coin
@@ -17,34 +17,28 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
-const ModelBase = require('./ModelBase');
+const assert = require('assert'),
+    bittrex = require("../integration/bittrex");
 
-/**
- * @class
- * @summary Represents a wallet balance 
- * @swagger
- * definitions:
- *  MonetaryAmount:
- *      properties:
- *          value: 
- *              type: string
- *              description: Indicates the value of the monetary amount
- *          code:
- *              type: string
- *              description: The currency or digital asset code for the monetary amount
- */
-module.exports = class MonetaryAmount extends ModelBase {
+describe("BitTrex API Test Suite", function() {
 
     /**
-     * @constructor
-     * @summary Instantiates the monetary amount object 
-     * @param {string} code The code of the monetary amount (example: USD)
-     * @param {number} amount The amount
+     * @summary Ensure that the client will get a quote between two currencies
      */
-    constructor(value, code) {
-        super();
-        this.code = code == "native" ? "XLM" : code;
-        this.value = value;
-    }
+    it("Should get a quote directly between two currencies", async function() {
+        var exchange = await new bittrex().getExchange({ from: "USDT",  to: "BTC" });
+        assert.ok(exchange);
+    });
 
-}
+    /**
+     * @summary Ensure that the client will get a quote between three currencies
+     */
+    it("Should get a quote between an intermediary currency", async function() {
+        // XLM<>BTC ; BTC<>USD
+        var exchange = await new bittrex().getExchange([
+            { from: "USDT", to: "XLM", via: ["BTC"] },
+            { from: "USDT", to: "XLM", via: ["ETH"] }
+        ]);
+        assert.ok(exchange);
+    });
+});

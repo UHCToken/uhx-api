@@ -46,8 +46,30 @@ const pg = require('pg'),
         this.getClaims = this.getClaims.bind(this);
         this.addClaim = this.addClaim.bind(this);
         this.deleteClaim = this.deleteClaim.bind(this);
+        this.getTfaMethod = this.getTfaMethod.bind(this);
+        this.assertClaim = this.assertClaim.bind(this);
     }
 
+    /**
+     * @method
+     * @summary Gets a tfa method
+     * @param {number} tfaMethodId The ID of the TFA method to fetch
+     * @param {*} _txc The connection on an active transaction to be used
+     * @returns {string} The module for the TFA method
+     */
+    async getTfaMethod(tfaMethodId, _txc) {
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+            var rdr = await dbc.query("SELECT * FROM tfa_methods WHERE id = $1", [tfaMethodId]);
+            if(rdr.rows.length > 0)
+                return rdr.rows[0].modulename;
+            return null;
+        }
+        finally {
+            if(!_txc) dbc.end();
+        }
+    }
 
     /**
      * @method
@@ -106,7 +128,7 @@ const pg = require('pg'),
         var dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM user_claims WHERE user_id = $1 WHERE expiry < CURRENT_TIMESTAMP", [userId]);
+            const rdr = await dbc.query("SELECT * FROM user_claims WHERE user_id = $1 AND expiry > CURRENT_TIMESTAMP", [userId]);
             var retVal = {};
             for(var r in rdr.rows)
                 retVal[rdr.rows[r].claim_type] = rdr.rows[r].claim_value;
@@ -134,8 +156,8 @@ const pg = require('pg'),
             var dbFilter = filter.toData();
             dbFilter.deactivation_time = filter.deactivationTime; // Filter for deactivation time?
 
-            var sqlCmd = model.Utils.generateSelect(dbFilter, "users", offset, count);
-            const rdr = await dbc.query(sqlCmd.sql + " ORDER BY updated_time, creation_time DESC", sqlCmd.args);
+            var sqlCmd = model.Utils.generateSelect(dbFilter, "users", offset, count, { col: ["updated_time", "creation_time"], order: "desc"});
+            const rdr = await dbc.query(sqlCmd.sql, sqlCmd.args);
             
             var retVal = [];
             for(var r in rdr.rows)
@@ -259,7 +281,7 @@ const pg = require('pg'),
         }
         catch(e) {
             if(e.code == '23505') // duplicate key
-                throw new exception.Exception("Duplicate user name", exception.ErrorCodes.DUPLICATE_USERNAME);
+                throw new exception.Exception("Duplicate user name", exception.ErrorCodes.DUPLICATE_NAME);
             else if(e.code == "23502")
                 throw new exception.Exception("Missing mandatory field", exception.ErrorCodes.DATA_ERROR, e);
             throw e;
@@ -282,9 +304,31 @@ const pg = require('pg'),
             if(!_txc) await dbc.connect();
             const rdr = await dbc.query("SELECT users.* FROM users WHERE wallet_id = $1", [walletId]);
             if(rdr.rows.length == 0)
-                throw new exception.NotFoundException("wallet", walletId);
+                return null; // Wallet is an anonymous wallet
             else
                 return new User().fromData(rdr.rows[0]);
+        }
+        finally {
+            if(!_txc) dbc.end();
+        }
+    }
+
+     /**
+     * @method
+     * @summary Retrieves a user from the database given a secure claim (note, secure claims are claims which start with $)
+     * @param {string} claimType The type of claim 
+     * @param {string} claimValue The value of the claim
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {User} The user whom the wallet belongs to
+     */
+    async getByClaim(claimType, claimValue, _txc) {
+        const dbc =  _txc ||new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+            const rdr = await dbc.query("SELECT users.* FROM user_claims INNER JOIN users ON (user_claims.user_id = users.id) WHERE expiry > CURRENT_TIMESTAMP AND claim_type = $1 AND claim_value = crypt($2, claim_value) LIMIT 1", [claimType, claimValue]);
+            var retVal = [];
+            rdr.rows.forEach((r) => retVal.push(new User().fromData(r)));
+            return retVal;
         }
         finally {
             if(!_txc) dbc.end();
@@ -343,7 +387,7 @@ const pg = require('pg'),
      * @summary Add a claim value to the user
      * @param {string} userId The user to which the claim is being made
      * @param {*} claim The claim which is to be added to the user
-     * @param {string} claim.typename The name of the claim
+     * @param {string} claim.type The name of the claim
      * @param {*} claim.value The value of the claim
      * @param {date} claim.expiry The time that the claim will cease to be valid
      * @param {Client} _txc When populated the transaction to execute under
@@ -367,6 +411,43 @@ const pg = require('pg'),
             
             await dbc.query(sql, [ claim.type, claim.value, claim.expiry, userId ]);
 
+        }
+        finally {
+            if(!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Asserts that the specified user has a claim with a specific value
+     * @param {string} userId The user for which the claim is being tested
+     * @param {string} claimType The type of claim that is being tested
+     * @param {*} claimValue The value of the claim that is being asserted
+     * @param {Client} _txc The database transaction to use 
+     * @returns {boolean} True if the assertion is correct
+     */
+    async assertClaim(userId, claimType, claimValue, _txc) {
+        // Validate parameters
+        if(!userId)
+            throw new exception.ArgumentException("userId");
+        if(!claimType)
+            throw new exception.ArgumentException("claimType");
+        if(!claimValue)
+            throw new exception.ArgumentException("claimValue");
+
+        var dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+
+            var sql = "SELECT TRUE FROM user_claims WHERE user_id = $1 AND claim_type = $2 AND expiry > CURRENT_TIMESTAMP AND claim_value = ";
+            if(claimType.startsWith("$")) // crypt
+                sql += "crypt($3, claim_value)";
+            else
+                sql += "$3"
+            sql += " LIMIT 1";
+
+            var rdr = await dbc.query(sql, [ userId, claimType, claimValue ]);
+            return rdr.rows.length > 0;
         }
         finally {
             if(!_txc) dbc.end();
