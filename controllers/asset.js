@@ -371,7 +371,7 @@ module.exports.AssetApiResource = class AssetApiResource {
         var assetFilter = new Asset().copy({
             code: req.query.code,
             type: req.query.type,
-            deactivationTime: req.query("_all") == "true" ? null : "null"
+            deactivationTime: req.query._all == "true" ? null : "null"
         });
         res.status(200).json(await uhc.Repositories.assetRepository.query(assetFilter, req.query._offset, req.query._count));
         return true;

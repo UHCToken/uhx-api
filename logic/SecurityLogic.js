@@ -91,7 +91,9 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
             var user = await uhc.Repositories.userRepository.getByNameSecret(username, password);
             
             // User was successful but their account is still locked
-            if(user.lockout > new Date())
+            if(!user)
+                throw new exception.Exception("Invalid username or password", exception.ErrorCodes.INVALID_ACCOUNT);
+            else if(user.lockout > new Date())
                 throw new exception.Exception("Account is locked", exception.ErrorCodes.ACCOUNT_LOCKED);
             else if(user.deactivationTime && user.deactivationTime < new Date())
                 throw new exception.Exception("Account has been deactivated", exception.ErrorCodes.UNAUTHORIZED);
@@ -121,13 +123,17 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
             uhc.log.error("Error performing authentication: " + e.message);
 
             // TFA is required, this is not necessarily a login failure
-            if(e.code && e.code == exception.ErrorCodes.TFA_REQUIRED) 
+            if(e.code && e.code == exception.ErrorCodes.TFA_REQUIRED)
                 throw e;
 
             // Attempt to increment the invalid login count
             var invalidUser = await uhc.Repositories.userRepository.incrementLoginFailure(username, uhc.Config.security.maxFailedLogin);
-            if(invalidUser.lockout) 
+            
+            if(invalidUser && invalidUser.lockout) 
                 throw new exception.Exception("Account is locked", exception.ErrorCodes.ACCOUNT_LOCKED, e);
+            else if(e.code == exception.ErrorCodes.NOT_FOUND)
+                throw new exception.Exception("Invalid username or password", exception.ErrorCodes.INVALID_ACCOUNT);
+
             throw e;
         }
 
@@ -250,25 +256,26 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
             var session = await uhc.Repositories.transaction(async (_txc) => {
 
                 // Get session
-                var session = await uhc.Repositories.sessionRepository.getByRefreshToken(refreshToken, uhc.Config.security.refreshValidity, _tx);
+                var session = await uhc.Repositories.sessionRepository.getByRefreshToken(refreshToken, uhc.Config.security.refreshValidity, _txc);
                 if(session == null)
                     throw new exception.Exception("Invalid refresh token", exception.ErrorCodes.SECURITY_ERROR);
                 else if(session.applicationId != application.id)
                     throw new exception.Exception("Refresh must be performed by originator", exception.ErrorCodes.SECURITY_ERROR);
                 // Abandon the existing session
-                await uhc.Repositories.sessionRepository.abandon(session.id, _tx);
+                await uhc.Repositories.sessionRepository.abandon(session.id, _txc);
 
                 // Establish a new session
                 return await uhc.Repositories.sessionRepository.insert(
                     new model.Session(session.userId, session.applicationId, session.audience, uhc.Config.security.sessionLength, remoteAddr),
                     null,
-                    _tx
+                    _txc
                 );
                 
             }); 
         
             await session.loadGrants();
             await session.loadUser();
+            uhc.log.info(`Session ${session.id} was successfully refreshed`);
             return new security.Principal(session);
         }
         catch(e) {
@@ -296,6 +303,8 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                 if(user.length == 0)
                     throw new exception.Exception("Invalid reset token", exception.ErrorCodes.SECURITY_ERROR);
                 else  {
+                    user[0].lockout = null;
+                    user[0].invalidLogins = 0;
                     await uhc.Repositories.userRepository.update(user[0], newPassword, _txc);
                     await uhc.Repositories.userRepository.deleteClaim(user[0].id, PASSWORD_RESET_CLAIM, _txc);
                 }

@@ -299,7 +299,7 @@
       // GRANT TYPE
       switch(req.body.grant_type){
         case "password":
-          userPrincipal = await uhc.SecurityLogic.establishSession(principal, req.body("username"), req.body("password"), req.body("scope") || "*", req.body.tfa_secret, req.ip);
+          userPrincipal = await uhc.SecurityLogic.establishSession(principal, req.body.username, req.body.password, req.body.scope || "*", req.body.tfa_secret, req.ip);
           break;
         case "refresh_token":
           userPrincipal = await uhc.SecurityLogic.refreshSession(principal, req.body.refresh_token, req.ip);

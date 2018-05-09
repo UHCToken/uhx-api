@@ -78,6 +78,7 @@
         this.fromData = this.fromData.bind(this);
         this.toData = this.toData.bind(this);
         this.loadAsset = this.loadAsset.bind(this);
+        this.loadWallet = this.loadWallet.bind(this);
     }
 
     /**

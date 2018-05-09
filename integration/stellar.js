@@ -456,11 +456,12 @@ module.exports = class StellarClient {
      * @param {MonetaryAmount} selling The amount to be paid from source > dest
      * @param {MonetaryAmount} buying The amount to be paid from dest > source
      * @param {string} ref A memo to add to the transaction
+     * @param {boolean} asTrade Indicates whether the exchange should be as a official "trade" or just purchases
      * @returns {Transaction} The transaction information for the operation
      * @example UserA wallet wishes to swap 100 UHX for 20 XLM from UserB wallet
      * client.exchangeAsset(userA, userB, new MonetaryAmount(20, "XLM"), new MonetaryAmount(100, "UHX"), "ID")
      */
-    async exchangeAsset(sellerWallet, buyerWallet, selling, buying, ref) {
+    async exchangeAsset(sellerWallet, buyerWallet, selling, buying, ref, asTrade) {
 
         try {
 
@@ -492,22 +493,34 @@ module.exports = class StellarClient {
                 throw new exception.NotFoundException("asset", selling.code);
 
             // Create exchange - Two offers in one TX
-            exchangeTx.addOperation(Stellar.Operation.manageOffer({
+            if(asTrade) 
+                exchangeTx.addOperation(Stellar.Operation.manageOffer({
+                        source: sellerWallet.address,
+                        selling: sellingAsset,
+                        buying: buyingAsset,
+                        amount: "" + selling.value,
+                        offerId: "0",
+                        price: "" + (buying.value / selling.value)
+                    })).addOperation(Stellar.Operation.manageOffer({
+                        source: buyerWallet.address, 
+                        selling: buyingAsset,
+                        buying: sellingAsset,
+                        amount: "" + buying.value,
+                        offerId:"0", 
+                        price: "" + (selling.value / buying.value) 
+                    }));
+            else 
+                exchangeTx.addOperation(Stellar.Operation.payment({
                     source: sellerWallet.address,
-                    selling: sellingAsset,
-                    buying: buyingAsset,
-                    amount: "" + selling.value,
-                    offerId: "0",
-                    price: "" + (buying.value / selling.value)
-                })).addOperation(Stellar.Operation.manageOffer({
+                    asset: sellingAsset,
+                    destination: buyerWallet.address,
+                    amount: "" + selling.value
+                })).addOperation(Stellar.Operation.payment({
                     source: buyerWallet.address, 
-                    selling: buyingAsset,
-                    buying: sellingAsset,
-                    amount: "" + buying.value,
-                    offerId:"0", 
-                    price: "" + (selling.value / buying.value) 
+                    asset: buyingAsset,
+                    destination: sellerWallet.address,
+                    amount: "" + buying.value
                 }));
-
             // Memo field if memo is present
             if(ref) {
                 var memoObject = Stellar.Memo.hash(crypto.createHash('sha256').update(ref).digest('hex'));
