@@ -358,7 +358,6 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                 });
 
                 // Generate e-mail 
-                if(email && user.emailVerified) {
                     var options = {
                         to: email,
                         from: uhc.Config.mail.from,
@@ -410,9 +409,16 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                 
                 ethWallet = await uhc.Repositories.walletRepository.insert(ethWallet, null, _txc);
                 strWallet = await uhc.Repositories.walletRepository.insert(strWallet, null, _txc);
+                
                 user.walletId = strWallet.id;
 
                 var retVal = await uhc.Repositories.userRepository.insert(user, password, null, _txc);
+                
+                //HACK: This is temporary until a better workflow for wallet funding is decided
+                await stellarClient.activateAccount(strWallet, "2.5",  await uhc.Repositories.walletRepository.get(uhc.Config.stellar.initiator_wallet_id));
+                var coin = await stellarClient.getAssetByCode("RECOIN")
+                await stellarClient.createTrust(strWallet, coin, "1000000")
+
                 ethWallet.userId = retVal.id;
                 strWallet.userId = retVal.id;
                 
@@ -466,7 +472,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
 
                 // Activate wallet if not already active
                 if(!stellarClient.isActive(wallet))
-                    await stellarClient.activateAccount(wallet, "1",  await testRepository.walletRepository.get(uhc.Config.stellar.initiator_wallet_id));
+                    await stellarClient.activateAccount(wallet, "1",  await uhc.Repositories.walletRepository.get(uhc.Config.stellar.initiator_wallet_id));
                 return wallet;
             });
         }

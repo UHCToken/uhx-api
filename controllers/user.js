@@ -85,7 +85,10 @@ class UserApiResource {
                     "post": {
                         "demand": security.PermissionType.EXECUTE | security.PermissionType.WRITE,
                         "method": this.reset
-                    },
+                    }
+                },
+                {
+                    "path": "user/reset/reset",
                     "put": {
                         "demand": security.PermissionType.EXECUTE | security.PermissionType.WRITE,
                         "method": this.resetComplete
