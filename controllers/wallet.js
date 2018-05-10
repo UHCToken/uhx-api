@@ -261,6 +261,8 @@ class WalletApiResource {
                 stellarPromises.push((async () => { 
                     await o.loadWallet(_txc)
                     o.wallet = await uhc.StellarClient.getAccount(o._wallet);
+                    o.remain = new Date() > o.startDate && new Date() < o.stopDate ? o.wallet.balances.find(b=>b.code == asset.code).value : o.stopDate < new Date() ? 0 : o.amount;
+                    
                 })());
             });
 
