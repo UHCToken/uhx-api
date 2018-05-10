@@ -21,6 +21,7 @@ const uhc = require('../uhc'),
     exception = require('../exception'),
     security = require('../security'),
     walletRepository = require('../repository/walletRepository'),
+    Wallet = require('../model/Wallet'),
     model = require('../model/model');
 
 /**
@@ -249,7 +250,10 @@ class WalletApiResource {
             var asset = await uhc.Repositories.assetRepository.get(req.params.assetId, _txc);
             await asset.loadDistributorWallet(_txc);
 
-            var stellarPromises = [ (async () => { asset.distWallet = await uhc.StellarClient.getAccount(asset._distWallet) })() ];
+            var stellarPromises = [ 
+                (async () => { asset.distWallet = await uhc.StellarClient.getAccount(asset._distWallet) })(),
+                (async () => { asset.issuerWallet = await uhc.StellarClient.getAccount(new Wallet().copy({ address: asset.issuer }))})()
+            ];
             // Load from stellar network but don't want ... haha
             var offers = await asset.loadOffers(_txc);
 

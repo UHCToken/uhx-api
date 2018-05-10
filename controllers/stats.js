@@ -119,7 +119,7 @@ class StatisticsApiResource {
      *      parameters:
      *          - in: path
      *            name: reportId
-     *            description: The name of the report to run
+     *            description: The id of the report to run
      *            type: string
      *          - in: path
      *            name: reportFormat
