@@ -205,7 +205,8 @@
         },
         sms: {
             auth: "XXXXx",
-            sid: ""
+            sid: "",
+            from: ""
         },
         from: "no-reply@domain.com",
         templates: {

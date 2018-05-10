@@ -37,6 +37,7 @@
     http = require('http');
     
 
+
 // Startup application
 const app = express();
 app.use(bodyParser.json())
@@ -82,4 +83,4 @@ else {
     https.createServer(uhc.Config.api.tls, app).listen(uhc.Config.api.port);
 }
 
-uhc.log.info(`UHC API started on ${uhc.Config.api.port}`);
+uhc.log.info(`UHC API started on ${uhc.Config.api.scheme} port ${uhc.Config.api.port}`);
