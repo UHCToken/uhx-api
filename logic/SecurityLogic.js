@@ -365,9 +365,9 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                         template: uhc.Config.mail.templates.resetPassword
                     };
                     await uhc.Mailer.sendEmail(options, { user: user, token: claimToken, ui_base: uhc.Config.api.ui_base });
-                }
-                else if(tel)
-                    throw new exception.NotImplementedException("SMS password resets are disabled");
+                
+                /*else if(tel)
+                    throw new exception.NotImplementedException("SMS password resets are disabled");*/
                 // else if(tel && user.telVerified) {
                 //     var options = {
                 //         to: user.tel,
@@ -415,7 +415,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                 var retVal = await uhc.Repositories.userRepository.insert(user, password, null, _txc);
                 
                 //HACK: This is temporary until a better workflow for wallet funding is decided
-                await stellarClient.activateAccount(strWallet, "2.5",  await uhc.Repositories.walletRepository.get(uhc.Config.stellar.initiator_wallet_id));
+                await stellarClient.activateAccount(strWallet, "10",  await uhc.Repositories.walletRepository.get(uhc.Config.stellar.initiator_wallet_id));
                 var coin = await stellarClient.getAssetByCode("RECOIN")
                 await stellarClient.createTrust(strWallet, coin, "1000000")
 
@@ -499,7 +499,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                     return await stellarClient.getAccount(userWallet)
                 }
                 else if(userWallet.network == "ETHEREUM"){
-                    var web3Client = uhc.web3Client;
+                    var web3Client = uhc.Web3Client;
                     return await web3Client.getBalance(userWallet)
                 }
                 else{

@@ -153,9 +153,12 @@ class WalletApiResource {
      *          - "read:wallet"
      */
     async get(req, res) {
-        var userWallet = await uhc.Repositories.walletRepository.getByUserId(req.params.uid)
-        userWallet = await uhc.SecurityLogic.getAllBalancesForUser(userWallet)
-        res.status(200).json(userWallet)
+        var userStrWallet = await uhc.Repositories.walletRepository.getTypeForUserByUserId(req.params.uid, 'STELLAR')
+        var userEthWallet = await uhc.Repositories.walletRepository.getTypeForUserByUserId(req.params.uid, 'ETHEREUM')
+        userStrWallet = await uhc.SecurityLogic.getAllBalancesForUser(userStrWallet)
+        userEthWallet = await uhc.SecurityLogic.getAllBalancesForUser(userEthWallet)
+        var wallets = {eth: userEthWallet, str: userStrWallet}
+        res.status(200).json(wallets)
         return true
     }
 

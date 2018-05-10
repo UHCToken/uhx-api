@@ -25,6 +25,7 @@
     Wallet = require("../model/Wallet"),
     exception = require('../exception'),
     Transaction = require('../model/Transaction'),
+    EthereumTx = require('ethereumjs-tx'),
     MonetaryAmount = require('../model/MonetaryAmount');
 /**
  * @class
@@ -122,14 +123,45 @@ module.exports = class WebClient {
             wallet.balances = [];
 
             wallet.balances.push(new model.MonetaryAmount(
-                balance,
-                "eth"
+                this.server.utils.fromWei(balance, "ether"),
+                "ETH"
             ));
             
             return(wallet)
         }
         catch(e) {
             console.error(`Failed to get account balance : ${JSON.stringify(e)}`);
+            throw new EthereumException(e);
+        }
+    }
+
+    async createPayment(buyerEthWallet, ethDistributionAccount, amount) {
+        
+        try {
+            var gasPrice = await this.server.eth.getGasPrice();
+            var gasLimit = await this.server.eth.getBlock("latest").gasLimit;
+            var nonce = await this.server.eth.getTransactionCount(buyerEthWallet.address)
+            var rawTx = {
+                nonce: this.server.utils.toHex(nonce),
+                gasPrice: this.server.utils.toHex(gasPrice), 
+                gasLimit:  this.server.utils.toHex('21000'),
+                from: buyerEthWallet.address, 
+                to: ethDistributionAccount, 
+                value: this.server.utils.toHex(this.server.utils.toWei(amount.value, "ether"))
+            }
+
+            var tx = new EthereumTx(rawTx)
+            var pk = Buffer.from(buyerEthWallet.seed.substring(2), 'hex')
+            tx.sign(pk)
+
+            var serializedTx = tx.serialize();
+
+            var hash = await this.server.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'))
+
+            return(hash)
+        }
+        catch(e) {
+            console.error(`Failed to send ether payment : ${JSON.stringify(e)}`);
             throw new EthereumException(e);
         }
     }
