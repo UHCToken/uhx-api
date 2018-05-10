@@ -30,6 +30,7 @@
     permission = require('./controllers/permission'),
     asset = require('./controllers/asset'),
     invitation = require('./controllers/invitation'),
+    reports = require('./controllers/stats'),
     swagger = require('./controllers/js-doc'),
     toobusy = require('toobusy-js'),
     https = require('https'),
@@ -64,13 +65,14 @@ if(uhc.Config.swagger.enabled) {
 
 // Add OAuth token service
 restApi.addResource(new oauth.OAuthTokenService());
-restApi.addResource(new purchase.PurchaseApiResource());
 restApi.addResource(new user.UserApiResource());
+restApi.addResource(new purchase.PurchaseApiResource());
 restApi.addResource(new wallet.WalletApiResource());
 restApi.addResource(new group.GroupApiResource());
 restApi.addResource(new permission.PermissionApiResource());
 restApi.addResource(new asset.AssetApiResource());
 restApi.addResource(new invitation.InvitationApiResource());
+restApi.addResource(new reports.StatisticsApiResource());
 
 // Start REST API
 restApi.start();

@@ -371,7 +371,7 @@ module.exports.AssetApiResource = class AssetApiResource {
         var assetFilter = new Asset().copy({
             code: req.query.code,
             type: req.query.type,
-            deactivationTime: req.query("_all") == "true" ? null : "null"
+            deactivationTime: req.query._all == "true" ? null : "null"
         });
         res.status(200).json(await uhc.Repositories.assetRepository.query(assetFilter, req.query._offset, req.query._count));
         return true;
@@ -424,13 +424,13 @@ module.exports.AssetApiResource = class AssetApiResource {
      */
     async quote(req, res) {
 
-        if(!req.query.from)
+        if(!req.query.from && !req.body.from)
             throw new exception.ArgumentException("from");
-        if(!req.query.to)
+        if(!req.query.to && !req.body.from)
             throw new exception.ArgumentException("to");
         
         // The asset
-        var quote = await uhc.TokenLogic.createAssetQuote(req.query.to, req.query.from);
+        var quote = await uhc.TokenLogic.createAssetQuote(req.query.to || req.body.to, req.query.from || req.body.from, req.query.nostore || req.body.nostore);
 
         // current offer info & remaining tokens
         var activeOffer = await uhc.Repositories.assetRepository.getActiveOffer(quote.assetId);
