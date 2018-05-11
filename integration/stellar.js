@@ -157,7 +157,7 @@ module.exports = class StellarClient {
 
         }
         catch(e) {
-            uhc.log.error(`Set account options failed : ${JSON.stringify(e)}`);
+            uhc.log.error(`Set account options failed : ${e.message}`);
             throw new StellarException(e);
         }
     }
