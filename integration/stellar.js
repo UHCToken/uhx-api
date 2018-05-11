@@ -535,6 +535,7 @@ module.exports = class StellarClient {
             exchangeTx.sign(Stellar.Keypair.fromSecret(buyerWallet.seed));
 
             // Submit transaction
+            uhc.log.info(`exchangeAsset(): ${sellerWallet.address} > ${buyerWallet.address} (${selling.value} ${selling.code} for ${buying.value} ${buying.code}) is being submitted`);
             var paymentResult = await this.server.submitTransaction(exchangeTx);
             uhc.log.info(`exchangeAsset(): ${sellerWallet.address} > ${buyerWallet.address} (${selling.value} ${selling.code} for ${buying.value} ${buying.code}) success`);
             
@@ -551,7 +552,7 @@ module.exports = class StellarClient {
                 paymentResult._links.transaction.href);
         }
         catch(e) {
-            uhc.log.error(`Account payment has failed: ${e.message}`);
+            uhc.log.error(`Account payment has failed: ${e.message} - ${e.data && e.data.extras ? e.data.extras.result_xdr : null}`);
             throw new StellarException(e);
         }
     }
