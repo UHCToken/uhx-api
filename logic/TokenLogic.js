@@ -209,9 +209,10 @@ module.exports = class TokenLogic {
      * @summary Creates a quote for an asset
      * @param {string} sellCurrency The asset that is being quoted
      * @param {string} purchaseCurrency The currency with which the user is buying
+     * @param {boolean} nostore Indicates whether the value should be stored
      * @returns {AssetQuote} The asset quote itself
      */
-    async createAssetQuote(sellCurrency, purchaseCurrency) {
+    async createAssetQuote(sellCurrency, purchaseCurrency, nostore) {
 
         try {
             var asset = await uhc.Repositories.assetRepository.query(new Asset().copy({code: sellCurrency}), 0, 1);
@@ -262,7 +263,8 @@ module.exports = class TokenLogic {
             }
 
             // Insert the offer
-            retVal = await uhc.Repositories.assetRepository.insertQuote(retVal);
+            if(!nostore)
+                retVal = await uhc.Repositories.assetRepository.insertQuote(retVal);
 
             return retVal;
         }

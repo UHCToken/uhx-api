@@ -26,6 +26,7 @@ const UserRepository = require('./userRepository'),
     AssetRepository = require('./assetRepository'),
     InvitationRepository = require('./invitationRepository'),
     PurchaseRepository = require('./purchaseRepository'),
+    ReportRepository = require('./reportRepository'),
     pg = require('pg'),
     uhc = require('../uhc'),
     exception = require('../exception');
@@ -89,6 +90,17 @@ class UhcRepositories {
         if(!this._userRepository)
             this._userRepository = new UserRepository(this.connectionString);
         return this._userRepository;
+    }
+
+    /**
+     * @property
+     * @summary Gets the report repository
+     * @type {ReportRepository}
+     */
+    get reportRepository() {
+        if(!this._reportRepository)
+            this._reportRepository = new ReportRepository(this.connectionString);
+        return this._reportRepository;
     }
 
     /**

@@ -66,6 +66,24 @@ class PurchaseApiResource {
                         "demand": null,
                         "method": this.getPaymentMethod
                     }
+                },
+                {
+                    "path": "purchase",
+                    "get": {
+                        "demand" : security.PermissionType.LIST,
+                        "method" : this.getAll
+                    },
+                    "post": {
+                        "demand" : security.PermissionType.WRITE,
+                        "method": this.post
+                    }
+                },
+                {
+                    "path": "purchase/:pid",
+                    "get" : {
+                        "demand": security.PermissionType.READ,
+                        "method": this.get
+                    }
                 }
             ]
         };
@@ -178,6 +196,7 @@ class PurchaseApiResource {
      *          - list:purchase
      */
     async getAll(req, res) {
+        // Remember to filter on UID
         throw new exception.NotImplementedException();
     }
     /**
@@ -219,6 +238,7 @@ class PurchaseApiResource {
      *          - get:purchase
      */
     async get(req, res) {
+        // Remember to filter on UID
         throw new exception.NotImplementedException();
     }
 
@@ -279,6 +299,28 @@ class PurchaseApiResource {
             }
         ]);
         return true;
+    }
+
+        
+    /**
+     * @method
+     * @summary Determines additional access control on the user resource
+     * @param {security.Principal} principal The JWT principal data that has authorization information
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to the client
+     * @returns {boolean} An indicator of whether the user has access to the resource
+     */
+    async acl(principal, req, res) {
+
+        if(!(principal instanceof security.Principal)) {
+            uhc.log.error("ACL requires a security principal to be passed");
+            return false;
+        }
+
+        // if the token has OWNER set for USER permission then this user must be SELF
+        return (principal.grant.user & security.PermissionType.OWNER && req.params.uid == principal.session.userId) // the permission on the principal is for OWNER only
+                ^ !(principal.grant.user & security.PermissionType.OWNER); // XOR the owner grant flag is not set.
+                
     }
 }
 

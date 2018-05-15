@@ -21,6 +21,7 @@ const uhc = require('../uhc'),
     exception = require('../exception'),
     security = require('../security'),
     walletRepository = require('../repository/walletRepository'),
+    Wallet = require('../model/Wallet'),
     model = require('../model/model');
 
 /**
@@ -62,6 +63,13 @@ class WalletApiResource {
                         "method": this.delete
                     }
                 },
+                {
+                    "path": "asset/:assetId/wallet",
+                    "get": {
+                        "demand": security.PermissionType.READ,
+                        "method": this.getAssetWallet
+                    }
+                }
             ]
         };
     }
@@ -205,6 +213,76 @@ class WalletApiResource {
     }
 
     /**
+     * @summary Gets the asset wallet
+     * @method
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to the client
+    * @swagger
+     * /asset/{assetId}/wallet:
+     *  get:
+     *      tags:
+     *      - "wallet"
+     *      summary: "Gets the specified asset class and the wallet balances"
+     *      description: "This method will get the specified asset, all offers and all balances of those offers"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - in: "path"
+     *        name: "assetId"
+     *        description: "The identity of the asset to load wallet info for"
+     *        required: true
+     *        type: string
+     *      responses:
+     *          200: 
+     *             description: "The data was retrieved successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/Asset"
+     *          404: 
+     *             description: "The user has not bought any UHC yet and does not have an active wallet"
+     *             schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhc_auth:
+     *          - "read:wallet"
+     *          - "read:asset"
+     */
+    async getAssetWallet(req, res) {
+        
+        var assetWalletStat = await uhc.Repositories.transaction(async (_txc) => {
+            var asset = await uhc.Repositories.assetRepository.get(req.params.assetId, _txc);
+            await asset.loadDistributorWallet(_txc);
+
+            var stellarPromises = [ 
+                (async () => { asset.distWallet = await uhc.StellarClient.getAccount(asset._distWallet) })(),
+                (async () => { asset.issuerWallet = await uhc.StellarClient.getAccount(new Wallet().copy({ address: asset.issuer }))})()
+            ];
+            // Load from stellar network but don't want ... haha
+            var offers = await asset.loadOffers(_txc);
+
+            offers.forEach((o) => {
+                stellarPromises.push((async () => { 
+                    await o.loadWallet(_txc)
+                    o.wallet = await uhc.StellarClient.getAccount(o._wallet);
+                    o.remain = new Date() > o.startDate && new Date() < o.stopDate ? o.wallet.balances.find(b=>b.code == asset.code).value : o.stopDate < new Date() ? 0 : o.amount;
+                    
+                })());
+            });
+
+            // Fill out details
+            await Promise.all(stellarPromises);
+
+            return asset;
+        });
+
+        res.status(200).json(assetWalletStat);
+        return true;
+    }
+
+    /**
      * @method
      * @summary Determines additional access control on the wallet resource
      * @param {security.Principal} principal The JWT principal data that has authorization information
@@ -224,6 +302,7 @@ class WalletApiResource {
                 ^ !(principal.grant.wallet & security.PermissionType.OWNER); // XOR the owner grant flag is not set.
                 
     }
+    
 }
 
 // Module exports

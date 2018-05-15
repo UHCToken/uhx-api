@@ -48,6 +48,24 @@ class UserApiResource {
             "permission_group": "user",
             "routes" : [
                 {
+                    "path": "user/reset",
+                    "post": {
+                        "demand": security.PermissionType.EXECUTE | security.PermissionType.WRITE,
+                        "method": this.reset
+                    },
+                    "put": {
+                        "demand": security.PermissionType.EXECUTE | security.PermissionType.WRITE,
+                        "method": this.resetComplete
+                    }
+                },
+                {
+                    "path": "user/confirm",
+                    "post": {
+                        "demand": security.PermissionType.EXECUTE | security.PermissionType.WRITE,
+                        "method": this.confirm
+                    }
+                },
+                {
                     "path" : "user",
                     "post": {
                         "demand" : security.PermissionType.WRITE,
@@ -79,28 +97,8 @@ class UserApiResource {
                         "demand": security.PermissionType.EXECUTE | security.PermissionType.WRITE,
                         "method": this.confirm
                     }
-                },
-                {
-                    "path": "user/reset",
-                    "post": {
-                        "demand": security.PermissionType.EXECUTE | security.PermissionType.WRITE,
-                        "method": this.reset
-                    }
-                },
-                {
-                    "path": "user/reset/reset",
-                    "put": {
-                        "demand": security.PermissionType.EXECUTE | security.PermissionType.WRITE,
-                        "method": this.resetComplete
-                    }
-                },
-                {
-                    "path": "user/confirm",
-                    "post": {
-                        "demand": security.PermissionType.EXECUTE | security.PermissionType.WRITE,
-                        "method": this.confirm
-                    }
                 }
+                
             ]
         };
     }
