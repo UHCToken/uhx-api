@@ -39,6 +39,7 @@ const pg = require('pg'),
         this.get = this.get.bind(this);
         this.insert = this.insert.bind(this);
         this.update = this.update.bind(this);
+        this.getByHash = this.getByHash.bind(this);
     }
 
     /**
@@ -65,6 +66,31 @@ const pg = require('pg'),
 
     }
 
+    
+    /**
+     * @method
+     * @summary Retrieve a specific purchase from the database by the hash of its id
+     * @param {uuid} idHash The hash of the transaction ID to fetch
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {Purchase} The fetched purchase
+     */
+    async getByHash(idHash, _txc) {
+
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+            const rdr = await dbc.query("SELECT * FROM purchase WHERE digest(id::TEXT, 'sha256') = $1", [idHash]);
+            if(rdr.rows.length == 0)
+                return null;
+            else
+                return new Purchase().fromData(rdr.rows[0]);
+        }
+        finally {
+            if(!_txc) dbc.end();
+        }
+
+    }
+    
     /**
      * @method
      * @summary Retrieve all purhcases made by a specific user

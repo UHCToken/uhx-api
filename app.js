@@ -30,6 +30,7 @@
     permission = require('./controllers/permission'),
     asset = require('./controllers/asset'),
     invitation = require('./controllers/invitation'),
+    transaction = require('./controllers/transaction'),
     reports = require('./controllers/stats'),
     swagger = require('./controllers/js-doc'),
     toobusy = require('toobusy-js'),
@@ -73,7 +74,7 @@ restApi.addResource(new permission.PermissionApiResource());
 restApi.addResource(new asset.AssetApiResource());
 restApi.addResource(new invitation.InvitationApiResource());
 restApi.addResource(new reports.StatisticsApiResource());
-
+restApi.addResource(new transaction.TransactionApiResource());
 // Start REST API
 restApi.start();
 

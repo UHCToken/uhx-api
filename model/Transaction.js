@@ -101,10 +101,10 @@ module.exports = class Transaction extends ModelBase {
         this.postingDate = postingDate;
         this.type = type;
         this.memo = memo;
-        this._payor = payor instanceof User ? payor : null;
-        this.payorId = payor instanceof User ? payor.id : payor;
-        this._payee = payee instanceof User ? payee : null;
-        this.payeeId = payee instanceof User ? payee.id : payee;
+        this._payor = payor && payor.constructor.name != "String" ? payor : null;
+        this.payorId =  payor && payor.constructor.name != "String" ? payor.id : payor;
+        this._payee =  payee && payee.constructor.name != "String" ? payee : null;
+        this.payeeId =  payee && payee.constructor.name != "String" ? payee.id : payee;
         this.amount = amount;
         this.fee = fee;
         this.ref = ref;

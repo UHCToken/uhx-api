@@ -162,7 +162,18 @@ class TransactionApiResource {
      *          - "list:transaction"
      */
     async getAll(req, res) {
-        throw new exception.NotImplementedException();
+        var transactions = await uhc.TokenLogic.getTransactionHistory(req.params.uid, req.query, req.principal);
+
+        // Minify user information
+        transactions = transactions.map((t)=> {
+            if(t.payee)
+                t._payee = t.payee.summary();
+            if(t.payor)
+                t._payor = t.payor.summary();
+            return t;
+        });
+        res.status(200).json(transactions);
+        return true;
     }
 
     /**

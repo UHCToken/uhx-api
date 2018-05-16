@@ -319,13 +319,20 @@ INSERT INTO permission_sets (id, name, description, created_by) VALUES ('20a9738
 INSERT INTO permission_sets (id, name, description, created_by) VALUES ('3fc7cbc7-58ca-40fa-9d17-060dbf180e0b', 'group', 'Access to the GROUP resource', '3c673456-23b1-4263-9deb-df46770852c9');
 INSERT INTO permission_sets (id, name, description, created_by) VALUES ('17e4de1c-4fd3-49ea-b394-90ddb5ccac38', 'permission', 'Access to the PERMISSION resource', '3c673456-23b1-4263-9deb-df46770852c9');
 INSERT INTO permission_sets (id, name, description, created_by) VALUES ('76818f0a-2caa-4c46-83f5-064248001821', 'invitation', 'Access to the INVITATION resource', '3c673456-23b1-4263-9deb-df46770852c9');
+INSERT INTO permission_sets (id, name, description, created_by) VALUES ('5e61b3dd-6b06-43d7-9d7f-839b30b6c496', 'transaction', 'Access to the TRANSACTION resource', '3c673456-23b1-4263-9deb-df46770852c9');
 
 -- ASSIGN DEFAULT PERMISSIONS
 
 -- ADMINS = RWXL ON ALL 
 INSERT INTO group_permissions (group_id, permission_set_id, acl_flags)
 	SELECT '044894bd-084e-47bb-9428-dbd80277614a', id, 15
-	FROM permission_sets;
+	FROM permission_sets
+	WHERE NOT EXISTS (
+		SELECT TRUE 
+		FROM group_permissions
+		WHERE group_id = '044894bd-084e-47bb-9428-dbd80277614a'
+		AND permission_set_id = permission_sets.id
+	);
 
 -- USERS 
 --	USER - RW OWNER

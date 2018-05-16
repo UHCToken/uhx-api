@@ -588,35 +588,50 @@ module.exports = class StellarClient {
 
             filter = filter || {};
             // Load the user's stellar account balances
-            userWallet = this.getAccount(userWallet);
+            userWallet = await this.getAccount(userWallet);
 
             // Gather transactions
             var ledgerTx = await this.server.transactions()
                 .forAccount(userWallet.address)
                 .cursor()
                 .order("desc")
-                .limit(_count)
+                .limit(filter._count || 20)
                 .call();
 
+            var rn = 0;
             var retVal = [], userMap = {};
-
             do {
-                ledgerTx.records.forEach(async (r) => {
-                    var ops = await r.operations();
-                    
-                    // Loop through operations
-                    ops._embedded.records.forEach(async (o) => {
-                        if(!filter.asset || o.asset_code == filter.asset) {
-                            retVal.push(await this.toTransaction(r, o, userMap));
-                        }
-                    });
+                await uhc.Repositories.transaction(async (_txc) => {
+                    userMap[userWallet.address] = userWallet._user || await uhc.Repositories.userRepository.getByWalletId(userWallet.id, _txc);
 
+                    for(var rNo in ledgerTx.records) 
+                    {
+                        var r = ledgerTx.records[rNo];
+                        var ops = await r.operations();
+                        
+                        // Loop through operations
+                        for(var opNo in ops._embedded.records)
+                        {
+                            var o = ops._embedded.records[opNo];
+                            try {
+                                if((!filter.asset || o.asset_code == filter.asset) && 
+                                    o.source_account == userWallet.address &&
+                                    rNo++ >= (filter._offset || 0) && retVal.length < (filter._count || 20)) {
+                                    retVal.push(await this.toTransaction(r, o, userMap, _txc));
+                                }
+                            }
+                            catch(e) {
+                                uhc.log.error(`Could not fill details on transaction: ${e.message}`);
+                            }
+                        }
+                    }
                 });
             } while(retVal.length < filter._count && await ledgerTx.next() && ledgerTx.records.length > 0);
 
+            return retVal.filter(o=>o);
         }
         catch(e) {
-            uhc.log.error(`Fetch transaction history has failed: ${JSON.stringify(e)}`);
+            uhc.log.error(`Fetch transaction history has failed: ${e.message}`);
             throw new StellarException(e);
         }
     }
@@ -628,11 +643,15 @@ module.exports = class StellarClient {
      * @param {Transaction} txRecord The transaction record being processed
      * @param {Operation} opRecord The operation record being processed
      * @param {*} userMap A map between account IDs and known users that have already been loaded 
+     * @param {Client} _txc When present the transaction controller to run data queries on
      */
-    async toTransaction(txRecord, opRecord, userMap) {
+    async toTransaction(txRecord, opRecord, userMap, _txc) {
 
-        // Map type
-        var type = null;
+        // Map type & extra data
+        var memo = txRecord.memo;
+
+        var type = null,
+            refData = null;
         switch(opRecord.type) {
             case "change_trust":
             case "allow_trust":
@@ -640,38 +659,51 @@ module.exports = class StellarClient {
                 break;
             case "payment":
                 type = model.TransactionType.Payment;
+
+                // Was there a payment / purchase memo?
+                if(txRecord.memo_type == 'hash') // Hash memo 
+                {
+                    refData = await uhc.Repositories.purchaseRepository.getByHash(Buffer.from(txRecord.memo, 'base64'), _txc);
+                    type = model.TransactionType.Purchase;
+                }
                 break;
             case "create_account":
                 type = model.TransactionType.AccountManagement;
+                memo = "Funded account";
                 break;
+            default:
+                return null;
         }
 
         // Payor / payee
-        var payor = userMap[opRecord.funder],
-            payee = userMap[opRecord.receiver];
-
-        // Special case : fees collected
-        var memo = txRecord.memo;
-        if(opRecord.receiver == this._feeAccount)
-            memo = "API USAGE FEE";
+        var source = opRecord.source_account || opRecord.from || opRecord.funder,
+            destination = opRecord.destination_account || opRecord.to || opRecord.account,
+            payor = userMap[source],
+            payee = userMap[destination];
 
         // Load if needed
-        if(payor === undefined)
-            payor = userMap[opRecord.funder] = await uhc.Repositories.userRepository.getByWalletId(opRecord.funder);
-        if(payee === undefined)
-            payee = userMap[opRecord.receiver] = await uhc.Repositories.userRepository.getByWalletId(opRecord.account);
-
+        if(payor === undefined) {
+            payor = userMap[source] = await uhc.Repositories.userRepository.getByPublicAddress(source, _txc);
+            if(!payee) // is it an asset account or offering?
+                payor = userMap[source] = await uhc.Repositories.assetRepository.getByPublicAddress(destination, _txc);
+        }
+        if(payee === undefined) {
+            payee = userMap[destination] = await uhc.Repositories.userRepository.getByPublicAddress(destination, _txc);
+            if(!payee) // is it an asset account or offering?
+                payee = userMap[destination] = await uhc.Repositories.assetRepository.getByPublicAddress(destination, _txc);
+        }
         // Construct tx record
         return new Transaction(
             opRecord.id,
             type, 
             memo,
             txRecord.created_at,
-            payor || opRecord.funder, 
-            payee || opRecord.receiver, 
-            new MonetaryAmount(o.amount, o.asset_code),
+            payor || source, 
+            payee || destination, 
+            new MonetaryAmount(opRecord.amount || opRecord.starting_balance, opRecord.asset_code || 'XLM'),
             null, 
-            opRecord._links.self                          
+            refData || opRecord._links.self,
+            model.TransactionStatus.Complete
         );
     }
 }

@@ -49,6 +49,7 @@ module.exports = class TokenLogic {
         this.createAsset = this.createAsset.bind(this);
         this.createAssetQuote = this.createAssetQuote.bind(this);
         this.createPurchase = this.createPurchase.bind(this);
+        this.getTransactionHistory = this.getTransactionHistory.bind(this);
     }
 
     /**
@@ -439,5 +440,37 @@ module.exports = class TokenLogic {
         }
     }
 
+    /**
+     * @method
+     * @summary Get the entire transaction history for the user's wallet
+     * @param {string} userId The unique identifier of the user for which transaction history should be loaded
+     * @param {*} filter The filter to be applied to the transaction history
+     * @param {SecurityPrincipal} principal The user who is running the query
+     */
+    async getTransactionHistory(userId, filter, principal) {
+
+        try {
+
+            // First we want to fetch the transaction history from stellar 
+            return await uhc.Repositories.transaction(async (_txc) => {
+
+                // Load primary data from wallet
+                var user = await uhc.Repositories.userRepository.get(userId, _txc);
+                var userWallet = await user.loadWallet(_txc);
+
+                // Get the stellar transaction history for the user
+                var transactionHistory = await uhc.StellarClient.getTransactionHistory(userWallet, filter);
+
+                return transactionHistory;
+            });
+
+        }
+        catch(e) {
+            uhc.log.error(`Error getting transaction history: ${e.message}`);
+            while(e.code == exception.ErrorCodes.DATA_ERROR && e.cause) 
+                e = e.cause[0];
+            throw new exception.Exception("Error fetching transaction history", e.code || exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
     
 }

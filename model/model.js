@@ -37,10 +37,14 @@
  */
 const TransactionType = {
     Payment : 1,
-    Trust : 2, 
-    Refund : 3,
-    Deposit: 4,
-    AccountManagement: 5
+    /**
+     * @summary Represents a purchase of an asset from the central distribution
+     */
+    Purchase : 2,
+    Trust : 3, 
+    Refund : 4,
+    Deposit: 5,
+    AccountManagement: 6
 };
 
 /**

@@ -176,4 +176,16 @@
         retVal.offers = this._offerInfo;
         return retVal;
     }
+
+    /**
+     * @method 
+     * @summary Returns a summary object
+     */
+    summary() {
+        return new Asset().copy({
+            id: this.id,
+            code: this.code,
+            issuer: this.issuer
+        });
+    }
  }

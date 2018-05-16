@@ -257,8 +257,10 @@ const uhc = require('../uhc'),
      * @summary Prefetch user's wallet information
      */
     async loadWallet(_txc) {
-      if(!this._wallet) 
+      if(!this._wallet)  {
             this._wallet = await uhc.Repositories.walletRepository.get(this.walletId, _txc);
+            this._wallet._user = this;
+      }
       return this._wallet;
     }
 
@@ -326,4 +328,17 @@ const uhc = require('../uhc'),
         return retVal;
     }
 
+    /**
+     * @method 
+     * @summary Returns a summary object
+     */
+    summary() {
+        return new User().copy({
+            id: this.id,
+            givenName: this.givenName,
+            familyName: this.familyName,
+            email: this.email,
+            name: this.name
+        });
+    }
 }
