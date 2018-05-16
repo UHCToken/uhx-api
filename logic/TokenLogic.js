@@ -275,6 +275,47 @@ module.exports = class TokenLogic {
         }
     }
 
+     /**
+     * @method
+     * @summary Register a wallet on the stellar network
+     * @param {string} userId The user for which the wallet should be created
+     */
+    async activateStellarWalletForUser(userId) {
+
+        try {
+
+            return await uhc.Repositories.transaction(async (_txc) => {
+                
+                // Create stellar client
+                var stellarClient = uhc.StellarClient;
+                
+                // Verify user
+                var user = await uhc.Repositories.userRepository.get(userId, _txc);
+
+                // Does user already have wallet?
+                var wallet = await user.loadWallet();
+                if(!wallet) { // Generate a KP
+                    // Create a wallet
+                    var wallet = await stellarClient.generateAccount();
+                    // Insert 
+                    wallet = await uhc.Repositories.walletRepository.insert(wallet, null, _txc);
+                    // Update user
+                    user.walletId = wallet.id;
+                    await uhc.Repositories.userRepository.update(user, null, null, _txc);
+                }
+
+                // Activate wallet if not already active
+                if(!stellarClient.isActive(wallet))
+                    await stellarClient.activateAccount(wallet, "1",  await testRepository.walletRepository.get(uhc.Config.stellar.initiator_wallet_id));
+                return wallet;
+            });
+        }
+        catch(e) {
+            uhc.log.error("Error finalizing authentication: " + e.message);
+            throw new exception.Exception("Error creating waller user", exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
+
     // TODO: Refactor this method
     /**
      * @method

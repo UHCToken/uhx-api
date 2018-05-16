@@ -439,7 +439,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
 
         try {
 
-            return await uhc.Repositories.transact(async (_txc) => {
+            return await uhc.Repositories.transaction(async (_txc) => {
                 
                 // Create stellar client
                 var stellarClient = uhc.StellarClient;
