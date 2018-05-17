@@ -412,7 +412,7 @@ module.exports = class StellarClient {
             }));
 
             // Memo field if memo is present
-            if (id) {
+            if (ref) {
                 var memoObject = Stellar.Memo.hash(crypto.createHash('sha256').update(ref).digest('hex'));
                 paymentTx.addMemo(memoObject);
             }
@@ -687,6 +687,7 @@ module.exports = class StellarClient {
             retVal.ref = opRecord._links.self;
             retVal.postingDate = opRecord.created_at;
             retVal.amount = new MonetaryAmount(opRecord.amount || opRecord.starting_balance, opRecord.asset_code || 'XLM');
+            retVal.state = model.TransactionStatus.Complete;
             return retVal;
         }
         else {
