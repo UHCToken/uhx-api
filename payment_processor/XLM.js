@@ -53,7 +53,7 @@
         if(!buyerWallet.balances.find(o=>o.code == asset.code))
             await uhc.StellarClient.createTrust(buyerWallet, asset);
         // TODO: If this needs to go to escrow this will need to be changed
-        var transaction = await uhc.StellarClient.exchangeAsset(buyerWallet, distributionAccount, orderInfo.invoicedAmount, new MonetaryAmount(orderInfo.amount, asset.code), orderInfo.batchId);
+        var transaction = await uhc.StellarClient.exchangeAsset(buyerWallet, distributionAccount, orderInfo.invoicedAmount, new MonetaryAmount(orderInfo.quantity, asset.code), orderInfo.batchId);
 
         orderInfo.ref = transaction.ref;
         orderInfo.memo = transaction.id;
