@@ -25,6 +25,7 @@ const uhc = require('../uhc'),
     Web3Client = require('../integration/web3'),
     model = require('../model/model'),
     User = require('../model/User'),
+    clone = require('clone'),
     crypto = require('crypto'),
     fs = require('fs');
 
@@ -416,12 +417,12 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                 var stellarClient = uhc.StellarClient;
                 var strWallet = await stellarClient.generateAccount();
                 
-                ethWallet = await uhc.Repositories.walletRepository.insert(ethWallet, null, _txc);
-                strWallet = await uhc.Repositories.walletRepository.insert(strWallet, null, _txc);
+                ethWallet = await uhc.Repositories.walletRepository.insert(ethWallet, principal, _txc);
+                strWallet = await uhc.Repositories.walletRepository.insert(strWallet, principal, _txc);
                 
                 user.walletId = strWallet.id;
 
-                var retVal = await uhc.Repositories.userRepository.insert(user, password, null, _txc);
+                var retVal = await uhc.Repositories.userRepository.insert(user, password, principal, _txc);
                 
                 //HACK: This is temporary until a better workflow for wallet funding is decided
                 await stellarClient.activateAccount(strWallet, "10",  await uhc.Repositories.walletRepository.get(uhc.Config.stellar.initiator_wallet_id));
@@ -432,11 +433,12 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                 strWallet.userId = retVal.id;
                 
                 web3Client.getBalance(ethWallet)
-                await uhc.Repositories.walletRepository.update(ethWallet, null, _txc);
-                await uhc.Repositories.walletRepository.update(strWallet, null, _txc);
-                await uhc.Repositories.groupRepository.addUser(uhc.Config.security.sysgroups.users, retVal.id, null, _txc);
-		        await this.sendConfirmationEmail(user, _txc);
-
+                await uhc.Repositories.walletRepository.update(ethWallet, principal, _txc);
+                await uhc.Repositories.walletRepository.update(strWallet, principal, _txc);
+                await uhc.Repositories.groupRepository.addUser(uhc.Config.security.sysgroups.users, retVal.id, principal, _txc);
+                if(!user.emailVerified ){
+                    await this.sendConfirmationEmail(user, _txc);
+                }
                 if(user.tel)
                     await this.sendConfirmationSms(user, _txc);
                 return retVal;
@@ -739,7 +741,8 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
             var invitation = await uhc.Repositories.invitationRepository.getByClaimToken(invitationToken);
 
             // Create a user
-            var user = new User().copy(invitation);
+            var user = clone(new User().copy(invitation));
+
             user.name = invitation.email;
             user.emailVerified = true;
 
@@ -750,28 +753,32 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
             return await uhc.Repositories.transaction(async (_txc) => {
 
                 // Insert the user and assign to user group
-                user = await uhc.Repositories.userRepository.insert(user, initialPassword, principal, _txc);
-                await uhc.Repositories.groupRepository.addUser(uhc.Config.security.sysgroups.users, user.id, principal, _txc);
+                
 
                 // Now we want to claim the token
-                await uhc.Repositories.invitationRepository.claim(invitation.id, user, _txc);
+                var newUser = await this.registerInternalUser(user, initialPassword, principal)
 
+                await uhc.Repositories.groupRepository.addUser(uhc.Config.security.sysgroups.users, newUser.id, principal, _txc);
+
+                await uhc.Repositories.invitationRepository.claim(invitation.id, newUser, _txc);
+
+                
                 // Now we want to notify the user
                 var sendOptions = {
-                    to: user.email,
+                    to: newUser.email,
                     from: uhc.Config.mail.from,
                     subject: "Welcome to the UHX community!",
                     template: uhc.Config.mail.templates.welcome
                 };
                 // Replacements
                 const replacements = {
-                    user: user,
+                    user: newUser,
                     ui_base: uhc.Config.api.ui_base
                 }
                 await uhc.Mailer.sendEmail(sendOptions, replacements);
 
                 // Return the user
-                return user;
+                return newUser;
             });
 
         }
