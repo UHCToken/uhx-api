@@ -297,8 +297,10 @@
       var userPrincipal = null;
     
       var forwardHeader = req.get("X-Forwarded-For");
-      if(forwardHeader)
+      if(forwardHeader) {
+        uhc.log.info(`Authentication on behalf of ${forwardHeader}`);
         forwardHeader = forwardHeader.split(',')[0];
+      }
 
       // GRANT TYPE
       switch(req.body.grant_type){
@@ -324,6 +326,7 @@
       res.status(200).json(retVal);
       return true;
     }
+
     /**
      * Custom exception handler for OAUTH
      * @param {*} e The exception to be handled 
