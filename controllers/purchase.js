@@ -300,9 +300,9 @@ class PurchaseApiResource {
             },
             {
                 "name": "Ether",
-                "network": "Etherium",
+                "network": "Ethereum",
                 "description": "Pay with Ether",
-                "note": "You must transfer a desired amount of ETH to the etherium account associated with your user account",
+                "note": "You must transfer a desired amount of ETH to the ethereum account associated with your user account",
                 "currency": "ETH"
             }
         ]);

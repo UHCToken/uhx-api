@@ -42,3 +42,7 @@ CREATE TABLE IF NOT EXISTS purchase (
     CONSTRAINT fk_purchase_updated_by FOREIGN KEY (updated_by) REFERENCES users(id),
     CONSTRAINT ck_purchase_updated CHECK (updated_time IS NULL AND updated_by IS NULL OR updated_by IS NOT NULL AND updated_time IS NOT NULL)
 );
+
+ALTER TABLE wallets ADD COLUMN network VARCHAR(36);
+ALTER TABLE wallets ADD COLUMN user_id uuid;
+ALTER TABLE wallets ADD CONSTRAINT fk_wallets_user FOREIGN KEY (user_id) REFERENCES users(id);

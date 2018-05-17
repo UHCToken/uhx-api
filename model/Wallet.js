@@ -86,6 +86,8 @@ module.exports = class Wallet extends ModelBase {
         this.address = dbWallet.address;
         this.seed = dbWallet.seed;
         this.id = dbWallet.id;
+        this.userId = dbWallet.user_id;
+        this.network = dbWallet.network;
         return this;
     }
 
@@ -97,7 +99,9 @@ module.exports = class Wallet extends ModelBase {
         return {
             address : this.address,
             seed : this.seed,
-            id : this.id
+            id : this.id,
+            network: this.network,
+            user_id: this.userId
         };
     }
 
@@ -113,6 +117,8 @@ module.exports = class Wallet extends ModelBase {
         this.id = otherWallet.id;
         this.balances = otherWallet.balances;
         this.transactions = otherWallet.transactions;
+        this.network = otherWallet.network;
+        this.userId = otherWallet.userId;
         return this;
     }
 
@@ -124,8 +130,10 @@ module.exports = class Wallet extends ModelBase {
         return {
             address: this.address,
             id: this.id,
+            network: this.network,
             balances: this.balances,
-            transactions: this.transactions
+            transactions: this.transactions,
+            userId: this.userId
         }
     }
 }
