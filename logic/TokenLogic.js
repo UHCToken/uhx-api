@@ -407,7 +407,7 @@ module.exports = class TokenLogic {
                     
                     // 3. Insert purchase as a transaction and as a purchase
                     purchase._payorWalletId = offerWallet.id;
-                    purchase._payeeWalletId = await buyer.loadStellarWallet(_txc);
+                    purchase._payeeWalletId = (await buyer.loadStellarWallet(_txc)).id;
                     purchase = await uhc.Repositories.transactionRepository.insert(purchase, principal, _txc);
                     purchase = await uhc.Repositories.transactionRepository.insertPurchase(purchase, principal, _txc);
                     
