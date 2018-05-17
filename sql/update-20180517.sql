@@ -1,0 +1,19 @@
+CREATE TABLE IF NOT EXISTS wallet_network (
+    id NUMERIC(1) NOT NULL, -- THE NETWORK
+    name VARCHAR(36) NOT NULL, -- THE NAME OF THE NETWORK
+    CONSTRAINT pk_wallet_network PRIMARY KEY (id)
+);
+
+INSERT INTO wallet_network VALUES (1, 'STELLAR');
+INSERT INTO wallet_network VALUES (2, 'ETHERIUM');
+
+ALTER TABLE wallets ADD COLUMN network_id NUMERIC(1);
+ALTER TABLE wallets ADD CONSTRAINT fk_wallet_network_id FOREIGN KEY (network_id) REFERENCES wallet_network(id);
+
+ALTER TABLE wallets ADD COLUMN user_id uuid;
+ALTER TABLE wallets ADD CONSTRAINT fk_wallets_user FOREIGN KEY (user_id) REFERENCES users(id);
+
+-- MIGRATE WALLETS
+UPDATE wallets SET network_id = 1, user_id = (SELECT id FROM users WHERE wallet_id = wallets.id);
+ALTER TABLE users DROP COLUMN wallet_id CASCADE;
+ALTER TABLE wallets ALTER COLUMN network_id SET NOT NULL;
