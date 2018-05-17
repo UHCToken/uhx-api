@@ -162,6 +162,7 @@ class WalletApiResource {
      */
     async get(req, res) {
         res.status(200).json(await uhc.Repositories.walletRepository.getByUserId(req.params.uid));
+        return true;
     }
 
     /**
