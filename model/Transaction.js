@@ -119,46 +119,48 @@ module.exports = class Transaction extends ModelBase {
         this.memo = memo;
 
         // Payor details
-        switch(payor.constructor.name) {
-            case "Wallet":
-                this._payorWalletId = payor.id;
-                this.payorId = payor.address;
-                break;
-            case "User":
-                this._payorWalletId = payor.walletId;
-                this.payorId =  payor.id;
-                this._payor = payor;
-                break;
-            case "Asset":
-                this._payorWalletId = payor._distWalletId;
-                this.payorId =  payor.id;
-                this._payor = payor;
-                break;
-            case "String":
-                this.payorId = payor;
-                break;
-        }
+        if(payor)
+            switch(payor.constructor.name) {
+                case "Wallet":
+                    this._payorWalletId = payor.id;
+                    this.payorId = payor.address;
+                    break;
+                case "User":
+                    this._payorWalletId = payor.walletId;
+                    this.payorId =  payor.id;
+                    this._payor = payor;
+                    break;
+                case "Asset":
+                    this._payorWalletId = payor._distWalletId;
+                    this.payorId =  payor.id;
+                    this._payor = payor;
+                    break;
+                case "String":
+                    this.payorId = payor;
+                    break;
+            }
 
         // Payee details
-        switch(payee.constructor.name) {
-            case "Wallet":
-                this._payeeWalletId = payee.id;
-                this.payeeId = payee.address;
-                break;
-            case "User":
-                this._payeeWalletId = payee.walletId;
-                this.payeeId = payee.id;
-                this._payee = payee;
-                break;
-            case "Asset":
-                this._payeeWalletId = payee._distWalletId;
-                this.payeeId = payee.id;
-                this._payee = payee;
-                break;   
-            case "String":
-                this.payeeId = payee;
-                break;
-        }
+        if(payee)
+          switch(payee.constructor.name) {
+                case "Wallet":
+                    this._payeeWalletId = payee.id;
+                    this.payeeId = payee.address;
+                    break;
+                case "User":
+                    this._payeeWalletId = payee.walletId;
+                    this.payeeId = payee.id;
+                    this._payee = payee;
+                    break;
+                case "Asset":
+                    this._payeeWalletId = payee._distWalletId;
+                    this.payeeId = payee.id;
+                    this._payee = payee;
+                    break;   
+                case "String":
+                    this.payeeId = payee;
+                    break;
+            }`
 
         this.amount = amount;
         this.fee = fee;
