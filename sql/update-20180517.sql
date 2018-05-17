@@ -19,6 +19,6 @@ ALTER TABLE users DROP COLUMN wallet_id CASCADE;
 ALTER TABLE wallets ALTER COLUMN network_id SET NOT NULL;
 
 ALTER TABLE wallet_network ADD COLUMN symbol VARCHAR(3);
-UPDATE wallet_network SET symbol = 'STR' WHERE id = 1;
-UPDATE wallet_network SET symbol = 'ETH' WHERE id = 2;
+UPDATE wallet_network SET symbol = 'str' WHERE id = 1;
+UPDATE wallet_network SET symbol = 'eth' WHERE id = 2;
 ALTER TABLE wallet_network ALTER COLUMN symbol SET NOT NULL;
