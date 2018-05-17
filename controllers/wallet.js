@@ -120,7 +120,7 @@ class WalletApiResource {
      *          - "write:wallet"
      */
     async put(req, res)  {
-        res.status(201).json(await uhc.SecurityLogic.activateStellarWalletForUser(req.params.uid));
+        res.status(201).json(await uhc.TokenLogic.activateStellarWalletForUser(req.params.uid));
         return true;
     }
     /**

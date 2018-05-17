@@ -48,6 +48,7 @@ const pg = require('pg'),
         this.deleteClaim = this.deleteClaim.bind(this);
         this.getTfaMethod = this.getTfaMethod.bind(this);
         this.assertClaim = this.assertClaim.bind(this);
+        this.getByPublicAddress = this.getByPublicAddress.bind(this);
     }
 
     /**
@@ -303,6 +304,28 @@ const pg = require('pg'),
         try {
             if(!_txc) await dbc.connect();
             const rdr = await dbc.query("SELECT users.* FROM users WHERE wallet_id = $1", [walletId]);
+            if(rdr.rows.length == 0)
+                return null; // Wallet is an anonymous wallet
+            else
+                return new User().fromData(rdr.rows[0]);
+        }
+        finally {
+            if(!_txc) dbc.end();
+        }
+    }
+
+        /**
+     * @method
+     * @summary Retrieves a user from the database given their wallet ID
+     * @param {string} addr The public address of the user' wallet
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {User} The user whom the wallet belongs to
+     */
+    async getByPublicAddress(addr, _txc) {
+        const dbc =  _txc ||new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+            const rdr = await dbc.query("SELECT users.* FROM users INNER JOIN wallets ON (wallets.id = users.wallet_id) WHERE address = $1", [addr]);
             if(rdr.rows.length == 0)
                 return null; // Wallet is an anonymous wallet
             else

@@ -1,3 +1,4 @@
+
 'use strict';
 
 /**
@@ -22,6 +23,8 @@ const uhc = require('../uhc'),
     MonetaryAmount = require('./MonetaryAmount'),
     User = require('./User'),
     ModelBase = require('./ModelBase');
+
+const uuidRegex = /[A-F0-9]{8}-(?:[A-F0-9]{4}\-){3}[A-F0-9]{12}/i;
 
 /**
  * @class
@@ -92,20 +95,21 @@ module.exports = class Transaction extends ModelBase {
      * @param {User} payee The user or userId of the user which received the fee
      * @param {MonetaryAmount} amount The amount of the transaction
      * @param {MonetaryAmount} fee The fee collected or processed on the transaction
-     * @param {TransactionStatus} status The status of the transaction
      * @param {*} ref A reference object
      */
-    constructor(id, type, memo, postingDate, payor, payee, amount, fee, ref, status) {
+    constructor(id, type, memo, postingDate, payor, payee, amount, fee, ref) {
         super();
         this.id = id;
         this.postingDate = postingDate;
         this.type = type;
         this.memo = memo;
-        this._payor = payor instanceof User ? payor : null;
-        this.payorId = payor instanceof User ? payor.id : payor;
-        this._payee = payee instanceof User ? payee : null;
-        this.payeeId = payee instanceof User ? payee.id : payee;
-        this.amount = amount;
+        this._payor = payor && payor.constructor.name != "String" ? payor : null;
+        this.payorId =  payor && payor.constructor.name != "String" ? payor.id : payor;
+        this._payee =  payee && payee.constructor.name != "String" ? payee : null;
+        this.payeeId =  payee && payee.constructor.name != "String" ? payee.id : payee;
+        this._payeeWalletId = this._payee ? this._payee.walletId : null;
+        this._payorWalletId = this._payor ? this._payor.walletId : null;
+        this.quantity = amount;
         this.fee = fee;
         this.ref = ref;
     }
@@ -129,9 +133,11 @@ module.exports = class Transaction extends ModelBase {
      * @returns {User} The payor of the transaction
      * @summary Loads the payor from the UHC database
      */
-    async loadPayor() {
-        if(!this._payor)
-            this._payor = await uhc.Repositories.userRepository.get(this.payorId);
+    async loadPayor(_txc) {
+        if(!this._payor && this.payorId)
+            this._payor = await uhc.Repositories.userRepository.get(this.payorId, _txc);
+        else if(!this._payor && this._payorWalletId)
+            this._payor = await uhc.Repositories.userRepository.getByWalletId(this._payorWalletId, _txc);
         return this._payor;
     }
 
@@ -140,9 +146,11 @@ module.exports = class Transaction extends ModelBase {
      * @returns {User} The payee of the transaction
      * @summary Loads the payee from the UHC database
      */
-    async loadPayee() {
-        if(!this._payee)
-            this._payee = await uhc.Repositories.userRepository.get(this.payeeId);
+    async loadPayee(_txc) {
+        if(!this._payee && this.payeeId)
+            this._payee = await uhc.Repositories.userRepository.get(this.payeeId, _txc);
+        else if(!this._payee && this._payeeWalletId)
+            this._payee = await uhc.Repositories.userRepository.getByWalletId(this._payorWalletId, _txc);
         return this._payee;
     }
 
@@ -157,4 +165,63 @@ module.exports = class Transaction extends ModelBase {
         return retVal;
     }
 
+    /**
+     * @summary
+     * @returns {Transaction} The parsed transaction
+     * @param {*} dbTransaction Convert this transaction from database
+     */
+    fromData(dbTransaction) {
+        return this._fromData(dbTransaction);
+    }
+
+    /**
+     * @method 
+     * @summary Translate from data layer to class layer
+     * @param {*} dbTransaction The database transaction to convert from
+     */
+    _fromData(dbTransaction) {
+
+        this.id = dbTransaction.id;
+        this._payeeWalletId = dbTransaction.payee_wallet_id;
+        this._payorWalletId = dbTransaction.payor_wallet_id;
+        this.type = dbTransaction.type_id;
+        this.batchId = dbTransaction.batch_id;
+        this.memo = dbTransaction.memo;
+        this.ref = dbTransaction.ref;
+        this.escrowInfo = dbTransaction.escrow;
+        this.escrowTerm = dbTransaction.escrow_time;
+        this.creationTime = dbTransaction.creation_time;
+        this.createdBy = dbTransaction.created_by;
+        this.updatedTime = dbTransaction.updated_time;
+        this.updatedBy = dbTransaction.updated_by;
+        this.postingDate = dbTransaction.transaction_time;
+        return this;
+    }
+
+    /**
+     * @method
+     * @summary Converts this transaction to database format
+     */
+    toData() {
+        return this._toData();
+    }
+
+    /**
+     * @method
+     * @summary Convert internal representation to data
+     */
+    _toData() {
+        return {
+            id: this.id,
+            payee_wallet_id: this._payeeWalletId,
+            payor_wallet_id: this._payorWalletId,
+            type_id: this.type,
+            batch_id : this.batchId,
+            memo: this.memo,
+            ref : this.ref,
+            escrow: this.escrowInfo,
+            escrow_time: this.escrowTerm,
+            transaction_time: this.postingDate
+        };
+    }
 }

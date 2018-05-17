@@ -117,10 +117,13 @@
          return this._code;
      }
      toJSON() {
+         if(Array.isArray(this._cause))
+            this._cause = this._cause.filter(o=>o);
+            
          return {
              message:this._message,
              code:this._code,
-             cause:this._cause
+             cause:this._cause && (!Array.isArray(this._cause) ^ this._cause.length) ? this._cause : null
          };
      }
  }

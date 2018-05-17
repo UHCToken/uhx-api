@@ -25,7 +25,7 @@ const UserRepository = require('./userRepository'),
     GroupRepository = require('./groupRepository'),
     AssetRepository = require('./assetRepository'),
     InvitationRepository = require('./invitationRepository'),
-    PurchaseRepository = require('./purchaseRepository'),
+    TransactionRepository = require('./transactionRepository'),
     ReportRepository = require('./reportRepository'),
     pg = require('pg'),
     uhc = require('../uhc'),
@@ -106,12 +106,12 @@ class UhcRepositories {
     /**
      * @property 
      * @summary Get the purchase repository
-     * @type {PurchaseRepository}
+     * @type {TransactionRepository}
      */
-    get purchaseRepository() {
-        if(!this._purchaseRepository)
-            this._purchaseRepository = new PurchaseRepository(this.connectionString);
-        return this._purchaseRepository;
+    get transactionRepository() {
+        if(!this._transactionRepository)
+            this._transactionRepository = new TransactionRepository(this.connectionString);
+        return this._transactionRepository;
     }
 
     /**
