@@ -159,6 +159,13 @@
       * @summary Configuration settings related to interaction with the stellar network
       */
      stellar: {
+        /**
+         * @summary Etherium client name
+         */
+        client: {
+            name: 'StellarClient',
+            balanceFn: 'getAccount'
+        },
          /**
           * @summary The wallet from which the initial balance of XLM should be retrieved
           */
@@ -189,6 +196,13 @@
       * @summary Configuration settings related to interaction with the ethereum network
       */
      ethereum: {
+         /**
+          * @summary Etherium client name
+          */
+         client: {
+            name: 'Web3Client',
+            balanceFn: 'getBalance'
+        },
      /**
       * @summary Flag for using ethereum
       */

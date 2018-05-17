@@ -53,6 +53,7 @@ module.exports = class TokenLogic {
         this.getTransactionHistory = this.getTransactionHistory.bind(this);
         this.createTransaction = this.createTransaction.bind(this);
         this.planAirdrop = this.planAirdrop.bind(this);
+        this.getAllBalancesForWallets = this.getAllBalancesForWallets.bind(this);
     }
 
     /**
@@ -296,7 +297,7 @@ module.exports = class TokenLogic {
                 var user = await uhc.Repositories.userRepository.get(userId, _txc);
 
                 // Does user already have wallet?
-                var wallet = await user.loadWallet();
+                var wallet = await user.loadStellarWallet();
                 if(!wallet) { // Generate a KP
                     // Create a wallet
                     var wallet = await stellarClient.generateAccount();
@@ -458,7 +459,7 @@ module.exports = class TokenLogic {
                     // 5. Now just dump the asset into the user's wallet
                     try {
 
-                        var buyerWallet = await buyer.loadWallet(_txc);
+                        var buyerWallet = await buyer.loadStellarWallet(_txc);
                         // If the user wallet is not active, activate it with 2 XLM
                         if(!await uhc.StellarClient.isActive(buyerWallet)) 
                             buyerWallet = await uhc.StellarClient.activateAccount(userWallet, "2", sourceWallet);
@@ -516,7 +517,7 @@ module.exports = class TokenLogic {
 
                 // Load primary data from wallet
                 var user = await uhc.Repositories.userRepository.get(userId, _txc);
-                var userWallet = await user.loadWallet(_txc);
+                var userWallet = await user.loadStellarWallet(_txc);
 
                 // Get the stellar transaction history for the user
                 var transactionHistory = await uhc.StellarClient.getTransactionHistory(userWallet, filter);
@@ -615,12 +616,12 @@ module.exports = class TokenLogic {
             var distributeFn = 
                 /** @param {User} u */
                 async(u) => {
-                    var w = await uhc.StellarClient.isActive(await u.loadWallet());
+                    var w = await uhc.StellarClient.isActive(await u.loadStellarWallet());
                     var txns = [];
                     // Is the account active? If not and auto-activate add transaction for that
                     if((!w || !w.balances || w.balances.length == 0)) 
                     {
-                        w = await u.loadWallet();
+                        w = await u.loadStellarWallet();
                         if(dropSpec.autoActivate) {
                             txns.push(new Transaction(null, model.TransactionType.AccountManagement, "Activate account for airdrop", null, payorWallet, u, new MonetaryAmount(1.6, "XLM"), new MonetaryAmount(0.0000100, "XLM"), null, model.TransactionStatus.Pending));
                             txns.push(new Transaction(null, model.TransactionType.Trust, "Trust air-dropped asset", null, u, u, new MonetaryAmount(0, dropSpec.amount.code), new MonetaryAmount(0.0000100, "XLM"), null, model.TransactionStatus.Pending));
@@ -718,4 +719,32 @@ module.exports = class TokenLogic {
             throw new exception.Exception("Error planning airdrop", e.code || exception.ErrorCodes.UNKNOWN, e);
         }
     }
+
+    
+    /**
+     * @method
+     * @summary Gets all balances for the user wallet
+     * @param {Wallet} userWallet The wallet for which the balances should be added to
+     */
+    async getAllBalancesForWallets(userWallets) {
+
+        try {
+
+            if(!Array.isArray(userWallets))
+                userWallets = [userWallets];
+
+            for(var w in userWallets) {
+                var config = uhc.Config[userWallets[w].network.toLowerCase()];
+                if(config && config.enabled !== false) // must exist and must be explicitly disabled
+                    userWallets[w] = await uhc[config.client.name][config.client.balanceFn](userWallets[w]);
+            }
+
+            return userWallets;
+        }
+        catch(e) {
+            uhc.log.error("Error getting balance: " + e.message);
+            throw new exception.Exception("Error getting balance:", exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
+
 }

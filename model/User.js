@@ -194,7 +194,6 @@ const uhc = require('../uhc'),
         this.creationTime = dbUser.creation_time;
         this.updatedTime = dbUser.updated_time;
         this.deactivationTime = dbUser.deactivation_time;
-        this.walletId = dbUser.wallet_id;
         return this;
     }
 
@@ -216,8 +215,7 @@ const uhc = require('../uhc'),
             description: this.profileText,
             tel: this.tel,
             tel_verified: this.telVerified,
-            tfa_method: this.tfaMethod,
-            wallet_id: this.walletId
+            tfa_method: this.tfaMethod
             // creation timestamp properites are skipped beecause they are set by repo
         };
 
@@ -254,14 +252,29 @@ const uhc = require('../uhc'),
 
     /**
      * @method
-     * @summary Prefetch user's wallet information
+     * @summary Prefetch user's stellar wallet information
      */
-    async loadWallet(_txc) {
-      if(!this._wallet && this.walletId)  {
-            this._wallet = await uhc.Repositories.walletRepository.get(this.walletId, _txc);
+    async loadStellarWallet(_txc) {
+      if(!this._wallet)  {
+            if(this._wallets)
+                this._wallet = this._wallets.find(o=>o.networkId == 1);
+            else 
+                this._wallet = await uhc.Repositories.walletRepository.getByUserId(this.id, _txc);
             this._wallet._user = this;
       }
       return this._wallet;
+    }
+
+    /**
+     * @method
+     * @summary Prefetch all user's wallet information
+     */
+    async loadWallets(_txc) {
+        if(!this._wallet)  {
+                this._wallets = await uhc.Repositories.walletRepository.getAllForUserId(this.id, _txc);
+                this._wallets.forEach(w=>w._user = this);
+        }
+        return this._wallets;
     }
 
     /**
@@ -319,7 +332,7 @@ const uhc = require('../uhc'),
     toJSON() {
         var retVal = this.stripHiddenFields();
         retVal.externalIds = this._externIds;
-        retVal.wallet = this._wallet;
+        retVal.wallets = this._wallets;
         retVal.claims = {};
         for(var k in this._claims)
             if(!k.startsWith("$"))

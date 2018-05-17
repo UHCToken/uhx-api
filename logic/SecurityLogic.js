@@ -50,7 +50,6 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
         this.refreshSession = this.refreshSession.bind(this);
         this.registerInternalUser = this.registerInternalUser.bind(this);
         this.createStellarWallet = this.activateStellarWalletForUser.bind(this);
-        this.getAllBalancesForUser = this.getAllBalancesForUser.bind(this);
         this.updateUser = this.updateUser.bind(this);
         this.validateUser = this.validateUser.bind(this);
         this.createInvitation = this.createInvitation.bind(this);
@@ -476,7 +475,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                 var user = await uhc.Repositories.userRepository.get(userId, _txc);
 
                 // Does user already have wallet?
-                var wallet = await user.loadWallet();
+                var wallet = await user.loadStellarWallet();
                 if(!wallet) { // Generate a KP
                     // Create a wallet
                     var wallet = await stellarClient.generateAccount();
@@ -499,36 +498,6 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
         }
     }
 
-
-        /**
-     * @method
-     * @summary Gets all balances for the user wallet
-     * @param {Wallet} userWallet The wallet for which the balances should be added to
-     */
-    async getAllBalancesForUser(userWallet) {
-
-        try {
-
-            return await uhc.Repositories.transaction(async (_txc) => {
-                
-                if(userWallet.network == "STELLAR"){
-                    var stellarClient = uhc.StellarClient;
-                    return await stellarClient.getAccount(userWallet)
-                }
-                else if(userWallet.network == "ETHEREUM"){
-                    var web3Client = uhc.Web3Client;
-                    return await web3Client.getBalance(userWallet)
-                }
-                else{
-                    throw "Wallet network is not supported";
-                }
-            });
-        }
-        catch(e) {
-            uhc.log.error("Error getting balance: " + e.message);
-            throw new exception.Exception("Error getting balance:", exception.ErrorCodes.UNKNOWN, e);
-        }
-    }
 
     /**
      * @method
