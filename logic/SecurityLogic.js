@@ -602,7 +602,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
             await uhc.Repositories.userRepository.addClaim(user.id, {
                 type: EMAIL_CONFIRM_CLAIM,
                 value: confirmToken,
-                expiry: new Date(new Date().getTime() + uhc.Config.security.confirmationValidaty)
+                expiry: new Date(new Date().getTime() + uhc.Config.security.confirmationValidity)
             }, _txc);
 
             // We want to send an e-mail to the previous e-mail address notifying the user of the change
