@@ -160,7 +160,7 @@ module.exports = class Transaction extends ModelBase {
                 case "String":
                     this.payeeId = payee;
                     break;
-            }`
+            }
 
         this.amount = amount;
         this.fee = fee;
