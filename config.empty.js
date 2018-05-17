@@ -99,6 +99,10 @@
           */
          tfaValidity: 300000,
          /**
+          * @summary Confirmation validatity
+          */
+         confirmationValidity: 300000,
+         /**
           * @summary Maximum failed login attempts
           */
          maxFailedLogin: 4,

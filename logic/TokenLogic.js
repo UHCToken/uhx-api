@@ -32,6 +32,7 @@ const uhc = require('../uhc'),
     Wallet = require('../model/Wallet'),
     MonetaryAmount = require('../model/MonetaryAmount'),
     Transaction = require('../model/Transaction'),
+    Airdrop = require("../model/Airdrop"),
     Purchase = require("../model/Purchase");
 
 /**
@@ -50,6 +51,8 @@ module.exports = class TokenLogic {
         this.createAssetQuote = this.createAssetQuote.bind(this);
         this.createPurchase = this.createPurchase.bind(this);
         this.getTransactionHistory = this.getTransactionHistory.bind(this);
+        this.createTransaction = this.createTransaction.bind(this);
+        this.planAirdrop = this.planAirdrop.bind(this);
     }
 
     /**
@@ -530,4 +533,156 @@ module.exports = class TokenLogic {
         }
     }
     
+    /**
+     * @method
+     * @summary Creates a transaction
+     * @param {Array} transactions The transactions that are being inserted or executed
+     * @param {User} sourceObject The source object (user or asset)
+     * @param {SecurityPrincipal} principal The user that is creating the transaction
+     * @returns {Array} The created to planned transactions
+     */
+    async createTransaction(transactions, sourceObject, principal) {
+
+        try {
+           
+            // Validate that purchases are done with purchase API
+            if(transactions.find(o=>o.type == model.TransactionType.Purchase))
+                throw new exception.BusinessRuleViolationException(new exception.RuleViolation("Purchases must be made with the Purchase API not Transaction API", exception.ErrorCodes.NOT_SUPPORTED, exception.RuleViolationSeverity.ERROR));
+
+            // First we will validate each transaction based on principal use
+            if(principal.grant["transaction"] & security.PermissionType.OWNER) // Principal is only allowed to create where they are the payor for themselves 
+            {
+                if(transactions.find(o=>o.state != model.TransactionStatus.Pending || o.payorId && o.payorId == principal.session.userId))
+                    throw new exception.BusinessRuleViolationException(new exception.RuleViolation("User can only create PENDING transactions for themselves", exception.ErrorCodes.ARGUMENT_EXCEPTION, exception.RuleViolationSeverity.ERROR));
+                
+                // Copy the transactions and make them safe
+                transactions = transactions.map(t=>new Transaction().copy({
+                        type: t.type,
+                        payorId: principal.session.userId,
+                        payeeId: t.payeeId || t.payee.id,
+                        state: 1,
+                        amount: t.amount,
+                        memo: t.memo
+                    })
+                );
+            }
+            else {
+                // Transaction map
+                transactions = transactions.map(t=> new Transaction().copy({
+                    type: t.type,
+                    payorId: t.payorId,
+                    payeeId: t.payeeId,
+                    state: t.state,
+                    amount: t.amount,
+                    memo: t.memo
+                }));
+            }
+
+            // TODO: Implement
+            throw new exception.NotImplementedException();
+        }
+        catch(e) {
+            uhc.log.error(`Error creating transaction: ${e.message}`);
+            while(e.code == exception.ErrorCodes.DATA_ERROR && e.cause) 
+                e = e.cause[0];
+            throw new exception.Exception("Error creating transaction", e.code || exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
+
+    /**
+     * @method
+     * @summary Plans an airdrop
+     * @param {Airdrop} dropSpec The airdrop to be planned
+     * @param {SecurityPrincipal} principal The user that is planning the drop
+     * @returns {Airdrop} The airdrop transactions that need to occur 
+     */
+    async planAirdrop(dropSpec, principal) {
+
+        try {
+
+            var promises = [];
+
+            // Drop spec
+            if(!dropSpec.amount)
+                throw new exception.ArgumentException("amount missing");
+            
+            // Payor wallet!!!
+            var payorWallet = await uhc.Repositories.walletRepository.get(dropSpec.payorId);
+            if(!payorWallet)
+                payorWallet = await uhc.Repositories.walletRepository.getByPublicKey(dropSpec.payorId);
+
+            // Function that distributes the asset
+            var distributeFn = 
+                /** @param {User} u */
+                async(u) => {
+                    var w = await uhc.StellarClient.isActive(await u.loadWallet());
+                    var txns = [];
+                    // Is the account active? If not and auto-activate add transaction for that
+                    if((!w || !w.balances || w.balances.length == 0)) 
+                    {
+                        w = await u.loadWallet();
+                        if(dropSpec.autoActivate) {
+                            txns.push(new Transaction(null, model.TransactionType.AccountManagement, "Activate account for airdrop", null, payorWallet, u, new MonetaryAmount(1.6, "XLM"), new MonetaryAmount(0.0000100, "XLM"), null, model.TransactionStatus.Pending));
+                            txns.push(new Transaction(null, model.TransactionType.Trust, "Trust air-dropped asset", null, u, u, new MonetaryAmount(0, dropSpec.amount.code), new MonetaryAmount(0.0000100, "XLM"), null, model.TransactionStatus.Pending));
+                            w.balances = [];
+                        }                            
+                        else 
+                            dropSpec.issues.push(new exception.RuleViolation(`Cannot airdrop to ${u.name} because Stellar account is inactive`, exception.ErrorCodes.INVALID_ACCOUNT, exception.RuleViolationSeverity.WARNING));
+                            
+                    }
+                    // Does the user have a trust line?
+                    else if(!w.balances.find(o=>o.code == dropSpec.amount.code))    
+                    {
+                        // We will need to trust, does the user have enough XLM to trust?
+                        var minBalance = (1.1 + w.balances.length * 0.5);
+                        var topUp = minBalance - w.balances.find(o=>o.code == "XLM").value;
+                        if(topUp > 0)
+                        {
+                            if(dropSpec.autoTopUp) {
+                                txns.push(new Transaction(null, model.TransactionType.Deposit, "Top-up account for airdrop", null, payorWallet, u, new MonetaryAmount(topUp, "XLM"), new MonetaryAmount(0.0000100, "XLM"), null, model.TransactionStatus.Pending));
+                                txns.push(new Transaction(null, model.TransactionType.Trust, "Trust air-dropped asset", null, u, u, new MonetaryAmount(0, dropSpec.amount.code), new MonetaryAmount(0.0000100, "XLM"), null, model.TransactionStatus.Pending));
+                            }
+                            else
+                                dropSpec.issues.push(new exception.RuleViolation(`Cannot airdrop to ${u.name} because they require additional ${topUp} XLM to create trust`, exception.ErrorCodes.INSUFFICIENT_FUNDS, exception.RuleViolationSeverity.WARNING));
+                        }
+                        else if(dropSpec.autoTrust) {
+                            txns.push(new Transaction(null, model.TransactionType.Trust, "Trust air-dropped asset", null, u, u, new MonetaryAmount(0, dropSpec.amount.code), new MonetaryAmount(0.0000100, "XLM"), null, model.TransactionStatus.Pending));
+                        }
+                        else
+                            dropSpec.issues.push(new exception.RuleViolation(`Cannot airdrop to ${u.name} because ${dropSpec.amount.code} is not trusted`, exception.ErrorCodes.SECURITY_ERROR, exception.RuleViolationSeverity.WARNING));
+                    }
+
+                    // They have a trust line or there are transactions to establish it
+                    if(txns.length > 0 || w.balances.find(o=>o.code == dropSpec.amount.code))
+                    // TODO: Fill out amount
+                        txns.push(new Transaction(null, model.TransactionType.Deposit, `Airdrop of ${dropSpec.amount.code}`, null, payorWallet, u, amt, new MonetaryAmount(0.0000100, "XLM"), null, model.TransactionStatus.Pending));
+                }
+
+            // First we want to make sure that drop parameters are valid
+            switch(dropSpec.distribution.mode) {
+                case "all":
+                    
+                    // All we need is the amount
+                    var scanFn = async (ofs) => {
+                        var np = await uhc.Repositories.userRepository.query(new User(), ofs, 100)
+                        promises.concat(np.map(u=>distributeFn(u)));
+                        if(np.length == 100)
+                            promises.push(scanFn(ofs + 100));
+                    };
+                    promises.push(scanFn(0));
+
+                    break;
+                    
+                case "each": 
+                    break;
+                case "min":
+                    break;
+                
+            }
+        }
+        catch(e) {
+            uhc.log.error(`Error planning airdrop: ${e.message}`);
+            throw new exception.Exception("Error planning airdrop", e.code || exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
 }

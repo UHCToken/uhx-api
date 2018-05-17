@@ -56,10 +56,10 @@ const uuidRegex = /[A-F0-9]{8}-(?:[A-F0-9]{4}\-){3}[A-F0-9]{12}/i;
  *              description: The date that this transaction was posted
  *          payorId:
  *              type: string    
- *              description: The identity of the user which made the payment
+ *              description: The identity of the user or public address which made the payment
  *          payeeId:
  *              type: string
- *              description: The identity of the user which was paid
+ *              description: The identity of the user or public address which was paid
  *          payor:
  *              $ref: "#/definitions/User"
  *              description: On transaction detail, contains the detailed user information for the payor
@@ -72,7 +72,7 @@ const uuidRegex = /[A-F0-9]{8}-(?:[A-F0-9]{4}\-){3}[A-F0-9]{12}/i;
  *          fee:
  *              $ref: "#/definitions/MonetaryAmount"  
  *              description: If present, indicates any fees that were collected for the transaction
- *          status:
+ *          state:
  *              type: number
  *              description: The status of the transaction
  *              enum:
@@ -82,6 +82,19 @@ const uuidRegex = /[A-F0-9]{8}-(?:[A-F0-9]{4}\-){3}[A-F0-9]{12}/i;
  *          ref:
  *              type: string
  *              description: A reference to the transaction. Can be a link or source information contained on the transaction. 
+ *          escrowInfo:
+ *              type: string
+ *              description: A reference to a stellar escrow account which is being used to hold the distributed funds
+ *          escrowTerm:
+ *              type: string
+ *              description: The term that the escrow was established under (90 DAY, 120 DAY, etc.)
+ *              enum:
+ *                  - '0 DAY'
+ *                  - '15 DAY'
+ *                  - '30 DAY'
+ *                  - '60 DAY'
+ *                  - '90 DAY'
+ *                  - '120 DAY'
  */
 module.exports = class Transaction extends ModelBase {
 
@@ -95,23 +108,62 @@ module.exports = class Transaction extends ModelBase {
      * @param {User} payee The user or userId of the user which received the fee
      * @param {MonetaryAmount} amount The amount of the transaction
      * @param {MonetaryAmount} fee The fee collected or processed on the transaction
+     * @param {Number} status The status of the transaction
      * @param {*} ref A reference object
      */
-    constructor(id, type, memo, postingDate, payor, payee, amount, fee, ref) {
+    constructor(id, type, memo, postingDate, payor, payee, amount, fee, ref, state) {
         super();
         this.id = id;
         this.postingDate = postingDate;
         this.type = type;
         this.memo = memo;
-        this._payor = payor && payor.constructor.name != "String" ? payor : null;
-        this.payorId =  payor && payor.constructor.name != "String" ? payor.id : payor;
-        this._payee =  payee && payee.constructor.name != "String" ? payee : null;
-        this.payeeId =  payee && payee.constructor.name != "String" ? payee.id : payee;
-        this._payeeWalletId = this._payee ? this._payee.walletId : null;
-        this._payorWalletId = this._payor ? this._payor.walletId : null;
-        this.quantity = amount;
+
+        // Payor details
+        switch(payor.constructor.name) {
+            case "Wallet":
+                this._payorWalletId = payor.id;
+                this.payorId = payor.address;
+                break;
+            case "User":
+                this._payorWalletId = payor.walletId;
+                this.payorId =  payor.id;
+                this._payor = payor;
+                break;
+            case "Asset":
+                this._payorWalletId = payor._distWalletId;
+                this.payorId =  payor.id;
+                this._payor = payor;
+                break;
+            case "String":
+                this.payorId = payor;
+                break;
+        }
+
+        // Payee details
+        switch(payee.constructor.name) {
+            case "Wallet":
+                this._payeeWalletId = payee.id;
+                this.payeeId = payee.address;
+                break;
+            case "User":
+                this._payeeWalletId = payee.walletId;
+                this.payeeId = payee.id;
+                this._payee = payee;
+                break;
+            case "Asset":
+                this._payeeWalletId = payee._distWalletId;
+                this.payeeId = payee.id;
+                this._payee = payee;
+                break;   
+            case "String":
+                this.payeeId = payee;
+                break;
+        }
+
+        this.amount = amount;
         this.fee = fee;
         this.ref = ref;
+        this.state = state || 2;
     }
 
     /**

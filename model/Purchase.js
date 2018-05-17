@@ -36,89 +36,75 @@ const Transaction = require('./Transaction'),
  * definitions:
  *  Purchase:
  *      summary: Represents a completed purchase or agreement to purchase an asset from the distributor
- *      properties:
- *          id:
- *              type: string
- *              description: The unique identifier this system tracks the purchase with
- *          buyerId:
- *              type: string
- *              description: The unique identifier of the user who purchased (or received) the asset
- *          buyer:
- *              $ref: "#/definitions/User"
- *              description: The user who purchased the asset
- *          quoteId:
- *              type: string
- *              description: Identifies the quote which was used to execute the purchase
- *          quote:
- *              $ref: "#/definitions/AssetQuote"
- *              description: The quote which was used to execute the purchase
- *          invoicedAmount:
- *              $ref: "#/definitions/MonetaryAmount"
- *              description: The amount of currency collected from the buyer
- *          assetId:
- *              type: string
- *              description: The unique identifier for the asset class being purchased
- *          asset:
- *              $ref: "#/definitions/Asset"
- *              description: The asset which was bought
- *          quantity:
- *              type: number
- *              description: The amount of the asset that was purchased
- *          memo:
- *              type: string
- *              description: A short memo field on the invoice / purchase
- *          ref:
- *              type: string
- *              description: A reference to the transaction which facilitated the purchase (could be an Etherium transaction, bank wire, etc.)
- *          escrowInfo:
- *              type: string
- *              description: A reference to a stellar escrow account which is being used to hold the distributed funds
- *          escrowTerm:
- *              type: string
- *              description: The term that the escrow was established under (90 DAY, 120 DAY, etc.)
- *              enum:
- *                  - '0 DAY'
- *                  - '15 DAY'
- *                  - '30 DAY'
- *                  - '60 DAY'
- *                  - '90 DAY'
- *                  - '120 DAY'
- *          creationTime:
- *              type: date
- *              description: The time the transaction was created
- *          createdBy:
- *              type: string
- *              description: The unique identifier of the user which created the transaction
- *          createdByUser:
- *              $ref: "#/definitions/User"
- *              description: The details of the user which created the purchase
- *          updatedTime:
- *              type: date
- *              description: The date that the purchase information (state, escrow, etc.) was updated
- *          updatedBy:
- *              type: string
- *              description: The unique identifier of the user that updated the purchase
- *          updatedByUser:
- *              $ref: "#/definitions/User"
- *              description: The user which updated the purchase
- *          transactionTime:
- *              type: date
- *              description: The time that the transaction occurred
- *          distributorWalletId:
- *              type: string
- *              description: The wallet which the assetId was purchased from
- *          distributorWallet:
- *              $ref: "#/definitions/Wallet"
- *              description: The wallet which was debited
- *          state:
- *              type: number
- *              description: The status of the purchase
- *              enum: 
- *                  - 1: PENING - The transaction has not been posted to the blockchain
- *                  - 2: COMPLETE - The transaction was completed and posted to the buyer's blockchain account
- *                  - 3: CANCEL - The transaction was cancelled by some process
- *                  - 4: REJECT - The transaction was rejected (payment refused)
- *                  - 5: HOLD - The transaction is in escrow until further notice
+ *      allOf: 
+ *          - $ref: "#/definitions/Transaction"
+ *          - properties:
+ *              id:
+ *                  type: string
+ *                  description: The unique identifier this system tracks the purchase with
+ *              buyerId:
+ *                  type: string
+ *                  description: The unique identifier of the user who purchased (or received) the asset
+ *              buyer:
+ *                  $ref: "#/definitions/User"
+ *                  description: The user who purchased the asset
+ *              quoteId:
+ *                  type: string
+ *                  description: Identifies the quote which was used to execute the purchase
+ *              quote:
+ *                  $ref: "#/definitions/AssetQuote"
+ *                  description: The quote which was used to execute the purchase
+ *              invoicedAmount:
+ *                  $ref: "#/definitions/MonetaryAmount"
+ *                  description: The amount of currency collected from the buyer
+ *              assetId:
+ *                  type: string
+ *                  description: The unique identifier for the asset class being purchased
+ *              asset:
+ *                  $ref: "#/definitions/Asset"
+ *                  description: The asset which was bought
+ *              quantity:
+ *                  type: number
+ *                  description: The amount of the asset that was purchased
+ *              memo:
+ *                  type: string
+ *                  description: A short memo field on the invoice / purchase
+ *              ref:
+ *                  type: string
+ *                  description: A reference to the transaction which facilitated the purchase (could be an Etherium transaction, bank wire, etc.)
+ *              creationTime:
+ *                  type: date
+ *                  description: The time the transaction was created
+ *              createdBy:
+ *                  type: string
+ *                  description: The unique identifier of the user which created the transaction
+ *              createdByUser:
+ *                  $ref: "#/definitions/User"
+ *                  description: The details of the user which created the purchase
+ *              updatedTime:
+ *                  type: date
+ *                  description: The date that the purchase information (state, escrow, etc.) was updated
+ *              updatedBy:
+ *                  type: string
+ *                  description: The unique identifier of the user that updated the purchase
+ *              updatedByUser:
+ *                  $ref: "#/definitions/User"
+ *                  description: The user which updated the purchase
+ *              distributorWalletId:
+ *                  type: string
+ *                  description: The wallet which the assetId was purchased from
+ *              distributorWallet:
+ *                  $ref: "#/definitions/Wallet"
+ *                  description: The wallet which was debited
+ *              state:
+ *                  type: number
+ *                  description: The status of the purchase
+ *                  enum: 
+ *                      - 1: PENING - The transaction has not been posted to the blockchain
+ *                      - 2: COMPLETE - The transaction was completed and posted to the buyer's blockchain account
+ *                      - 3: CANCEL - The transaction was cancelled by some process
+ *                      - 4: REJECT - The transaction was rejected (payment refused)
+ *                      - 5: HOLD - The transaction is in escrow until further notice
  */
 module.exports = class Purchase extends Transaction {
 

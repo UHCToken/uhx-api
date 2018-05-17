@@ -1,3 +1,4 @@
+
 'use strict';
 
 /**
@@ -19,6 +20,7 @@
  
 const uhc = require('../uhc'),
     exception = require('../exception'),
+    Transaction = require('../model/Transaction'),
     security = require('../security');
 
 /**
@@ -48,7 +50,7 @@ class TransactionApiResource {
                 {
                     "path" : "user/:uid/wallet/transaction",
                     "post": {
-                        "demand" : security.PermissionType.WRITE,
+                        "demand" : security.PermissionType.WRITE | security.PermissionType.EXECUTE,
                         "method" : this.post
                     },
                     "get" : {
@@ -62,7 +64,15 @@ class TransactionApiResource {
                         "demand": security.PermissionType.READ,
                         "method": this.get
                     }
+                },
+                {
+                    "path":"asset/:id/wallet/transaction",
+                    "post": {
+                        "demand": security.PermissionType.WRITE | security.PermissionType.EXECUTE,
+                        "method": this.post
+                    }
                 }
+
             ]
         };
     }
@@ -224,9 +234,96 @@ class TransactionApiResource {
      *      security:
      *      - uhc_auth:
      *          - "write:transaction"
+     * /asset/{assetid}/wallet/transaction:
+     *  post:
+     *      tags:
+     *      - "transaction"
+     *      summary: "Posts a new transaction to the asset wallet"
+     *      description: "This method will request that a transaction be posted to the assets's wallet. Note: All requests to this resource require that the token presented be for the {userid} of this wallet. All other requests will fail. To request a payment from another user, use the /contract mechanism"
+     *      consumes: 
+     *      - "application/json"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "assetid"
+     *        in: "path"
+     *        description: "The ID of the asset whose wallet this transaction should be posed to"
+     *        required: true
+     *        type: "string"
+     *      - in: "body"
+     *        name: "body"
+     *        description: "The transaction details"
+     *        required: true
+     *        schema:
+     *          $ref: "#/definitions/Transaction"
+     *      responses:
+     *          201: 
+     *             description: "The requested resource was created successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/Transaction"
+     *          404:
+     *              description: "The specified user cannot be found or the specified user does not have an active wallet"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          422:
+     *              description: "The transaction object sent by the client was rejected due to a business rule violation"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhc_auth:
+     *          - "write:transaction"
      */
     async post(req, res) {
-        throw new exception.NotImplementedException();
+        
+        if(!req.body.type)
+            throw new exception.ArgumentException("type missing");
+        else if(!req.body.payee && !req.body.payeeId)
+            throw new exception.ArgumentException("payee missing");
+        else if(!req.body.test)
+            throw new exception.ArgumentException("test indicator missing");
+        else if(!req.body.amount)
+            throw new exception.ArgumentException("amount missing");
+
+        // Payor corrections
+        var sourceObject = null;
+        if(req.params.uid) 
+            sourceObject = await uhc.Repositories.userRepository.get(req.params.id);
+        else if(req.params.id)
+            sourceObject = await uhc.Repositories.assetRepository.get(req.params.id);
+
+        if(!Array.isArray(req.body))
+            req.body = [req.body];
+        
+        var transactions = await uhc.TokenLogic.createTransaction(req.body.map(o=>new Transaction().copy(o)), sourceObject, req.principal);
+
+        res.status(201).json(retVal);
+
+        return true;
+    }
+
+    /**
+     * @method
+     * @summary Determines additional access control on the user resource
+     * @param {security.Principal} principal The JWT principal data that has authorization information
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to the client
+     * @returns {boolean} An indicator of whether the user has access to the resource
+     */
+    async acl(principal, req, res) {
+
+        if(!(principal instanceof security.Principal)) {
+            uhc.log.error("ACL requires a security principal to be passed");
+            return false;
+        }
+
+        // if the token has OWNER set for USER permission then this user must be SELF
+        return (principal.grant.user & security.PermissionType.OWNER && req.params.uid == principal.session.userId) // the permission on the principal is for OWNER only
+                ^ !(principal.grant.user & security.PermissionType.OWNER); // XOR the owner grant flag is not set.
+                
     }
 }
 

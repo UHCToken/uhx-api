@@ -37,6 +37,7 @@ const pg = require('pg'),
     constructor(connectionString) {
         this._connectionString = connectionString;
         this.get = this.get.bind(this);
+        this.getByPublicKey = this.getByPublicKey.bind(this);
     }
 
     /**
@@ -54,6 +55,30 @@ const pg = require('pg'),
             const rdr = await dbc.query("SELECT * FROM wallets WHERE id = $1", [id]);
             if(rdr.rows.length == 0)
                 throw new exception.NotFoundException('wallet', id);
+            else
+                return new model.Wallet().fromData(rdr.rows[0]);
+        }
+        finally {
+            if(!_txc) dbc.end();
+        }
+
+    }
+
+    /**
+     * @method
+     * @summary Retrieve a specific wallet from the database
+     * @param {string} publicId Gets the specified wallet
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {Wallet} The fetched wallet
+     */
+    async get(publicId, _txc) {
+
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+            const rdr = await dbc.query("SELECT * FROM wallets WHERE address = $1", [publicId]);
+            if(rdr.rows.length == 0)
+                throw new exception.NotFoundException('wallet', publicId);
             else
                 return new model.Wallet().fromData(rdr.rows[0]);
         }

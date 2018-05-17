@@ -44,7 +44,8 @@ const TransactionType = {
     Trust : 3, 
     Refund : 4,
     Deposit: 5,
-    AccountManagement: 6
+    AccountManagement: 6,
+    Airdrop: 7
 };
 
 /**
