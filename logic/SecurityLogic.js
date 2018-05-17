@@ -412,12 +412,11 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
             await uhc.Repositories.transaction(async (_txc) => {
 
                 // Insert the user
-                var web3Client = uhc.Web3Client;
-                var ethWallet = await web3Client.generateAccount()
+
+
                 var stellarClient = uhc.StellarClient;
                 var strWallet = await stellarClient.generateAccount();
                 
-                ethWallet = await uhc.Repositories.walletRepository.insert(ethWallet, principal, _txc);
                 strWallet = await uhc.Repositories.walletRepository.insert(strWallet, principal, _txc);
                 
                 user.walletId = strWallet.id;
@@ -428,12 +427,19 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                 await stellarClient.activateAccount(strWallet, "10",  await uhc.Repositories.walletRepository.get(uhc.Config.stellar.initiator_wallet_id));
                 var coin = await stellarClient.getAssetByCode("RECOIN")
                 await stellarClient.createTrust(strWallet, coin, "1000000")
-
-                ethWallet.userId = retVal.id;
+               
                 strWallet.userId = retVal.id;
+
+                if(uhc.Config.ethereum.enabled){
+                    var web3Client = uhc.Web3Client;
+                    var ethWallet = await web3Client.generateAccount()
+                    ethWallet = await uhc.Repositories.walletRepository.insert(ethWallet, principal, _txc);
+                    ethWallet.userId = retVal.id;
+                    
+                    web3Client.getBalance(ethWallet)
+                    await uhc.Repositories.walletRepository.update(ethWallet, principal, _txc);
+                }
                 
-                web3Client.getBalance(ethWallet)
-                await uhc.Repositories.walletRepository.update(ethWallet, principal, _txc);
                 await uhc.Repositories.walletRepository.update(strWallet, principal, _txc);
                 await uhc.Repositories.groupRepository.addUser(uhc.Config.security.sysgroups.users, retVal.id, principal, _txc);
                 if(!user.emailVerified ){

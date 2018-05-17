@@ -185,10 +185,22 @@
       * @summary Configuration settings related to interaction with the ethereum network
       */
      ethereum: {
-
+     /**
+      * @summary Flag for using ethereum
+      */
+        enabled: false,
+     /**
+      * @summary Geth endpoint
+      */
         geth_server: "http://localhost:8545",
-
-        geth_net_server: "ws://localhost:8546"
+     /**
+      * @summary Web service endpoint for geth
+      */
+        geth_net_server: "ws://localhost:8546",
+        /**
+          * @summary The wallet id to which ethereum is accepted
+          */                          
+         distribution_wallet_address: "0x0000000000000000000000000000000000000000",
      },
      
      /**
