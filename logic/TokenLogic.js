@@ -715,7 +715,7 @@ module.exports = class TokenLogic {
             }
         }
         catch(e) {
-            uhc.log.error(`Error planning airdrop: ${e.message}`);
+            uhc.log.error(`Error planning airdrop: ${e.message} : ${e.stack}`);
             throw new exception.Exception("Error planning airdrop", e.code || exception.ErrorCodes.UNKNOWN, e);
         }
     }
