@@ -654,14 +654,47 @@ module.exports = class TokenLogic {
 
                     // They have a trust line or there are transactions to establish it
                     if(txns.length > 0 || w.balances.find(o=>o.code == dropSpec.amount.code))
-                    // TODO: Fill out amount
+                    {
+                        var amt = null;
+                        switch(dropSpec.distribution.mode) {
+                            case "all":
+                            case "user":
+                                amt = dropSpec.amount;
+                                break;
+                            case "min": {
+                                var bal = w.balances.find(o=>o.code == dropSpec.distribution.min.code);
+                                
+                                if(bal && Number(bal.value) >= Number(dropSpec.distribution.min.value)) 
+                                    amt =  dropSpec.amount;
+                                else
+                                    return;
+
+                                break;
+                            }
+                            case "each": {
+                                var bal = w.balances.find(o=>o.code == dropSpec.distribution.min.code);
+                                if(bal) 
+                                {
+                                    var value = Number(bal.value);
+                                    if(!dropSpec.distribution.allowPartial)
+                                        value = Math.trunc(value);
+                                    value = value * Number(dropSpec.amount.value);
+                                    amt = new MonetaryAmount(value, dropSpec.amount.code);
+                                } 
+                                else
+                                    return;
+                                break;
+                            }
+                        }
                         txns.push(new Transaction(null, model.TransactionType.Deposit, `Airdrop of ${dropSpec.amount.code}`, null, payorWallet, u, amt, new MonetaryAmount(0.0000100, "XLM"), null, model.TransactionStatus.Pending));
+                    }
+
+                    dropSpec.plan.concat(txns);
                 }
 
             // First we want to make sure that drop parameters are valid
             switch(dropSpec.distribution.mode) {
                 case "all":
-                    
                     // All we need is the amount
                     var scanFn = async (ofs) => {
                         var np = await uhc.Repositories.userRepository.query(new User(), ofs, 100)
@@ -670,14 +703,14 @@ module.exports = class TokenLogic {
                             promises.push(scanFn(ofs + 100));
                     };
                     promises.push(scanFn(0));
-
                     break;
-                    
                 case "each": 
                     break;
                 case "min":
                     break;
-                
+                case "user":
+                    promises.concat(dropSpec.payeeId.map(o=> (async (u) => { promises.push(distributeFn(await uhc.Repositories.userRepository.get(u))); })(o)));
+                    break;
             }
         }
         catch(e) {
