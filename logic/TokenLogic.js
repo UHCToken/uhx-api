@@ -328,27 +328,31 @@ module.exports = class TokenLogic {
 
         try {
 
+            var purchase = purchaseInfo;
             // Is this a user purchase or an admin purchase? Clean inputs based on permission level
             if(principal.grant["purchase"] & security.PermissionType.OWNER) // Principal is only allowed to buy for themselves
-                purchaseInfo = new Purchase().copy({
+                purchase = new Purchase().copy({
+                    type: model.TransactionType.Purchase,
                     quoteId: purchaseInfo.quoteId,
                     assetId: purchaseInfo.assetId,
-                    amount: purchaseInfo.amount,
+                    quantity: purchaseInfo.quantity,
                     buyerId: principal.session.userId,
                     state: 1 // PENDING
                 });
             else 
-                purchaseInfo = new Purchase().copy({
+                purchase = new Purchase().copy({
+                    type: model.TransactionType.Purchase,
                     quoteId: purchaseInfo.quoteId, 
                     assetId: purchaseInfo.assetId,
-                    amount: purchaseInfo.amount,
+                    quantity: purchaseInfo.quantity,
                     invoicedAmount: purchaseInfo.invoicedAmount,
                     buyerId: purchaseInfo.buyerId,
-                    escrowTerm: purchaseInfo.escrowTerm,
                     memo: purchaseInfo.memo,
                     state: purchaseInfo.state,
                     distributorWalletId: purchaseInfo.distributorWalletId,
-                    state: purchaseInfo.state || 1
+                    payeeId: purchaseInfo.buyerId,
+                    state: purchaseInfo.state || 1,
+                    escrowTerm: purchaseInfo.escrowTerm
                 });
             
 
@@ -356,67 +360,78 @@ module.exports = class TokenLogic {
             return await uhc.Repositories.transaction(async (_txc) => {
                 
                 // If the purchase is PENDING it needs to be processed - We need a quote and to deduct user account
-                if(purchaseInfo.state == model.PurchaseState.NEW) {
+                if(purchase.state == model.PurchaseState.NEW) {
                     // 1. Does the quote exist and is it still valid? 
-                    var quote = await purchaseInfo.loadQuote(_txc);
-                    var asset = await purchaseInfo.loadAsset(_txc);
+                    var quote = await purchase.loadQuote(_txc);
+                    var asset = await purchase.loadAsset(_txc);
                     if(quote.assetId != asset.id)
-                        throw new exception.BusinessRuleViolationException(new exception.RuleViolation(`Quote asset ${quote.assetId} does not match purchase order asset ${purchaseInfo.assetId}`, exception.ErrorCodes.DATA_ERROR, exception.RuleViolationSeverity.error));
+                        throw new exception.BusinessRuleViolationException(new exception.RuleViolation(`Quote asset ${quote.assetId} does not match purchase order asset ${purchase.assetId}`, exception.ErrorCodes.DATA_ERROR, exception.RuleViolationSeverity.error));
                     else if(quote.expiry < new Date())
                         throw new exception.BusinessRuleViolationException(new exception.RuleViolation(`Quote is expired`, exception.ErrorCodes.EXPIRED, exception.RuleViolationSeverity.error));
                     // 2. Set the invoice amount
-                    if(!purchaseInfo.invoicedAmount || !purchaseInfo.invoicedAmount.code && !purchaseInfo.invoicedAmount.value)
-                        purchaseInfo.invoicedAmount = new MonetaryAmount(purchaseInfo.amount * quote.rate.value, quote.rate.code);
+                    if(!purchase.invoicedAmount || !purchase.invoicedAmount.code && !purchase.invoicedAmount.value)
+                        purchase.invoicedAmount = new MonetaryAmount(purchase.quantity * quote.rate.value, quote.rate.code);
 
                     // 2a. Verify buyer is logged in user
-                    var buyer = await purchaseInfo.loadBuyer(_txc);
+                    var buyer = await purchase.loadBuyer(_txc);
                     if(!buyer)
-                        throw new exception.NotFoundException("buyer", purchaseInfo.buyerId);
-                    if(principal.session.userId != purchaseInfo.buyerId)
+                        throw new exception.NotFoundException("buyer", purchase.buyerId);
+                    if(principal.session.userId != purchase.buyerId)
                         throw new exception.Exception(`Cannot process transactions on other user's accounts`, exception.ErrorCodes.SECURITY_ERROR);
 
-                    // 3. Insert 
-                    purchaseInfo = await uhc.Repositories.purchaseRepository.insert(purchaseInfo, principal, _txc);
-
-
-                    // 4. Verify there is an asset sale active
-                    var offering = await uhc.Repositories.assetRepository.getActiveOffer(purchaseInfo.assetId, _txc);
+                    // 3. Verify there is an asset sale active
+                    var offering = await uhc.Repositories.assetRepository.getActiveOffer(purchase.assetId, _txc);
                     if(!offering)
                         throw new exception.Exception(`No current offer is active for this transaction`, exception.ErrorCodes.NO_OFFER);
                     
+
                     // 5. Verify the asset wallet has sufficient balance for the transaction
                     var offerWallet = await uhc.StellarClient.getAccount(await offering.loadWallet(_txc));
                     var sourceBalance = offerWallet.balances.find((o)=>o.code == asset.code);
-                    if(!sourceBalance || sourceBalance.value < purchaseInfo.amount) 
+                    if(!sourceBalance || sourceBalance.value < purchase.quantity) 
                         throw new exception.Exception("Not enough assets on offering to fulfill this order", exception.ErrorCodes.INSUFFICIENT_FUNDS);
-                    purchaseInfo.distributorWalletId = offerWallet.id;
+                    purchase.distributorWalletId = offerWallet.id;
 
                     // 6. Are there any limits on the total trade value?
                     var claims = await buyer.loadClaims(_txc);
                     if(claims["kyc.limit"]) {
                         // KYC Limit in USD, get total value of trade
-                        var exchange = await new Bittrex().getExchange({ from: "USDT", to: purchaseInfo.invoicedAmount.code, via: [ "BTC" ]});
-                        if(exchange[0] * purchaseInfo.invoicedAmount.value > claims["kyc.limit"])
-                            throw new exception.BusinessRuleViolationException(new exception.RuleViolation(`The estimated trade value of ${exchange[0] * purchaseInfo.invoicedAmount.value} exceeds this account's AML limit`, exception.ErrorCodes.AML_CHECK, exception.RuleViolationSeverity.ERROR));
+                        var exchange = await new Bittrex().getExchange({ from: "USDT", to: purchase.invoicedAmount.code, via: [ "BTC" ]});
+                        if(exchange[0] * purchase.invoicedAmount.value > claims["kyc.limit"])
+                            throw new exception.BusinessRuleViolationException(new exception.RuleViolation(`The estimated trade value of ${exchange[0] * purchase.invoicedAmount.value} exceeds this account's AML limit`, exception.ErrorCodes.AML_CHECK, exception.RuleViolationSeverity.ERROR));
                     }
                     
-                    // TODO: Should we hold the user interface while this happens?
+                    // 3. Insert purchase as a transaction and as a purchase
+                    purchase._payorWalletId = offerWallet.id;
+                    purchase._payeeWalletId = buyer.walletId;
+                    purchase = await uhc.Repositories.transactionRepository.insert(purchase, principal, _txc);
+                    purchase = await uhc.Repositories.transactionRepository.insertPurchase(purchase, principal, _txc);
+                    
                     // 7. Attempt to execute purchase
-                    purchaseInfo.state = await require("../payment_processor/" + purchaseInfo.invoicedAmount.code)(purchaseInfo, offerWallet);
+                    var linkedTxns = [];
+                    purchase.state = await require("../payment_processor/" + purchase.invoicedAmount.code)(purchase, offerWallet, linkedTxns);
+                    
+                    for(var i in linkedTxns)
+                        await uhc.Repositories.transactionRepository.insert(linkedTxns[i], principal, _txc);
 
                     // 8. Update purchase information
-                    purchaseInfo = await uhc.Repositories.purchaseRepository.update(purchaseInfo, principal, _txc);
+                    purchase = await uhc.Repositories.transactionRepository.update(purchase, principal, _txc);
+                    purchase = await uhc.Repositories.transactionRepository.updatePurchase(purchase, principal, _txc);
 
+                    linkedTxns.push(purchase);
+
+                    return linkedTxns;
                 } 
-                else if(purchaseInfo.state == model.PurchaseState.ACTIVE) // We are just recording an ACTIVE purchase which means we just want to deposit 
+                else if(purchase.state == model.PurchaseState.ACTIVE) // We are just recording an ACTIVE purchase which means we just want to deposit 
                 {
                     // 1. Insert the ACTIVE order
-                    purchaseInfo = await uhc.Repositories.purchaseRepository.insert(purchaseInfo, principal, _txc);
+                    purchase = await uhc.Repositories.transactionRepository.insert(purchase, principal, _txc);
+                    purchase = await uhc.Repositories.transactionRepository.insertPurchase(purchase, principal, _txc);
 
                     // 2. Is the distributor wallet specifically specified?
                     var sourceWallet = null;
-                    if(!purchaseInfo.distributorWalletId) {
-                        var offering = await uhc.Repositories.assetRepository.getActiveOffer(purchaseInfo.assetId, _txc);
+                    if(!purchase.distributorWalletId) {
+                        var offering = await uhc.Repositories.assetRepository.getActiveOffer(purchase.assetId, _txc);
                         if(!offering)
                             throw new exception.Exception(`No current offer is active for this transaction`, exception.ErrorCodes.NO_OFFER);
                         
@@ -424,18 +439,18 @@ module.exports = class TokenLogic {
                         sourceWallet = await offering.loadWallet(_txc);
                     }
                     else 
-                        sourceWallet = await purchaseInfo.loadDistributionWallet(_txc);
+                        sourceWallet = await purchase.loadDistributionWallet(_txc);
 
                     // 3. Verify balance
                     sourceWallet = await uhc.StellarClient.getAccount(sourceWallet);
                     var sourceBalance = sourceWallet.balances.find((o)=>o.code == asset.code);
-                    if(!sourceBalance || sourceBalance.value < purchaseInfo.amount) 
+                    if(!sourceBalance || sourceBalance.value < purchase.quantity) 
                         throw new exception.Exception("Not enough assets on offering to fulfill this order", exception.ErrorCodes.INSUFFICIENT_FUNDS);
-                    purchaseInfo.distributorWalletId = sourceWallet.id;
+                    purchase.distributorWalletId = sourceWallet.id;
 
                     // 4. Load the buyer & asset
-                    var buyer = await purchaseInfo.loadBuyer(_txc);
-                    var asset = await purchaseInfo.loadAsset(_txc);
+                    var buyer = await purchase.loadBuyer(_txc);
+                    var asset = await purchase.loadAsset(_txc);
 
                     // 5. Now just dump the asset into the user's wallet
                     try {
@@ -451,24 +466,25 @@ module.exports = class TokenLogic {
                             buyerWallet = await uhc.StellarClient.createTrust(buyerWallet, asset);
 
                         // Process the payment
-                        var transaction = uhc.StellarClient.createPayment(sourceWallet, buyer, new MonetaryAmount(purchaseInfo.amount, asset.code), purchaseInfo.id, 'hash');
-                        purchaseInfo.state = model.PurchaseState.COMPLETE;
-                        purchaseInfo.ref = transaction.ref;
-                        purchaseInfo.transactionTime = purchaseInfo.transactionTime || new Date();
-                        await uhc.Repositories.purchaseRepository.update(purchaseInfo, principal, _txc);
+                        var transaction = uhc.StellarClient.createPayment(sourceWallet, buyer, new MonetaryAmount(purchase.quantity, asset.code), purchase.id, 'hash');
+                        purchase.state = model.PurchaseState.COMPLETE;
+                        purchase.ref = transaction.ref;
+                        purchase.transactionTime = purchase.transactionTime || new Date();
+                        await uhc.Repositories.transactionRepository.updatePurchase(purchase, principal, _txc);
                     }
                     catch (e) {
                         uhc.log.error(`Error transacting with Stellar network: ${e.message}`);
-                        purchaseInfo.state = model.PurchaseState.REJECT;
-                        purchaseInfo.ref = e.code || exception.ErrorCodes.COM_FAILURE;
-                        await uhc.Repositories.purchaseRepository.update(purchaseInfo, principal, _txc);
+                        purchase.state = model.PurchaseState.REJECT;
+                        purchase.ref = e.code || exception.ErrorCodes.COM_FAILURE;
+                        await uhc.Repositories.transactionRepository.updatePurchase(purchase, principal, _txc);
                         throw e;
                     }
                 }
-                else 
-                    purchaseInfo = await uhc.Repositories.purchaseRepository.insert(purchaseInfo, principal, _txc);
-
-                return purchaseInfo;
+                else  {
+                    purchase = await uhc.Repositories.transactionRepository.insert(purchase, principal, _txc);
+                    purchase = await uhc.Repositories.transactionRepository.insertPurchase(purchase, principal, _txc);
+                }
+                return [purchase];
                     
             });
         }

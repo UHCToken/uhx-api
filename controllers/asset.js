@@ -264,7 +264,9 @@ module.exports.AssetApiResource = class AssetApiResource {
      * @param {Express.Response} res The HTTP response to the client
      */
     async lock(req, res) {
-        throw new exception.NotImplementedException();
+        var asset = await uhc.Repositories.assetRepository.lock(req.params.id, req.principal);
+        res.status(201).json(asset);
+        return true;
     }
 
     /**
@@ -274,7 +276,9 @@ module.exports.AssetApiResource = class AssetApiResource {
      * @param {Express.Response} res The HTTP response to the client
      */
     async unlock(req, res) {
-        throw new exception.NotImplementedException();
+        var asset = await uhc.Repositories.assetRepository.unlock(req.params.id, req.principal);
+        res.status(201).json(asset);
+        return true;
     }
 
     /**

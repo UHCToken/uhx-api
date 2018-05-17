@@ -21,13 +21,14 @@ const pg = require('pg'),
     exception = require('../exception'),
     model = require('../model/model'),
     Purchase = require("../model/Purchase"),
+    Transaction = require("../model/Transaction"),
     security = require('../security');
 
  /**
   * @class 
   * @summary Represents the purchase repository logic
   */
- module.exports = class PurchaseRepository {
+ module.exports = class TransactionRepository {
 
     /**
      * @constructor
@@ -47,18 +48,18 @@ const pg = require('pg'),
      * @summary Retrieve a specific purchase from the database
      * @param {uuid} id Gets the specified purchase
      * @param {Client} _txc The postgresql connection with an active transaction to run in
-     * @returns {Purchase} The fetched purchase
+     * @returns {Transaction} The fetched purchase
      */
     async get(id, _txc) {
 
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM purchase WHERE id = $1", [id]);
+            const rdr = await dbc.query("SELECT * FROM transactions LEFT JOIN purchase USING (id) WHERE id = $1", [id]);
             if(rdr.rows.length == 0)
                 throw new exception.NotFoundException('purchase', id);
             else
-                return new Purchase().fromData(rdr.rows[0]);
+                return new Transaction().fromData(rdr.rows[0]);
         }
         finally {
             if(!_txc) dbc.end();
@@ -69,21 +70,26 @@ const pg = require('pg'),
     
     /**
      * @method
-     * @summary Retrieve a specific purchase from the database by the hash of its id
-     * @param {uuid} idHash The hash of the transaction ID to fetch
+     * @summary Retrieve a specific transaction from the database by the hash of its id
+     * @param {uuid} idHash The hash of the transaction ID or batch to fetch
      * @param {Client} _txc The postgresql connection with an active transaction to run in
-     * @returns {Purchase} The fetched purchase
+     * @returns {Transaction} The fetched purchase
      */
     async getByHash(idHash, _txc) {
 
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM purchase WHERE digest(id::TEXT, 'sha256') = $1", [idHash]);
-            if(rdr.rows.length == 0)
-                return null;
-            else
-                return new Purchase().fromData(rdr.rows[0]);
+            const rdr = await dbc.query("SELECT * FROM transactions LEFT JOIN purchase USING (id) WHERE digest(id::TEXT, 'sha256') = $1 OR digest(batch_id::TEXT, 'sha256') = $1 ORDER BY seq_id", [idHash]);
+            var retVal = rdr.rows.map(r=> {
+                if(r.type_id == "2") {
+                    var p = new Purchase().fromData(r)._fromData(r);
+                    return p;
+                }
+                else
+                    return new Transaction().fromData(r);
+            });
+            return retVal;
         }
         finally {
             if(!_txc) dbc.end();
@@ -98,8 +104,7 @@ const pg = require('pg'),
      * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {Purchase} The fetched purchases
      */
-    async getByUserId(userId, _txc) {
-
+    async getPurchasesByUserId(userId, _txc) {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
@@ -111,21 +116,46 @@ const pg = require('pg'),
         finally {
             if(!_txc) dbc.end();
         }
+    }
 
+    /**
+     * @method
+     * @summary Retrieve all transactions made by a specific user
+     * @param {uuid} userId The identity of the user who was the payor
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {Purchase} The fetched purchases
+     */
+    async getByPayor(userId, _txc) {
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+            const rdr = await dbc.query("SELECT transactions.* FROM transactions " + 
+                " LEFT JOIN users payor ON (payor.wallet_id = transactions.payor_wallet_id) " +
+                " LEFT JOIN users payee ON (payee.wallet_id = transactions.payee_wallet_id) " + 
+                " WHERE payee.id = $1 OR payor.id = $1", [userId]);
+            var retVal = [];
+            rdr.rows.forEach(o=>retVal.push(new Transaction().fromData(o)));
+            return retVal;
+        }
+        finally {
+            if(!_txc) dbc.end();
+        }
     }
 
     /**
      * @method
      * @summary Update the specified purchase
-     * @param {Puarchse} purchase The instance of the purchase that is to be updated
+     * @param {Purchase} purchase The instance of the transaction that is to be updated
      * @param {Principal} runAs The principal that is updating this purchase 
      * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {Purchase} The updated purchase data from the database
      */
-    async update(purchase, runAs, _txc) {
+    async updatePurchase(purchase, runAs, _txc) {
 
         if(!purchase.id)
             throw new exception.Exception("Target object must carry an identifier", exception.ErrorCodes.ARGUMENT_EXCEPTION);
+        else if(!(purchase instanceof Purchase))
+            throw new exception.ArgumentException("purchase");
 
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
@@ -145,8 +175,41 @@ const pg = require('pg'),
             if(!_txc) dbc.end();
         }
     }
-
     
+    
+    /**
+     * @method
+     * @summary Update the specified transaction
+     * @param {Transaction} transaction The instance of the transaction that is to be updated
+     * @param {Principal} runAs The principal that is updating this purchase 
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {Transaction} The updated purchase data from the database
+     */
+    async update(transaction, runAs, _txc) {
+
+        if(!transaction.id)
+            throw new exception.Exception("Target object must carry an identifier", exception.ErrorCodes.ARGUMENT_EXCEPTION);
+
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+
+            // if the transaction is a purchase we need the transaction data not purchase data
+            var dbTransaction = transaction.toTransactionData ? transaction.toTransactionData() : transaction.toData();
+            dbTransaction.updated_by = runAs.session.userId;
+            var updateCmd = model.Utils.generateUpdate(dbTransaction, 'transactions', 'updated_time');
+
+            const rdr = await dbc.query(updateCmd.sql, updateCmd.args);
+            if(rdr.rows.length == 0)
+                throw new exception.Exception("Could not update transaction in data store", exception.ErrorCodes.DATA_ERROR);
+            else
+                return transaction.fromTransactionData ? transaction.fromTransactionData(rdr.rows[0]) : transaction.fromData(rdr.rows[0]);
+        }
+        finally {
+            if(!_txc) dbc.end();
+        }
+    }
+
     /**
      * @method
      * @summary Insert  the specified purchase
@@ -155,12 +218,11 @@ const pg = require('pg'),
      * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {Purchase} The inserted purchase
      */
-    async insert(purchase, runAs, _txc) {
+    async insertPurchase(purchase, runAs, _txc) {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
             var dbPurchase = purchase.toData();
-            delete(dbPurchase.id);
             dbPurchase.created_by = runAs.session.userId;
             var insertCmd = model.Utils.generateInsert(dbPurchase, 'purchase');
 
@@ -169,6 +231,34 @@ const pg = require('pg'),
                 throw new exception.Exception("Could not register purchase in data store", exception.ErrorCodes.DATA_ERROR);
             else
                 return purchase.fromData(rdr.rows[0]);
+        }
+        finally {
+            if(!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Insert  the specified transaction
+     * @param {Transaction} transaction The instance of the transaction that is to be inserted
+     * @param {Principal} runAs The principal that is inserting this transaction
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {Transaction} The inserted purchase
+     */
+    async insert(transaction, runAs, _txc) {
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+            var dbTransaction = transaction.toTransactionData ? transaction.toTransactionData() : transaction.toData();
+            delete(dbTransaction.id);
+            dbTransaction.created_by = runAs.session.userId;
+            var insertCmd = model.Utils.generateInsert(dbTransaction, 'transactions');
+
+            const rdr = await dbc.query(insertCmd.sql, insertCmd.args);
+            if(rdr.rows.length == 0)
+                throw new exception.Exception("Could not register transaction in data store", exception.ErrorCodes.DATA_ERROR);
+            else
+                return transaction.fromTransactionData ? transaction.fromTransactionData(rdr.rows[0]) : transaction.fromData(rdr.rows[0]);
         }
         finally {
             if(!_txc) dbc.end();

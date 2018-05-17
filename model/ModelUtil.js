@@ -90,7 +90,7 @@ module.exports = class ModelUtil {
                     if(dbModel[k].indexOf("*") > -1)
                     {
                         op = "ILIKE";
-                        dbModel[k] = dbModel[k].replace('*', '%');
+                        dbModel[k] = dbModel[k].replace(/\*/g, '%');
                     }
                     whereClause += `${k} ${op} $${parmId++} AND `;
                     parameters.push(dbModel[k]);

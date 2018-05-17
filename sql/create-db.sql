@@ -344,6 +344,7 @@ INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('
 INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('330d2fb4-ba61-4b48-a0a1-8162a4708e96', '5245dff0-9b79-4ddb-b3bd-9dd733afd678', 31);
 INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('330d2fb4-ba61-4b48-a0a1-8162a4708e96', '20a97388-5b6a-43e7-ac07-911ceee7e0d6', 11);
 INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('330d2fb4-ba61-4b48-a0a1-8162a4708e96', '76818f0a-2caa-4c46-83f5-064248001821', 4);
+INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('330d2fb4-ba61-4b48-a0a1-8162a4708e96', '5e61b3dd-6b06-43d7-9d7f-839b30b6c496', 31);
 
 -- CREATE A TEST USER
 INSERT INTO users (name, password, email) VALUES ('bob@test.com',crypt('Test123', gen_salt('bf')), 'bob@test.com');

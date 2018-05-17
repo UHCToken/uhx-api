@@ -18,13 +18,14 @@
  */
 
 
-const ModelBase = require('./ModelBase'),
+const Transaction = require('./Transaction'),
     uhc = require("../uhc"),
     MonetaryAmount = require("./MonetaryAmount"),
     AssetQuote = require("./AssetQuote"),
     Asset = require("./Asset"),
     Wallet = require("./Wallet"),
     User = require("./User");
+    
 
 /**
  * @class
@@ -60,7 +61,7 @@ const ModelBase = require('./ModelBase'),
  *          asset:
  *              $ref: "#/definitions/Asset"
  *              description: The asset which was bought
- *          amount:
+ *          quantity:
  *              type: number
  *              description: The amount of the asset that was purchased
  *          memo:
@@ -119,13 +120,14 @@ const ModelBase = require('./ModelBase'),
  *                  - 4: REJECT - The transaction was rejected (payment refused)
  *                  - 5: HOLD - The transaction is in escrow until further notice
  */
-module.exports = class Purchase extends ModelBase {
+module.exports = class Purchase extends Transaction {
 
     /**
      * @constructor
      */
     constructor() {
         super();
+        this.type = 2;
         this.toData = this.toData.bind(this);
         this.fromData = this.fromData.bind(this);
         this.loadAsset = this.loadAsset.bind(this);
@@ -145,18 +147,13 @@ module.exports = class Purchase extends ModelBase {
         this.quoteId = dbPurchase.quote_id;
         this.invoicedAmount = new MonetaryAmount(dbPurchase.charge_amount, dbPurchase.charge_currency);
         this.assetId = dbPurchase.asset_id;
-        this.amount = dbPurchase.amount;
-        this.memo = dbPurchase.memo;
-        this.ref = dbPurchase.ref;
-        this.escrowInfo = dbPurchase.escrow;
-        this.escrowTerm = dbPurchase.escrow_time;
+        this.quantity = dbPurchase.amount;
         this.creationTime = dbPurchase.creation_time;
         this.createdBy = dbPurchase.created_by;
         this.updatedTime = dbPurchase.updated_time;
         this.updatedBy = dbPurchase.updated_by;
         this.state = dbPurchase.state;
         this.distributorWalletId = dbPurchase.dist_wallet_id;
-        this.transactionTime = dbPurchase.transaction_time;
         return this;
     }
 
@@ -172,18 +169,30 @@ module.exports = class Purchase extends ModelBase {
             charge_amount: this.invoicedAmount.value,
             charge_currency: this.invoicedAmount.code,
             asset_id: this.assetId,
-            amount: this.amount,
-            memo: this.memo,
-            ref: this.ref,
-            escrow: this.escrowInfo,
-            escrow_time: this.escrowTerm,
+            amount: this.quantity,
             state: this.state,
-            transaction_time: this.transactionTime,
             dist_wallet_id: this.distributorWalletId
             // tracking fields not updated
         }
     }
 
+    /**
+     * @method
+     * @summary Creates the transaction data
+     */
+    toTransactionData() {
+        return this._toData();
+    }
+
+    /**
+     * @method
+     * @returns {Purchase}
+     * @param {*} dbTransaction The database transaction information
+     */
+    fromTransactionData(dbTransaction) {
+        return this._fromData(dbTransaction);
+    }
+    
     /**
      * @method
      * @summary Load the distributor wallet
@@ -281,7 +290,8 @@ module.exports = class Purchase extends ModelBase {
         retVal.quote = this.quote ? this.quote.stripHiddenFields() : null;
         retVal.createdByUser = this._createdBy ? this._createdBy.stripHiddenFields() : null;
         retVal.updatedByUser = this._updatedBy ? this._updatedBy.stripHiddenFields() : null;
-        
+        retVal.payor = this.payor;
+        retVal.payee = this.payee;
         return retVal;
     }
 }

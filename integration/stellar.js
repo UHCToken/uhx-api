@@ -17,7 +17,7 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
- const Stellar = require('stellar-sdk'),
+const Stellar = require('stellar-sdk'),
     uhc = require("../uhc"),
     model = require("../model/model"),
     Asset = require('../model/Asset'),
@@ -61,13 +61,13 @@ module.exports = class StellarClient {
      */
     constructor(horizonApiBase, stellarAsset, useTestNetwork, feeTarget) {
         // "private" members
-        if (useTestNetwork){
+        if (useTestNetwork) {
             Stellar.Network.useTestNetwork()
         }
-        
+
         this._feeAccount = feeTarget;
         this._asset = stellarAsset;
-        this._server = new Stellar.Server(horizonApiBase); 
+        this._server = new Stellar.Server(horizonApiBase);
         this.round = this.round.bind(this);
         this.activateAccount = this.activateAccount.bind(this);
         this.createPayment = this.createPayment.bind(this);
@@ -103,8 +103,8 @@ module.exports = class StellarClient {
      * @summary Gets the stellar asset(s) this client operates with
      * @type {Stellar.Asset}
      */
-    get assets() { 
-        return !Array.isArray(this._asset) ? [this._asset] : this._asset; 
+    get assets() {
+        return !Array.isArray(this._asset) ? [this._asset] : this._asset;
     }
 
     /**
@@ -120,7 +120,7 @@ module.exports = class StellarClient {
                 seed: kp.secret()
             });
         }
-        catch(e) {
+        catch (e) {
             uhc.log.error(`Account generation has failed : ${JSON.stringify(e)}`);
             throw new StellarException(e);
         }
@@ -135,20 +135,20 @@ module.exports = class StellarClient {
      */
     async setOptions(userWallet, options) {
         try {
-            
+
             uhc.log.info(`setOptions() : Setting options on ${userWallet.address}`);
 
             var userAcct = await this.server.loadAccount(userWallet.address);
-            
+
             // Create the options
             var optionsTx = new Stellar.TransactionBuilder(userAcct)
                 .addOperation(Stellar.Operation.setOptions(options))
-                .build();        
+                .build();
 
             var sourceKey = await Stellar.Keypair.fromSecret(userWallet.seed);
 
             optionsTx.sign(sourceKey);
-            
+
             var optionsResult = await this._server.submitTransaction(optionsTx);
 
             uhc.log.info(`setOptions(): Account ${userWallet.address} options updated on Horizon API`);
@@ -156,7 +156,7 @@ module.exports = class StellarClient {
             return userWallet;
 
         }
-        catch(e) {
+        catch (e) {
             uhc.log.error(`Set account options failed : ${e.message}`);
             throw new StellarException(e);
         }
@@ -172,15 +172,15 @@ module.exports = class StellarClient {
      */
     async createSellOffer(sellerWallet, offer, asset) {
         try {
-            
+
             asset = asset || await offer.loadAsset();
 
             uhc.log.info(`createSellOffer() : Creating offer to sell ${offer.target} @ 1 ${asset.code} @ ${offer.price.value} ${offer.price.code}`);
 
             var sellerAcct = await this.server.loadAccount(sellerWallet.address);
-            
+
             var buyAsset = this.getAssetByCode(offer.buyCode);
-            if(!buyAsset)
+            if (!buyAsset)
                 throw new exception.NotFoundException("asset", offer.buyCode);
 
             // Create the options
@@ -192,15 +192,15 @@ module.exports = class StellarClient {
                     Stellar.Operation.manageOffer({
                         amount: offer.amount,
                         selling: new Stellar.Asset(asset.code, asset.issuer),
-                        buying: this.getAssetByCode(offer.price.code), 
+                        buying: this.getAssetByCode(offer.price.code),
                         offerId: 0,
                         price: offer.price.value
                     })
-                ).build();        
+                ).build();
             var sourceKey = await Stellar.Keypair.fromSecret(sellerWallet.seed);
 
             offerTx.sign(sourceKey);
-            
+
             var offerResult = await this._server.submitTransaction(offerTx);
 
             uhc.log.info(`createSellOffer(): ${sellerWallet.address} offer made on Horizon API`);
@@ -209,7 +209,7 @@ module.exports = class StellarClient {
             return offer;
 
         }
-        catch(e) {
+        catch (e) {
             uhc.log.error(`Create SELL offer failed : ${JSON.stringify(e)}`);
             throw new StellarException(e);
         }
@@ -227,10 +227,10 @@ module.exports = class StellarClient {
             userWallet = await this.getAccount(userWallet);
             return userWallet;
         }
-        catch(e) {
-            if(e.constructor.name == "NotFoundException")
+        catch (e) {
+            if (e.constructor.name == "NotFoundException")
                 return null;
-                
+
             uhc.log.error(`Account retrieval has failed : ${JSON.stringify(e)}`);
             throw new StellarException(e);
         }
@@ -278,7 +278,7 @@ module.exports = class StellarClient {
                 address: kp.publicKey()
             });
         }
-        catch(e) {
+        catch (e) {
             uhc.log.error(`Account creation has failed : ${JSON.stringify(e)}`);
             throw new StellarException(e);
         }
@@ -301,16 +301,16 @@ module.exports = class StellarClient {
             var changeTrustTx = new Stellar.TransactionBuilder(stellarAcct);
 
             // Add trust operations
-            if(asset) {
+            if (asset) {
                 uhc.log.info(`createTrust(): Creating trust for ${asset.code} for ${userWallet.address}`);
                 changeTrustTx.addOperation(Stellar.Operation.changeTrust({
-                    asset : asset instanceof String ? this.getAssetByCode(asset) : new Stellar.Asset(asset.code, asset.issuer),
+                    asset: asset instanceof String ? this.getAssetByCode(asset) : new Stellar.Asset(asset.code, asset.issuer),
                     limit: limit ? "" + limit : undefined,
                     source: userWallet.address
                 }));
             }
             else
-                for(var i in this.assets){
+                for (var i in this.assets) {
                     uhc.log.info(`createTrust(): Creating trust for ${this.assets[i].code} for ${userWallet.address}`);
                     changeTrustTx.addOperation(Stellar.Operation.changeTrust({
                         asset: new Stellar.Asset(this.assets[i].code, this.assets[i].issuer),
@@ -327,12 +327,12 @@ module.exports = class StellarClient {
 
             // Submit transaction
             var distResult = await this.server.submitTransaction(changeTrustTx);
-            
+
             uhc.log.info(`createTrust(): Account ${userWallet.address} trust has been changed`);
 
             return userWallet;
         }
-        catch(e) {
+        catch (e) {
             uhc.log.error(`Account changeTrust has failed: ${JSON.stringify(e)}`);
             throw new StellarException(e);
         }
@@ -349,7 +349,7 @@ module.exports = class StellarClient {
         try {
 
             uhc.log.info(`getAccount(): Get account ${userWallet.address} from Horizon API`);
-            
+
             // Load stellar user acct
             var stellarAcct = await this.server.loadAccount(userWallet.address);
 
@@ -363,13 +363,13 @@ module.exports = class StellarClient {
             });
 
             uhc.log.info(`getAccount(): Account ${userWallet.address} has been loaded from Horizon API`);
-            
+
             // TODO: Should we wrap this?
             return userWallet;
         }
-        catch(e) {
+        catch (e) {
 
-            if(e.data && e.data.status == 404)
+            if (e.data && e.data.status == 404)
                 throw new exception.NotFoundException("wallet", userWallet.id); // soft fail
             uhc.log.error(`Account getAccount has failed: ${JSON.stringify(e)}`);
             throw new StellarException(e);
@@ -382,11 +382,10 @@ module.exports = class StellarClient {
      * @param {Wallet} payorWallet The wallet from which the payment should be made
      * @param {Wallet} payeeWallet The wallet to which the payment should be made
      * @param {MonetaryAmount} amount The amount of the payment
-     * @param {string} memo A memo to add to the transaction
-     * @param {string} memoType The memo type (hash|text)
+     * @param {string} ref The id of the batch or ID that is being used for this payment
      * @returns {Transaction} The transaction information for the operation
      */
-    async createPayment(payorWallet, payeeWallet, amount, memo, memoType) {
+    async createPayment(payorWallet, payeeWallet, amount, ref) {
 
         try {
 
@@ -396,38 +395,28 @@ module.exports = class StellarClient {
 
             // New tx
             var paymentTx = new Stellar.TransactionBuilder(payorStellarAcct);
-            
+
             // Find the asset type
             var assetType = this.getAssetByCode(amount.code);
 
             // Asset type not found
-            if(!assetType)
+            if (!assetType)
                 throw new exception.NotFoundException("asset", amount.code);
 
             // Create payment transaction
             paymentTx.addOperation(Stellar.Operation.payment({
-                    destination: payeeWallet.address, 
-                    asset: assetType,
-                    amount: ""+ amount.value,
-                    source: payorWallet.address
-                }));
+                destination: payeeWallet.address,
+                asset: assetType,
+                amount: "" + amount.value,
+                source: payorWallet.address
+            }));
 
             // Memo field if memo is present
-            if(memo) {
-                var memoObject = null;
-                switch(memoType) {
-                    case "hash":
-                        memoObject = Stellar.Memo.hash(memo);
-                        break;
-                    case "id":
-                        memoObject = Stellar.Memo.id(memo);
-                        break;
-                    default: 
-                        memoObject = Stellar.Memo.text(memo);
-                        break;
-                }
+            if (id) {
+                var memoObject = Stellar.Memo.hash(crypto.createHash('sha256').update(ref).digest('hex'));
                 paymentTx.addMemo(memoObject);
             }
+
             // Sign the transaction
             paymentTx = paymentTx.build();
 
@@ -438,11 +427,11 @@ module.exports = class StellarClient {
             var ref = null;
             var paymentResult = await this.server.submitTransaction(paymentTx);
             uhc.log.info(`Payment ${payorWallet.address} > ${payeeWallet.address} (${amount.value} ${amount.code}) success`);
-            
+
             // Build transaction 
             return new model.Transaction(paymentResult.ledger, new Date(), await payorWallet.loadUser(), await payeeWallet.loadUser(), amount, null, paymentResult._links.transaction.href);
         }
-        catch(e) {
+        catch (e) {
             uhc.log.error(`Account payment has failed: ${e.message}`);
             throw new StellarException(e);
         }
@@ -469,60 +458,60 @@ module.exports = class StellarClient {
             buying.value = this.round(buying.value);
 
             uhc.log.info(`exchangeAsset() : ${sellerWallet.address} > ${buyerWallet.address} [${selling.value} ${selling.code} for ${buying.value} ${buying.code}]`);
-            
+
             // Load payor stellar account
             var sellerStellarAcct = await this.server.loadAccount(sellerWallet.address);
             var buyerStellarAcct = await this.server.loadAccount(buyerWallet.address);
 
             // New tx
             var exchangeTx = new Stellar.TransactionBuilder(sellerStellarAcct, {
-                timebounds: { 
+                timebounds: {
                     minTime: Math.trunc((new Date().getTime() - 10000) / 1000),
                     maxTime: Math.trunc((new Date().getTime() + 10000) / 1000)
                 }
             });
-            
+
             // Find the asset type
             var buyingAsset = this.getAssetByCode(buying.code),
                 sellingAsset = this.getAssetByCode(selling.code);
 
             // Asset type not found
-            if(!buyingAsset)
+            if (!buyingAsset)
                 throw new exception.NotFoundException("asset", buying.code);
-            if(!sellingAsset)
+            if (!sellingAsset)
                 throw new exception.NotFoundException("asset", selling.code);
 
             // Create exchange - Two offers in one TX
-            if(asTrade) 
+            if (asTrade)
                 exchangeTx.addOperation(Stellar.Operation.manageOffer({
-                        source: sellerWallet.address,
-                        selling: sellingAsset,
-                        buying: buyingAsset,
-                        amount: "" + selling.value,
-                        offerId: "0",
-                        price: "" + (buying.value / selling.value)
-                    })).addOperation(Stellar.Operation.manageOffer({
-                        source: buyerWallet.address, 
-                        selling: buyingAsset,
-                        buying: sellingAsset,
-                        amount: "" + buying.value,
-                        offerId:"0", 
-                        price: "" + (selling.value / buying.value) 
-                    }));
-            else 
+                    source: sellerWallet.address,
+                    selling: sellingAsset,
+                    buying: buyingAsset,
+                    amount: "" + selling.value,
+                    offerId: "0",
+                    price: "" + (buying.value / selling.value)
+                })).addOperation(Stellar.Operation.manageOffer({
+                    source: buyerWallet.address,
+                    selling: buyingAsset,
+                    buying: sellingAsset,
+                    amount: "" + buying.value,
+                    offerId: "0",
+                    price: "" + (selling.value / buying.value)
+                }));
+            else
                 exchangeTx.addOperation(Stellar.Operation.payment({
                     source: sellerWallet.address,
                     asset: sellingAsset,
                     destination: buyerWallet.address,
                     amount: "" + selling.value
                 })).addOperation(Stellar.Operation.payment({
-                    source: buyerWallet.address, 
+                    source: buyerWallet.address,
                     asset: buyingAsset,
                     destination: sellerWallet.address,
                     amount: "" + buying.value
                 }));
             // Memo field if memo is present
-            if(ref) {
+            if (ref) {
                 var memoObject = Stellar.Memo.hash(crypto.createHash('sha256').update(ref).digest('hex'));
                 exchangeTx.addMemo(memoObject);
             }
@@ -538,20 +527,21 @@ module.exports = class StellarClient {
             uhc.log.info(`exchangeAsset(): ${sellerWallet.address} > ${buyerWallet.address} (${selling.value} ${selling.code} for ${buying.value} ${buying.code}) is being submitted`);
             var paymentResult = await this.server.submitTransaction(exchangeTx);
             uhc.log.info(`exchangeAsset(): ${sellerWallet.address} > ${buyerWallet.address} (${selling.value} ${selling.code} for ${buying.value} ${buying.code}) success`);
-            
+            // uhc.log.info(JSON.stringify(paymentResult.data));
+
             // Build transaction 
             return new model.Transaction(
-                paymentResult.ledger, 
-                model.TransactionType.Payment,
+                paymentResult.ledger,
+                model.TransactionType.Purchase,
                 null,
-                new Date(), 
-                await sellerWallet.loadUser(), 
-                await buyerWallet.loadUser(), 
-                selling, 
-                null, 
+                new Date(),
+                await sellerWallet.loadUser(),
+                await buyerWallet.loadUser(),
+                selling,
+                null,
                 paymentResult._links.transaction.href);
         }
-        catch(e) {
+        catch (e) {
             uhc.log.error(`Account payment has failed: ${e.message} - ${e.data && e.data.extras ? e.data.extras.result_xdr : null}`);
             throw new StellarException(e);
         }
@@ -564,11 +554,11 @@ module.exports = class StellarClient {
      */
     getAssetByCode(code) {
         // Code is native so it is XLM
-        if(code == "XLM")
+        if (code == "XLM")
             return Stellar.Asset.native();
 
         var retVal = this.assets.find((o) => o.code == code);
-        if(retVal) 
+        if (retVal)
             return new Stellar.Asset(retVal.code, retVal.issuer);
         return null;
     }
@@ -604,33 +594,35 @@ module.exports = class StellarClient {
                 await uhc.Repositories.transaction(async (_txc) => {
                     userMap[userWallet.address] = userWallet._user || await uhc.Repositories.userRepository.getByWalletId(userWallet.id, _txc);
 
-                    for(var rNo in ledgerTx.records) 
-                    {
+                    for (var rNo in ledgerTx.records) {
                         var r = ledgerTx.records[rNo];
                         var ops = await r.operations();
-                        
+
+                        // First, load once through batch 
+                        var dbData = [];
+                        if (r.memo_type == 'hash')
+                            dbData = await uhc.Repositories.transactionRepository.getByHash(Buffer.from(r.memo, 'base64'), _txc);
+
                         // Loop through operations
-                        for(var opNo in ops._embedded.records)
-                        {
+                        for (var opNo in ops._embedded.records) {
                             var o = ops._embedded.records[opNo];
                             try {
-                                if((!filter.asset || o.asset_code == filter.asset) && 
-                                    o.source_account == userWallet.address &&
+                                if ((!filter.asset || o.asset_code == filter.asset) &&
                                     rNo++ >= (filter._offset || 0) && retVal.length < (filter._count || 20)) {
-                                    retVal.push(await this.toTransaction(r, o, userMap, _txc));
+                                    retVal.push(await this.toTransaction(opNo, r, o, dbData, userMap, _txc));
                                 }
                             }
-                            catch(e) {
+                            catch (e) {
                                 uhc.log.error(`Could not fill details on transaction: ${e.message}`);
                             }
                         }
                     }
                 });
-            } while(retVal.length < filter._count && await ledgerTx.next() && ledgerTx.records.length > 0);
+            } while (retVal.length < filter._count && await ledgerTx.next() && ledgerTx.records.length > 0);
 
-            return retVal.filter(o=>o);
+            return retVal.filter(o => o);
         }
-        catch(e) {
+        catch (e) {
             uhc.log.error(`Fetch transaction history has failed: ${e.message}`);
             throw new StellarException(e);
         }
@@ -642,30 +634,23 @@ module.exports = class StellarClient {
      * @summary Creates a transaction object from a Stellar operation
      * @param {Transaction} txRecord The transaction record being processed
      * @param {Operation} opRecord The operation record being processed
+     * @param {Transaction} dbData Data about the batch or transaction loaded from the DB if available
      * @param {*} userMap A map between account IDs and known users that have already been loaded 
      * @param {Client} _txc When present the transaction controller to run data queries on
      */
-    async toTransaction(txRecord, opRecord, userMap, _txc) {
+    async toTransaction(opIndex, txRecord, opRecord, dbData, userMap, _txc) {
 
         // Map type & extra data
         var memo = txRecord.memo;
 
-        var type = null,
-            refData = null;
-        switch(opRecord.type) {
+        var type = null;
+        switch (opRecord.type) {
             case "change_trust":
             case "allow_trust":
                 type = model.TransactionType.Trust;
                 break;
             case "payment":
                 type = model.TransactionType.Payment;
-
-                // Was there a payment / purchase memo?
-                if(txRecord.memo_type == 'hash') // Hash memo 
-                {
-                    refData = await uhc.Repositories.purchaseRepository.getByHash(Buffer.from(txRecord.memo, 'base64'), _txc);
-                    type = model.TransactionType.Purchase;
-                }
                 break;
             case "create_account":
                 type = model.TransactionType.AccountManagement;
@@ -681,29 +666,42 @@ module.exports = class StellarClient {
             payor = userMap[source],
             payee = userMap[destination];
 
-        // Load if needed
-        if(payor === undefined) {
+        // Load blockchain fill data if needed
+        if (payor === undefined) {
             payor = userMap[source] = await uhc.Repositories.userRepository.getByPublicAddress(source, _txc);
-            if(!payee) // is it an asset account or offering?
+            if (!payee) // is it an asset account or offering?
                 payor = userMap[source] = await uhc.Repositories.assetRepository.getByPublicAddress(destination, _txc);
         }
-        if(payee === undefined) {
+        if (payee === undefined) {
             payee = userMap[destination] = await uhc.Repositories.userRepository.getByPublicAddress(destination, _txc);
-            if(!payee) // is it an asset account or offering?
+            if (!payee) // is it an asset account or offering?
                 payee = userMap[destination] = await uhc.Repositories.assetRepository.getByPublicAddress(destination, _txc);
         }
-        // Construct tx record
-        return new Transaction(
-            opRecord.id,
-            type, 
-            memo,
-            txRecord.created_at,
-            payor || source, 
-            payee || destination, 
-            new MonetaryAmount(opRecord.amount || opRecord.starting_balance, opRecord.asset_code || 'XLM'),
-            null, 
-            refData || opRecord._links.self,
-            model.TransactionStatus.Complete
-        );
+
+        // Was there a payment / purchase memo?
+        var retVal = null;
+        if (dbData.length > opIndex) {
+            retVal = dbData[opIndex];
+            retVal._payor = payor || source;
+            retVal._payee = payee || destination;
+            retVal.ref = opRecord._links.self;
+            retVal.postingDate = opRecord.created_at;
+            retVal.amount = new MonetaryAmount(opRecord.amount || opRecord.starting_balance, opRecord.asset_code || 'XLM');
+            return retVal;
+        }
+        else {
+            return new Transaction(
+                null,
+                type,
+                memo,
+                txRecord.created_at,
+                payor || source,
+                payee || destination,
+                new MonetaryAmount(opRecord.amount || opRecord.starting_balance, opRecord.asset_code || 'XLM'),
+                null,
+                opRecord._links.self,
+                model.TransactionStatus.Complete
+            );
+        }
     }
 }

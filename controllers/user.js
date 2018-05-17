@@ -264,7 +264,8 @@ class UserApiResource {
         await user.loadWallet();
 
         // Load balances from blockchain
-        user._wallet = await uhc.StellarClient.isActive(user._wallet) || user._wallet;
+        if(user._wallet)
+            user._wallet = await uhc.StellarClient.isActive(user._wallet) || user._wallet;
         
         await user.loadExternalIds();
         await user.loadClaims();
@@ -345,7 +346,7 @@ class UserApiResource {
         });
         
         var results = await uhc.Repositories.userRepository.query(filterUser, req.query._offset, req.query._count);
-        results.forEach((o)=>{ o.externalIds = null;});
+        results.forEach((o)=>{ o._externalIds = null;});
         res.status(200).json(results);
         return true;
     }
