@@ -86,7 +86,8 @@ module.exports = class WebClient {
             return new Wallet().copy({
                 address: ethWallet.address,
                 seed: ethWallet.privateKey,
-                network: "ETHEREUM"
+                network: "ETHEREUM",
+                networkId: 2
             });
         }
         catch(e) {

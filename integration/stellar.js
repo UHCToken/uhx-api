@@ -118,7 +118,8 @@ module.exports = class StellarClient {
             return new Wallet().copy({
                 address: kp.publicKey(),
                 seed: kp.secret(),
-                network: "STELLAR"
+                network: "STELLAR",
+                networkId: 1
             });
         }
         catch (e) {
