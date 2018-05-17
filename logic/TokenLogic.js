@@ -736,7 +736,7 @@ module.exports = class TokenLogic {
             for(var w in userWallets) {
                 var config = uhc.Config[userWallets[w].network.toLowerCase()];
                 if(config && config.enabled !== false) // must exist and must be explicitly disabled
-                    userWallets[w] = await uhc[config.client.name][config.client.balanceFn](userWallets[w]);
+                    userWallets[w] = await uhc[config.client.name][config.client.balanceFn](userWallets[w]) || userWallets[w];
             }
 
             return userWallets;
