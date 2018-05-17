@@ -62,7 +62,7 @@
         // Now record the payment to DIST for our own copy of records
         transaction.type = model.TransactionType.Payment;
         transaction._payeeWalletId = distributionAccount.id;
-        transaction._payorWalletId = buyer.walletId;
+        transaction._payorWalletId = buyerWallet.id;
         transaction.batchId = orderInfo.batchId;
         transaction.memo = transaction.id; // Ledger identifier
         transaction.transactionTime = new Date();

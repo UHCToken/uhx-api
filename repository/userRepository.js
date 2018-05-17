@@ -303,7 +303,7 @@ const pg = require('pg'),
         const dbc =  _txc ||new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT users.* FROM users WHERE wallet_id = $1", [walletId]);
+            const rdr = await dbc.query("SELECT users.* FROM wallets INNER JOIN users ON (wallets.user_id = users.id) WHERE wallets.id = $1", [walletId]);
             if(rdr.rows.length == 0)
                 return null; // Wallet is an anonymous wallet
             else
@@ -325,7 +325,7 @@ const pg = require('pg'),
         const dbc =  _txc ||new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT users.* FROM users INNER JOIN wallets ON (wallets.id = users.wallet_id) WHERE address = $1", [addr]);
+            const rdr = await dbc.query("SELECT users.* FROM users INNER JOIN wallets ON (wallets.user_id = users.id) WHERE address = $1", [addr]);
             if(rdr.rows.length == 0)
                 return null; // Wallet is an anonymous wallet
             else

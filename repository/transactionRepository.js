@@ -130,8 +130,10 @@ const pg = require('pg'),
         try {
             if(!_txc) await dbc.connect();
             const rdr = await dbc.query("SELECT transactions.* FROM transactions " + 
-                " LEFT JOIN users payor ON (payor.wallet_id = transactions.payor_wallet_id) " +
-                " LEFT JOIN users payee ON (payee.wallet_id = transactions.payee_wallet_id) " + 
+                " LEFT JOIN wallets payor_wallet ON (payor_wallet.id = transactions.payor_wallet_id) " +
+                " LEFT JOIN wallets payee_wallet ON (payee_wallet.id = transactions.payee_wallet_id) " + 
+                " LEFT JOIN wallets payor ON (payor_wallet.user_id = payor.id) " +
+                " LEFT JOIN wallets payee ON (payee_wallet.user_id = payee.id) " + 
                 " WHERE payee.id = $1 OR payor.id = $1", [userId]);
             var retVal = [];
             rdr.rows.forEach(o=>retVal.push(new Transaction().fromData(o)));
