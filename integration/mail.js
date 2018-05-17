@@ -93,7 +93,7 @@ module.exports = class MailWrapper {
         options.text = templateData.text;
         options.html = templateData.html;
         options.from = options.from || this._options.from;
-        options.cc = "justin.fyfe1@mohawkcollege.ca";
+        //options.cc = "justin.fyfe1@mohawkcollege.ca";
         var transport = nodemailer.createTransport(this._options.smtp);
         await transport.sendMail(options);
         uhc.log.info(`E-Mail has successfully been sent to ${options.to}`);

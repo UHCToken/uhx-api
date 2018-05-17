@@ -38,8 +38,7 @@
     helmet = require('helmet'),
     http = require('http');
     
-
-
+    toobusy.maxLag(10000);
 // Startup application
 const app = express();
 app.use(bodyParser.json())

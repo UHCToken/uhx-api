@@ -64,6 +64,8 @@ const pg = require('pg'),
 
     }
 
+
+
     /**
      * @method
      * @summary Retrieve a specific wallet from the database
@@ -102,7 +104,31 @@ const pg = require('pg'),
             if(!_txc) await dbc.connect();
             const rdr = await dbc.query("SELECT wallets.* FROM wallets INNER JOIN users ON (users.wallet_id = wallets.id) WHERE users.id = $1", [userId]);
             if(rdr.rows.length == 0)
-                throw new exception.NotFoundException('wallet', id);
+                throw new exception.NotFoundException('wallet', userId);
+            else
+                return new model.Wallet().fromData(rdr.rows[0]);
+        }
+        finally {
+            if(!_txc) dbc.end();
+        }
+
+    }
+
+        /**
+     * @method
+     * @summary Retrieve all wallets for a user from the database
+     * @param {uuid} userId The identity of the user to retrieve
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {Wallet} The fetched wallet(s)
+     */
+    async getTypeForUserByUserId(userId, network, _txc) {
+
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+            const rdr = await dbc.query("SELECT wallets.* FROM wallets WHERE wallets.user_id = $1 AND wallets.network = $2", [userId, network]);
+            if(rdr.rows.length == 0)
+                throw new exception.NotFoundException('wallet', userId);
             else
                 return new model.Wallet().fromData(rdr.rows[0]);
         }
@@ -152,6 +178,7 @@ const pg = require('pg'),
      */
     async insert(wallet, runAs, _txc) {
         const dbc = _txc || new pg.Client(this._connectionString);
+        console.log(wallet)
         try {
             if(!_txc) await dbc.connect();
             var dbWallet = wallet.toData();

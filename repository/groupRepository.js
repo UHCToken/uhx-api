@@ -279,9 +279,9 @@ module.exports = class GroupRepository {
             throw new exception.Exception("groupId is required", exception.ErrorCodes.ARGUMENT_EXCEPTION);
         if(!userId)
             throw new exception.Exception("userId is required", exception.ErrorCodes.ARGUMENT_EXCEPTION);
-        if(!runAs || !(runAs instanceof security.Principal))
+        /*if(!runAs || !(runAs instanceof security.Principal))
             throw new exception.Exception("runAs must be principal and must be supplied", exception.ErrorCodes.ARGUMENT_EXCEPTION);
-
+        */
         var dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
