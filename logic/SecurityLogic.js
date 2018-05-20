@@ -410,41 +410,30 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
             this.validateUser(user, password);
             await uhc.Repositories.transaction(async (_txc) => {
 
+                // TODO: Refactor this for each accepted network
+
                 // Insert the user
-
-
                 var stellarClient = uhc.StellarClient;
                 var strWallet = await stellarClient.generateAccount();
-                
-                strWallet = await uhc.Repositories.walletRepository.insert(strWallet, principal, _txc);
-                
-                user.walletId = strWallet.id;
-
                 var retVal = await uhc.Repositories.userRepository.insert(user, password, principal, _txc);
-                
-                //HACK: This is temporary until a better workflow for wallet funding is decided
-                await stellarClient.activateAccount(strWallet, "10",  await uhc.Repositories.walletRepository.get(uhc.Config.stellar.initiator_wallet_id));
-                var coin = await stellarClient.getAssetByCode("RECOIN")
-                await stellarClient.createTrust(strWallet, coin, "1000000")
-               
                 strWallet.userId = retVal.id;
+                strWallet = await uhc.Repositories.walletRepository.insert(strWallet, principal, _txc);
 
+                // Etherium 
                 if(uhc.Config.ethereum.enabled){
                     var web3Client = uhc.Web3Client;
                     var ethWallet = await web3Client.generateAccount()
-                    ethWallet = await uhc.Repositories.walletRepository.insert(ethWallet, principal, _txc);
                     ethWallet.userId = retVal.id;
-                    
-                    web3Client.getBalance(ethWallet)
-                    await uhc.Repositories.walletRepository.update(ethWallet, principal, _txc);
+                    ethWallet = await uhc.Repositories.walletRepository.insert(ethWallet, principal, _txc);
+                    await web3Client.getBalance(ethWallet)
                 }
-                
-                await uhc.Repositories.walletRepository.update(strWallet, principal, _txc);
+
+                // Add user
                 await uhc.Repositories.groupRepository.addUser(uhc.Config.security.sysgroups.users, retVal.id, principal, _txc);
                 if(!user.emailVerified ){
                     await this.sendConfirmationEmail(user, _txc);
                 }
-                if(user.tel)
+                if(user.tel && !user.telVerified)
                     await this.sendConfirmationSms(user, _txc);
                 return retVal;
             });

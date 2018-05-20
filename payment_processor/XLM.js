@@ -39,7 +39,14 @@
     // Step 1. We want to ensure that the buyer has sufficient XLM
     var asset = await orderInfo.loadAsset();
     var buyer = await orderInfo.loadBuyer();
-    var buyerWallet = await uhc.StellarClient.getAccount(await buyer.loadStellarWallet());
+    var buyerWallet = await uhc.StellarClient.isActive(await buyer.loadStellarWallet());
+
+    // Buyer is attempting to buy but their acct is not even active!
+    if(!buyerWallet) {
+        orderInfo.memo = exception.ErrorCodes.INVALID_ACCOUNT;
+        return model.PurchaseState.REJECT;
+    }
+
     var sourceBalance = buyerWallet.balances.find(o=>o.code == orderInfo.invoicedAmount.code);
     if(!sourceBalance || sourceBalance.value < Number(orderInfo.invoicedAmount.value) + (1 + (buyerWallet.balances.length) * 0.5)) // Must carry min balance
     {
