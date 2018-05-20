@@ -151,18 +151,19 @@
     /**
      * @summary Load the distributor wallet from the database
      */
-    async loadDistributorWallet() {
+    async loadDistributorWallet(_txc) {
         if(!this._distWallet)
-            this._distWallet = uhc.Repositories.walletRepository.get(this._distWalletId);
+            this._distWallet = await uhc.Repositories.walletRepository.get(this._distWalletId, _txc);
         return this._distWallet;
     }
 
     /**
      * @summary Load sales information
+     * @returns {Offer}
      */
-    async loadOffers() {
+    async loadOffers(_txc) {
         if(!this._offerInfo)
-            this._offerInfo = uhc.Repositories.assetRepository.getOffers(this.id);
+            this._offerInfo = await uhc.Repositories.assetRepository.getOffers(this.id, _txc);
         return this._offerInfo;
     }
 
@@ -174,5 +175,17 @@
         var retVal = this.stripHiddenFields();
         retVal.offers = this._offerInfo;
         return retVal;
+    }
+
+    /**
+     * @method 
+     * @summary Returns a summary object
+     */
+    summary() {
+        return new Asset().copy({
+            id: this.id,
+            code: this.code,
+            issuer: this.issuer
+        });
     }
  }

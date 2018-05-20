@@ -37,11 +37,29 @@
  */
 const TransactionType = {
     Payment : 1,
-    Trust : 2, 
-    Refund : 3,
-    Deposit: 4,
-    AccountManagement: 5
+    /**
+     * @summary Represents a purchase of an asset from the central distribution
+     */
+    Purchase : 2,
+    Trust : 3, 
+    Refund : 4,
+    Deposit: 5,
+    AccountManagement: 6,
+    Airdrop: 7
 };
+
+/**
+ * @enum
+ * @summary Identifies the purchase state
+ */
+const PurchaseState = {
+    NEW: 1, 
+    COMPLETE: 2,
+    CANCEL: 3,
+    REJECT: 4,
+    HOLD: 5,
+    ACTIVE: 6
+}
 
 /**
  * @enum
@@ -66,3 +84,4 @@ module.exports.MonetaryAmount = MonetaryAmount;
 module.exports.Transaction = Transaction;
 module.exports.TransactionType = TransactionType;
 module.exports.TransactionStatus = TransactionStatus;
+module.exports.PurchaseState = PurchaseState;

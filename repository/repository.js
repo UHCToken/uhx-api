@@ -25,7 +25,10 @@ const UserRepository = require('./userRepository'),
     GroupRepository = require('./groupRepository'),
     AssetRepository = require('./assetRepository'),
     InvitationRepository = require('./invitationRepository'),
+    TransactionRepository = require('./transactionRepository'),
+    ReportRepository = require('./reportRepository'),
     pg = require('pg'),
+    uhc = require('../uhc'),
     exception = require('../exception');
 
 /**
@@ -71,7 +74,7 @@ class UhcRepositories {
         catch(e) {
             await dbc.query("ROLLBACK");
             uhc.log.error(`Rolling back transaction due to: ${e.message}`);
-            throw new exception.Exception("Database transaction failed", exception.ErrorCodes.DATA_ERROR, e);
+            throw new exception.Exception("Database transaction failed", e.constructor.name == "BusinessRuleViolationException" ? exception.ErrorCodes.RULES_VIOLATION : exception.ErrorCodes.DATA_ERROR, e);
         }
         finally {
             dbc.end();
@@ -87,6 +90,28 @@ class UhcRepositories {
         if(!this._userRepository)
             this._userRepository = new UserRepository(this.connectionString);
         return this._userRepository;
+    }
+
+    /**
+     * @property
+     * @summary Gets the report repository
+     * @type {ReportRepository}
+     */
+    get reportRepository() {
+        if(!this._reportRepository)
+            this._reportRepository = new ReportRepository(this.connectionString);
+        return this._reportRepository;
+    }
+
+    /**
+     * @property 
+     * @summary Get the purchase repository
+     * @type {TransactionRepository}
+     */
+    get transactionRepository() {
+        if(!this._transactionRepository)
+            this._transactionRepository = new TransactionRepository(this.connectionString);
+        return this._transactionRepository;
     }
 
     /**

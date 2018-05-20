@@ -1,3 +1,4 @@
+
 'use strict';
 
 /**
@@ -22,6 +23,8 @@ const uhc = require('../uhc'),
     MonetaryAmount = require('./MonetaryAmount'),
     User = require('./User'),
     ModelBase = require('./ModelBase');
+
+const uuidRegex = /[A-F0-9]{8}-(?:[A-F0-9]{4}\-){3}[A-F0-9]{12}/i;
 
 /**
  * @class
@@ -53,10 +56,10 @@ const uhc = require('../uhc'),
  *              description: The date that this transaction was posted
  *          payorId:
  *              type: string    
- *              description: The identity of the user which made the payment
+ *              description: The identity of the user or public address which made the payment
  *          payeeId:
  *              type: string
- *              description: The identity of the user which was paid
+ *              description: The identity of the user or public address which was paid
  *          payor:
  *              $ref: "#/definitions/User"
  *              description: On transaction detail, contains the detailed user information for the payor
@@ -69,7 +72,7 @@ const uhc = require('../uhc'),
  *          fee:
  *              $ref: "#/definitions/MonetaryAmount"  
  *              description: If present, indicates any fees that were collected for the transaction
- *          status:
+ *          state:
  *              type: number
  *              description: The status of the transaction
  *              enum:
@@ -79,6 +82,19 @@ const uhc = require('../uhc'),
  *          ref:
  *              type: string
  *              description: A reference to the transaction. Can be a link or source information contained on the transaction. 
+ *          escrowInfo:
+ *              type: string
+ *              description: A reference to a stellar escrow account which is being used to hold the distributed funds
+ *          escrowTerm:
+ *              type: string
+ *              description: The term that the escrow was established under (90 DAY, 120 DAY, etc.)
+ *              enum:
+ *                  - '0 DAY'
+ *                  - '15 DAY'
+ *                  - '30 DAY'
+ *                  - '60 DAY'
+ *                  - '90 DAY'
+ *                  - '120 DAY'
  */
 module.exports = class Transaction extends ModelBase {
 
@@ -92,22 +108,64 @@ module.exports = class Transaction extends ModelBase {
      * @param {User} payee The user or userId of the user which received the fee
      * @param {MonetaryAmount} amount The amount of the transaction
      * @param {MonetaryAmount} fee The fee collected or processed on the transaction
-     * @param {TransactionStatus} status The status of the transaction
+     * @param {Number} status The status of the transaction
      * @param {*} ref A reference object
      */
-    constructor(id, type, memo, postingDate, payor, payee, amount, fee, ref, status) {
+    constructor(id, type, memo, postingDate, payor, payee, amount, fee, ref, state) {
         super();
         this.id = id;
         this.postingDate = postingDate;
         this.type = type;
         this.memo = memo;
-        this._payor = payor instanceof User ? payor : null;
-        this.payorId = payor instanceof User ? payor.id : payor;
-        this._payee = payee instanceof User ? payee : null;
-        this.payeeId = payee instanceof User ? payee.id : payee;
+
+        // Payor details
+        if(payor)
+            switch(payor.constructor.name) {
+                case "Wallet":
+                    this._payorWalletId = payor.id;
+                    this.payorId = payor.address;
+                    break;
+                case "User":
+                    this._payorWalletId = payor.walletId;
+                    this.payorId =  payor.id;
+                    this._payor = payor;
+                    break;
+                case "Asset":
+                    this._payorWalletId = payor._distWalletId;
+                    this.payorId =  payor.id;
+                    this._payor = payor;
+                    break;
+                case "String":
+                    this.payorId = payor;
+                    break;
+            }
+
+        // Payee details
+        if(payee)
+          switch(payee.constructor.name) {
+                case "Wallet":
+                    this._payeeWalletId = payee.id;
+                    this.payeeId = payee.address;
+                    break;
+                case "User":
+                    this._payeeWalletId = payee.walletId;
+                    this.payeeId = payee.id;
+                    this._payee = payee;
+                    break;
+                case "Asset":
+                    this._payeeWalletId = payee._distWalletId;
+                    this.payeeId = payee.id;
+                    this._payee = payee;
+                    break;   
+                case "String":
+                    this.payeeId = payee;
+                    break;
+            }
+
         this.amount = amount;
         this.fee = fee;
         this.ref = ref;
+        this.state = state || 2;
     }
 
     /**
@@ -129,9 +187,11 @@ module.exports = class Transaction extends ModelBase {
      * @returns {User} The payor of the transaction
      * @summary Loads the payor from the UHC database
      */
-    async loadPayor() {
-        if(!this._payor)
-            this._payor = await uhc.Repositories.userRepository.get(this.payorId);
+    async loadPayor(_txc) {
+        if(!this._payor && this.payorId)
+            this._payor = await uhc.Repositories.userRepository.get(this.payorId, _txc);
+        else if(!this._payor && this._payorWalletId)
+            this._payor = await uhc.Repositories.userRepository.getByWalletId(this._payorWalletId, _txc);
         return this._payor;
     }
 
@@ -140,9 +200,11 @@ module.exports = class Transaction extends ModelBase {
      * @returns {User} The payee of the transaction
      * @summary Loads the payee from the UHC database
      */
-    async loadPayee() {
-        if(!this._payee)
-            this._payee = await uhc.Repositories.userRepository.get(this.payeeId);
+    async loadPayee(_txc) {
+        if(!this._payee && this.payeeId)
+            this._payee = await uhc.Repositories.userRepository.get(this.payeeId, _txc);
+        else if(!this._payee && this._payeeWalletId)
+            this._payee = await uhc.Repositories.userRepository.getByWalletId(this._payorWalletId, _txc);
         return this._payee;
     }
 
@@ -157,4 +219,63 @@ module.exports = class Transaction extends ModelBase {
         return retVal;
     }
 
+    /**
+     * @summary
+     * @returns {Transaction} The parsed transaction
+     * @param {*} dbTransaction Convert this transaction from database
+     */
+    fromData(dbTransaction) {
+        return this._fromData(dbTransaction);
+    }
+
+    /**
+     * @method 
+     * @summary Translate from data layer to class layer
+     * @param {*} dbTransaction The database transaction to convert from
+     */
+    _fromData(dbTransaction) {
+
+        this.id = dbTransaction.id;
+        this._payeeWalletId = dbTransaction.payee_wallet_id;
+        this._payorWalletId = dbTransaction.payor_wallet_id;
+        this.type = dbTransaction.type_id;
+        this.batchId = dbTransaction.batch_id;
+        this.memo = dbTransaction.memo;
+        this.ref = dbTransaction.ref;
+        this.escrowInfo = dbTransaction.escrow;
+        this.escrowTerm = dbTransaction.escrow_time;
+        this.creationTime = dbTransaction.creation_time;
+        this.createdBy = dbTransaction.created_by;
+        this.updatedTime = dbTransaction.updated_time;
+        this.updatedBy = dbTransaction.updated_by;
+        this.postingDate = dbTransaction.transaction_time;
+        return this;
+    }
+
+    /**
+     * @method
+     * @summary Converts this transaction to database format
+     */
+    toData() {
+        return this._toData();
+    }
+
+    /**
+     * @method
+     * @summary Convert internal representation to data
+     */
+    _toData() {
+        return {
+            id: this.id,
+            payee_wallet_id: this._payeeWalletId,
+            payor_wallet_id: this._payorWalletId,
+            type_id: this.type,
+            batch_id : this.batchId,
+            memo: this.memo,
+            ref : this.ref,
+            escrow: this.escrowInfo,
+            escrow_time: this.escrowTerm,
+            transaction_time: this.postingDate
+        };
+    }
 }

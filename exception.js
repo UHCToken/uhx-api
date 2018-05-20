@@ -41,7 +41,13 @@
     DUPLICATE_NAME : "ERR_DUPLICATE_NAME",
     COM_FAILURE: "ERR_COMMUNICATIONS_FAILURE",
     API_RATE_EXCEEDED : "ERR_RATE_LIMIT_EXCEEDED",
-    DATA_ERROR: "ERR_DATA_STOR"
+    DATA_ERROR: "ERR_DATA_STOR",
+    TFA_REQUIRED: "WRN_TFA_REQUIRED",
+    TFA_FAILED: "ERR_TFA_FAILURE",
+    NO_OFFER: "ERR_NO_CURRENT_OFFER",
+    ASSET_LOCKED: "ERR_ASSET_LOCK",
+    AML_CHECK: "ERR_AML_LIMIT_EXCEED",
+    EXPIRED: "ERR_EXPIRED"
  }
 
  /**
@@ -111,10 +117,13 @@
          return this._code;
      }
      toJSON() {
+         if(Array.isArray(this._cause))
+            this._cause = this._cause.filter(o=>o);
+            
          return {
              message:this._message,
              code:this._code,
-             cause:this._cause
+             cause:this._cause && (!Array.isArray(this._cause) ^ this._cause.length) ? this._cause : null
          };
      }
  }
@@ -129,8 +138,8 @@
       * @constructor
       * @summary Constructs a new not implemented exception
       */
-    constructor() {
-        super("Not Implemented", ErrorCodes.NOT_IMPLEMENTED);
+    constructor(message) {
+        super(message || "Not Implemented", ErrorCodes.NOT_IMPLEMENTED);
     }
  }
 

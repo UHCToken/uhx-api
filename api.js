@@ -18,7 +18,7 @@
  */
 
 // HTTP operations that are premitted
-const ALLOWED_OPS = [ 'use', 'options', 'get', 'post', 'put', 'delete' ];
+const ALLOWED_OPS = [ 'use', 'options', 'get', 'post', 'put', 'delete', 'lock', 'unlock' ];
 
 const uhc = require("./uhc"),
     security = require("./security"),

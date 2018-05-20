@@ -23,6 +23,7 @@ const pg = require('pg'),
     security = require('../security'),
     model = require('../model/model'),
     Asset = require('../model/Asset'),
+    AssetQuote = require('../model/AssetQuote'),
     Offer = require('../model/Offer');
 
 /**
@@ -48,6 +49,9 @@ module.exports = class AsssetRepository {
         this.getOffers = this.getOffers.bind(this);
         this.getActiveOffer = this.getActiveOffer.bind(this);
         this.updateOffer = this.updateOffer.bind(this);
+        this.insertQuote = this.insertQuote.bind(this);
+        this.getQuote = this.getQuote.bind(this);
+        this.getByPublicAddress = this.getByPublicAddress.bind(this);
     }
 
     /**
@@ -166,6 +170,14 @@ module.exports = class AsssetRepository {
                 throw new exception.Exception("Could not insert asset offer", exception.ErrorCodes.DATA_ERROR);
             else
                 return offer.fromData(rdr.rows[0]); 
+        }
+        catch(e) {
+            switch(e.constraint || null) {
+                case "ck_asset_sale_sell":
+                    throw new exception.BusinessRuleViolationException(new exception.RuleViolation(`Start date exceeds stop date of offer for ${JSON.stringify(offer.price)}`, exception.ErrorCodes.ARGUMENT_EXCEPTION, exception.RuleViolationSeverity.ERROR));
+                default:
+                    throw e;
+            }
         }
         finally {
             if (!_txc) dbc.end();
@@ -304,6 +316,33 @@ module.exports = class AsssetRepository {
 
     /**
      * @method
+     * @summary Gets the specified asset by ID
+     * @param {string} addr The public address of the asset to get
+     * @param {Client} _txc When present, the database transaction to use
+     * @returns {Asset} The asset with identifier matching
+     */
+    async getByPublicAddress(addr, _txc) {
+        var dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+
+            // Get by ID
+            var rdr = await dbc.query("SELECT DISTINCT assets.* FROM wallets " +
+                    "LEFT JOIN asset_offer ON (wallet_id = wallets.id) " +
+                    "LEFT JOIN assets ON (asset_offer.asset_id = assets.id OR wallets.id = assets.dist_wallet_id) " + 
+                    "WHERE assets.id IS NOT NULL AND address = $1", [addr]);
+            if (rdr.rows.length == 0)
+                return null;
+            else
+                return new Asset().fromData(rdr.rows[0]);
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
      * @summary Get the specified asset by code
      * @param {Asset} filter The filter to query on
      * @param {number} offset The offset to start filter on
@@ -333,6 +372,51 @@ module.exports = class AsssetRepository {
         }
         finally {
             if (!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Inserts the specified quote into the database
+     * @param {AssetQuote} quote The quote to be inserted into the database
+     * @param {Client} _txc When present, the transaction to run as
+     */
+    async insertQuote(quote, _txc) {
+        var dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+            
+            var insertCmd = model.Utils.generateInsert(quote, "asset_quote");
+            var rdr = await dbc.query(insertCmd.sql, insertCmd.args);
+            if(rdr.rows.length == 0)
+                throw new exception.Exception("Could not insert the asset quote", exception.ErrorCodes.DATA_ERROR);
+            else 
+                return quote.fromData(rdr.rows[0]);
+        }
+        finally { 
+            if(!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @summary
+     * @method Retrieves the specified quote from the database
+     * @param {string} quoteId The ID of the quote to retrieve
+     * @param {Client} _txc When present, the transaction to run as
+     */
+    async getQuote(quoteId, _txc) {
+        var dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+            
+            var rdr = await dbc.query(`SELECT * FROM asset_quote WHERE id = $1`, [quoteId]);
+            if(rdr.rows.length == 0)
+                throw new exception.Exception("Could not get the asset quote", exception.ErrorCodes.DATA_ERROR);
+            else 
+                return new AssetQuote().fromData(rdr.rows[0]);
+        }
+        finally { 
+            if(!_txc) dbc.end();
         }
     }
 }

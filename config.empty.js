@@ -90,6 +90,22 @@
           * @summary Refresh vailidity in ms
           */
          refreshValidity: 30000000,
+        /**
+         * @summary Specifies the amount of time a validation method is given
+         */
+        confirmationValidity: 400000000,
+         /**
+          * @summary The validity period for password resets
+          */
+         resetValidity:  30000000,
+         /**
+          * @summary The validity of a TFA code
+          */
+         tfaValidity: 300000,
+         /**
+          * @summary Confirmation validatity
+          */
+         confirmationValidity: 300000,
          /**
           * @summary Maximum failed login attempts
           */
@@ -143,6 +159,13 @@
       * @summary Configuration settings related to interaction with the stellar network
       */
      stellar: {
+        /**
+         * @summary Etherium client name
+         */
+        client: {
+            name: 'StellarClient',
+            balanceFn: 'getAccount'
+        },
          /**
           * @summary The wallet from which the initial balance of XLM should be retrieved
           */
@@ -162,8 +185,42 @@
         /**
          * @summary The home domain where the stellar TOML file is hosted
          */
-        home_domain: "?.cooldomain.com"
+        home_domain: "?.cooldomain.com",
+        /**
+         * @summary When using market rate quotes the validity of the offer.
+         */
+        market_offer_validity: 60000,
      },
+
+     /**
+      * @summary Configuration settings related to interaction with the ethereum network
+      */
+     ethereum: {
+         /**
+          * @summary Etherium client name
+          */
+         client: {
+            name: 'Web3Client',
+            balanceFn: 'getBalance'
+        },
+     /**
+      * @summary Flag for using ethereum
+      */
+        enabled: false,
+     /**
+      * @summary Geth endpoint
+      */
+        geth_server: "http://localhost:8545",
+     /**
+      * @summary Web service endpoint for geth
+      */
+        geth_net_server: "ws://localhost:8546",
+        /**
+          * @summary The wallet id to which ethereum is accepted
+          */                          
+         distribution_wallet_address: "0x0000000000000000000000000000000000000000",
+     },
+     
      /**
       * @summary Swagger configuration
       */
@@ -171,7 +228,7 @@
          swaggerDefinition: {
              info: {
              title: "Universal Health Coin API",
-             version: "1.0-alpha",
+             version: "1.0-alpha3",
              description: "The Universal Health Coin API"
          },
          basePath: "/api/v1",
@@ -191,12 +248,21 @@
                 pass: 'mypass'
             }
         },
+        sms: {
+            auth: "XXXXx",
+            sid: "",
+            from: ""
+        },
         from: "no-reply@domain.com",
         templates: {
             invitation: "./templates/invitation",
             welcome: "./templates/welcome",
             confirmation: "./templates/confirm",
-            emailChange: "./templates/emailChange"
+            contactChange: "./templates/contactChange",
+            resetPassword: "./templates/resetPassword",
+            tfa: "./templates/tfa",
+            tfaChange: "./templates/tfaChanged",
+            passwordChange: "./templates/passwordChanged"
         } 
     },
     logging : {

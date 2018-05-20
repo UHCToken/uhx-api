@@ -29,6 +29,7 @@ module.exports = class ModelBase {
     constructor() {
         this.stripHiddenFields = this.stripHiddenFields.bind(this);
         this.copy = this.copy.bind(this);
+        this.summary = this.summary.bind(this);
     }
 
     /**
@@ -57,6 +58,13 @@ module.exports = class ModelBase {
         return this.stripHiddenFields();
     }
 
+    /**
+     * @method
+     * @summary Gets a summary object
+     */
+    summary() {
+        return this;
+    }
     
     /**
      * @method

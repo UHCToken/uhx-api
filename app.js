@@ -30,12 +30,15 @@
     permission = require('./controllers/permission'),
     asset = require('./controllers/asset'),
     invitation = require('./controllers/invitation'),
+    transaction = require('./controllers/transaction'),
+    reports = require('./controllers/stats'),
     swagger = require('./controllers/js-doc'),
     toobusy = require('toobusy-js'),
     https = require('https'),
+    helmet = require('helmet'),
     http = require('http');
     
-
+    toobusy.maxLag(10000);
 // Startup application
 const app = express();
 app.use(bodyParser.json())
@@ -46,6 +49,7 @@ app.use(function(req, res, next) {
     else
         next();
 });
+app.use(helmet());
 
 // Construct REST API
 var restApi = new api.RestApi(uhc.Config.api.base, app);
@@ -61,14 +65,15 @@ if(uhc.Config.swagger.enabled) {
 
 // Add OAuth token service
 restApi.addResource(new oauth.OAuthTokenService());
-restApi.addResource(new purchase.PurchaseApiResource());
 restApi.addResource(new user.UserApiResource());
+restApi.addResource(new purchase.PurchaseApiResource());
 restApi.addResource(new wallet.WalletApiResource());
 restApi.addResource(new group.GroupApiResource());
 restApi.addResource(new permission.PermissionApiResource());
 restApi.addResource(new asset.AssetApiResource());
 restApi.addResource(new invitation.InvitationApiResource());
-
+restApi.addResource(new reports.StatisticsApiResource());
+restApi.addResource(new transaction.TransactionApiResource());
 // Start REST API
 restApi.start();
 
@@ -80,4 +85,4 @@ else {
     https.createServer(uhc.Config.api.tls, app).listen(uhc.Config.api.port);
 }
 
-uhc.log.info(`UHC API started on ${uhc.Config.api.port}`);
+uhc.log.info(`UHC API started on ${uhc.Config.api.scheme} port ${uhc.Config.api.port}`);

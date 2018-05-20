@@ -1,0 +1,1 @@
+CREATE INDEX purchase_id_sha_idx ON purchase(digest(id::text, 'sha256')) WHERE state = 2;

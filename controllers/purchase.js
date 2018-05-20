@@ -19,7 +19,8 @@
 
 const uhc = require('../uhc'),
     exception = require('../exception'),
-    security = require('../security');
+    security = require('../security'),
+    Purchase = require("../model/Purchase");
 
 /**
  * @class
@@ -60,31 +61,150 @@ class PurchaseApiResource {
                     }
                 },
                 {
-                    "path":"paymentMethod",
+                    "path":"purchase/method",
                     "get": {
                         "demand": null,
-                        "method": this.getPaymentProvider
+                        "method": this.getPaymentMethod
+                    }
+                },
+                {
+                    "path": "purchase",
+                    "get": {
+                        "demand" : security.PermissionType.LIST,
+                        "method" : this.getAll
+                    },
+                    "post": {
+                        "demand" : security.PermissionType.WRITE,
+                        "method": this.post
+                    }
+                },
+                {
+                    "path": "purchase/:pid",
+                    "get" : {
+                        "demand": security.PermissionType.READ,
+                        "method": this.get
                     }
                 }
             ]
         };
     }
+
     /**
      * @method
      * @summary Posts a new payment to the system
      * @param {Express.Request} req The request from the client
      * @param {Express.Response} res The response to send back to the client
+     * @swagger
+     * /user/{userId}/purchase:
+     *  post:
+     *      tags:
+     *      - "purchase"
+     *      summary: Posts a new purchase request to the API
+     *      description: Posts a new purchase request to the API, a purchase request can be executed immediately or sometime in the future and may or may not be completed successfully
+     *      produces:
+     *      - "application/json"
+     *      consumes:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "userId"
+     *        in: "path"
+     *        required: "true"
+     *        type: "string"
+     *        description: "The user which is buying or purchasing"
+     *      - name: "body"
+     *        in: "body"
+     *        required: "true"
+     *        description: "The purchase request being made"
+     *        schema: 
+     *          $ref: "#/definitions/Purchase"
+     *      responses:
+     *          201: 
+     *              description: "The purchase request was successfully created"
+     *              schema: 
+     *                  $ref: "#/definitions/Purchase"
+     *          422:
+     *              description: "The purchase request failed due to a business rule being violated"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *          500: 
+     *              description: "The purchase request failed due to an internal server error"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhc_auth:
+     *          - write:purchase
      */
     async post(req, res)  {
-        throw new exception.NotImplementedException();
+
+        if(!req.body.quoteId)
+            throw new exception.ArgumentException("quoteId missing");
+        else if(!req.body.assetId)
+            throw new exception.ArgumentException("assetId missing");
+        else if(!req.body.quantity)
+            throw new exception.ArgumentException("quantity missing");
+        else if(req.body.invoicedAmount || req.body.buyer || req.body.buyerId || req.body.state)
+            throw new exception.ArgumentException("prohibited field supplied");
+
+        req.body.buyerId = req.params.uid;
+        var purchase = await uhc.TokenLogic.createPurchase(new Purchase().copy(req.body), req.principal);
+        purchase.forEach(o=>{
+            if(o.payor)
+                o._payor = o.payor.summary();
+            if(o.payee)
+                o._payee = o.payee.summary();
+            if(o.buyer)
+                o._buyer = o.buyer.summary();
+        })
+        res.status(201)
+            .set("Location", `${uhc.Config.api.scheme}://${uhc.Config.api.host}:${uhc.Config.api.port}${uhc.Config.api.base}/user/${req.params.uid}/purchase/${purchase.id}`)
+            .json(purchase);
+        return true;
     }
     /**
      * @method
      * @summary Get all payments posted to a particular user's account
      * @param {Express.Request} req The request from the client
      * @param {Express.Response} res The response to the client
+     * @swagger
+     * /user/{userId}/purchase:
+     *  get:
+     *      tags:
+     *      - "purchase"
+     *      summary: Gets the purchases transacted by the specified user
+     *      description: Gets all purchases of UH* assets made by the specified user
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "userId"
+     *        in: "path"
+     *        required: "true"
+     *        type: "string"
+     *        description: "The user for which the query should be executed"
+     *      - name: "dateFrom"
+     *        in: "query"
+     *        required: "true"
+     *        type: "date"
+     *        description: "The lower date of purchases made"
+     *      - name: "dateTo"
+     *        in: "query"
+     *        required: "true"
+     *        type: "date"
+     *        description: "The upper date of purchases made"
+     *      responses:
+     *          200: 
+     *              description: "The query executed successfully, results in the body"
+     *              schema: 
+     *                  $ref: "#/definitions/Purchase"
+     *          500: 
+     *              description: "The query failed due to an internal server error"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhc_auth:
+     *          - list:purchase
      */
     async getAll(req, res) {
+        // Remember to filter on UID
         throw new exception.NotImplementedException();
     }
     /**
@@ -92,8 +212,41 @@ class PurchaseApiResource {
      * @summary Get a single payment posted to a user's account
      * @param {Express.Request} req The request from the client 
      * @param {Express.Response} res The response from the client
+     * @swagger
+     * /user/{userId}/purchase/{id}:
+     *  get:
+     *      tags:
+     *      - "purchase"
+     *      summary: Gets the purchases transacted by the specified user
+     *      description: Gets a specific purchase for the user
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "userId"
+     *        in: "path"
+     *        required: "true"
+     *        type: "string"
+     *        description: "The user for which the query should be executed"
+     *      - name: "id"
+     *        in: "path"
+     *        required: "true"
+     *        type: "string"
+     *        description: "The identifier of the purchase"
+     *      responses:
+     *          200: 
+     *              description: "The query executed successfully, results in the body"
+     *              schema: 
+     *                  $ref: "#/definitions/Purchase"
+     *          500: 
+     *              description: "The query failed due to an internal server error"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhc_auth:
+     *          - get:purchase
      */
     async get(req, res) {
+        // Remember to filter on UID
         throw new exception.NotImplementedException();
     }
 
@@ -102,18 +255,80 @@ class PurchaseApiResource {
      * @summary Get the payment methods allowed on this service
      * @param {Express.Request} req The request from the client 
      * @param {Express.Response} res The response from the client
+     * @swagger
+     * /purchase/method:
+     *  get:
+     *      tags:
+     *      - "purchase"
+     *      summary: Gets the methods of payment accepted by this service
+     *      produces:
+     *      - "application/json"
+     *      responses:
+     *          200: 
+     *              description: "The query executed successfully, results in the body"
+     *              schema: 
+     *                  properties:
+     *                      name: 
+     *                          description: The english name of the payment method
+     *                          type: string
+     *                      network: 
+     *                          description: A system identifier for the payment method
+     *                          type: string
+     *                      description: 
+     *                          description: A full description of the payment method
+     *                          type: string
+     *                      note: 
+     *                          description: A descriptive note for user's transacting with this currency
+     *                          type: string
+     *                      currency: 
+     *                          description: The currency code of the payment method
+     *                          type: string
+     *          500: 
+     *              description: "The query failed due to an internal server error"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     * 
      */
-    async getPaymentProvider(req, res) {
+    async getPaymentMethod(req, res) {
         res.status(200).json([
             {
                 "name": "Stellar Lumens",
-                "type": "StellarLumen",
+                "network": "Stellar",
                 "description": "Pay with Lumens",
                 "note": "Your UHX account must contain 2 XLM for transaction processing, if you use this option you should transfer an extra 2 XLM to your account",
                 "currency": "XLM"
+            },
+            {
+                "name": "Ether",
+                "network": "Ethereum",
+                "description": "Pay with Ether",
+                "note": "You must transfer a desired amount of ETH to the ethereum account associated with your user account",
+                "currency": "ETH"
             }
         ]);
         return true;
+    }
+
+        
+    /**
+     * @method
+     * @summary Determines additional access control on the user resource
+     * @param {security.Principal} principal The JWT principal data that has authorization information
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to the client
+     * @returns {boolean} An indicator of whether the user has access to the resource
+     */
+    async acl(principal, req, res) {
+
+        if(!(principal instanceof security.Principal)) {
+            uhc.log.error("ACL requires a security principal to be passed");
+            return false;
+        }
+
+        // if the token has OWNER set for USER permission then this user must be SELF
+        return (principal.grant.user & security.PermissionType.OWNER && req.params.uid == principal.session.userId) // the permission on the principal is for OWNER only
+                ^ !(principal.grant.user & security.PermissionType.OWNER); // XOR the owner grant flag is not set.
+                
     }
 }
 

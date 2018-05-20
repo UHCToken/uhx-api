@@ -304,12 +304,12 @@ class InvitationApiResource {
      */
     async claim(req, res) {
 
-        if(!req.param("code")) // The claim code
+        if(!req.body.code) // The claim code
             throw new exception.ArgumentException("code");
-        if(!req.param("password")) // The password to set on the created user instance
+        if(!req.body.code) // The password to set on the created user instance
             throw new exception.ArgumentException("password");
         
-        var user = await uhc.SecurityLogic.claimInvitation(req.param("code"), req.param("password"), req.principal);
+        var user = await uhc.SecurityLogic.claimInvitation(req.body.code, req.body.password, req.principal);
         res.status(201)
             .set("Location", `${uhc.Config.api.scheme}://${uhc.Config.api.host}:${uhc.Config.api.port}${uhc.Config.api.base}/user/${user.id}`)
             .json(user);

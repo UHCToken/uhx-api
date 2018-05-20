@@ -22,12 +22,18 @@ const uhc = require('../uhc'),
     exception = require('../exception'),
     security = require('../security'),
     StellarClient = require('../integration/stellar'),
+    Web3Client = require('../integration/web3'),
     model = require('../model/model'),
     User = require('../model/User'),
+    clone = require('clone'),
     crypto = require('crypto'),
-    fs = require('fs'),
-    Emailer = require('../integration/email');
+    fs = require('fs');
 
+const PASSWORD_RESET_CLAIM = "$reset.password",
+    EMAIL_CONFIRM_CLAIM = "$confirm.email",
+    UNDO_CHANGE_CLAIM = "$undo.email",
+    SMS_CONFIRM_CLAIM = "$confirm.sms",
+    TFA_CLAIM = "$tfa.secret";
 /**
   * @class
   * @summary Represents the core business logic of the UHC application
@@ -47,19 +53,11 @@ const uhc = require('../uhc'),
         this.updateUser = this.updateUser.bind(this);
         this.validateUser = this.validateUser.bind(this);
         this.createInvitation = this.createInvitation.bind(this);
-        this.getStellarClient = this.getStellarClient.bind(this);
+        this.initiatePasswordReset = this.initiatePasswordReset.bind(this);
+        this.resetPassword = this.resetPassword.bind(this);
+        this.confirmContact = this.confirmContact.bind(this);
     }
 
-    /**
-     * @method
-     * @summary Gets or creates the stellar client
-     * @returns {StellarClient} The stellar client
-     */
-    async getStellarClient() {
-        if(!this._stellarClient)
-            this._stellarClient = new StellarClient(uhc.Config.stellar.horizon_server, await uhc.Repositories.assetRepository.query(), uhc.Config.stellar.testnet_use);
-        return this._stellarClient;
-    }
 
     /**
      * @method
@@ -84,9 +82,10 @@ const uhc = require('../uhc'),
      * @param {string} username The username of the user wishing to login
      * @param {string} password The password that the user entered
      * @param {string} scope The scope which the session should be established for.
+     * @param {string} tfa_secret The one time TFA secret to be used
      * @returns {Principal} The authenticated user principal
      */
-    async establishSession(clientPrincipal, username, password, scope, remote_ip) {
+    async establishSession(clientPrincipal, username, password, scope, tfa_secret, remote_ip) {
 
         // Ensure that the application information is loaded
         await clientPrincipal.session.loadApplication();
@@ -96,17 +95,49 @@ const uhc = require('../uhc'),
             var user = await uhc.Repositories.userRepository.getByNameSecret(username, password);
             
             // User was successful but their account is still locked
-            if(user.lockout > new Date())
+            if(!user)
+                throw new exception.Exception("Invalid username or password", exception.ErrorCodes.INVALID_ACCOUNT);
+            else if(user.lockout > new Date())
                 throw new exception.Exception("Account is locked", exception.ErrorCodes.ACCOUNT_LOCKED);
             else if(user.deactivationTime && user.deactivationTime < new Date())
                 throw new exception.Exception("Account has been deactivated", exception.ErrorCodes.UNAUTHORIZED);
+
+            var tfa = await user.loadTfaMethod();
+            if(tfa && !tfa_secret)  // SEND TFA code and FAIL login
+            {
+                // Send code
+                await uhc.Repositories.transaction(async (_txc) => {
+                    var tfaToken = this.generateSignedClaimToken('tfa');
+                    await uhc.Repositories.userRepository.deleteClaim(user.id, TFA_CLAIM);
+                    await uhc.Repositories.userRepository.addClaim(user.id, {
+                        type: TFA_CLAIM,
+                        value: tfaToken,
+                        expiry: new Date(new Date().getTime() + uhc.Config.security.tfaValidity)
+                    });
+                    await require(tfa)(user, tfaToken);
+                });
+                throw new exception.Exception("Account requires TFA code", exception.ErrorCodes.TFA_REQUIRED);
+            }
+            else if(tfa) { // Verify the TFA
+                if(!await uhc.Repositories.userRepository.assertClaim(user.id, TFA_CLAIM, tfa_secret))
+                    throw new exception.Exception("Invalid TFA code", exception.ErrorCodes.TFA_FAILED);
+            }
         }
         catch(e) {
             uhc.log.error("Error performing authentication: " + e.message);
+
+            // TFA is required, this is not necessarily a login failure
+            if(e.code && e.code == exception.ErrorCodes.TFA_REQUIRED)
+                throw e;
+
             // Attempt to increment the invalid login count
             var invalidUser = await uhc.Repositories.userRepository.incrementLoginFailure(username, uhc.Config.security.maxFailedLogin);
-            if(invalidUser.lockout) 
+            
+            if(invalidUser && invalidUser.lockout) 
                 throw new exception.Exception("Account is locked", exception.ErrorCodes.ACCOUNT_LOCKED, e);
+            else if(e.code == exception.ErrorCodes.NOT_FOUND)
+                throw new exception.Exception("Invalid username or password", exception.ErrorCodes.INVALID_ACCOUNT);
+
             throw e;
         }
 
@@ -128,6 +159,65 @@ const uhc = require('../uhc'),
         catch(e) {
             uhc.log.error("Error finalizing authentication: " + e.message);
             throw new exception.Exception("Error finalizing authentication", exception.ErrorCodes.SECURITY_ERROR, e);
+        }
+    }
+
+    /**
+     * @method
+     * @summary Completes the confirmation process
+     * @param {string} code The confirmation code to be validated
+     * @param {SecurityPrincipal} principal The security principal
+     * @returns {void}
+     */
+    async confirmContact(code, principal) {
+
+        try {
+            this.validateSignedClaimToken(code);
+
+            var success = false;
+            // Now we want to do one of two things, first: 
+            // If the code is a 9 digit short code, principal must be a user 
+            if(code.length == 9 && !await principal.session.loadUser())
+                throw new exception.Exception("Short codes can only be verified from an existing principal", exception.ErrorCodes.ARGUMENT_EXCEPTION);
+            else if(code.length == 9) { // 9 digit assertion - we want to verify
+                 success = await uhc.Repositories.transaction(async (_txc) => {
+                     // Email confirmation code
+                    if(await uhc.Repositories.userRepository.assertClaim(principal.session.userId, EMAIL_CONFIRM_CLAIM, code, _txc)) // code is an email confirm claim
+                    {
+                        await uhc.Repositories.userRepository.update(new User().copy({id: principal.session.userId, emailVerified: true}), null, principal, _txc);
+                        await uhc.Repositories.userRepository.deleteClaim(principal.session.userId, EMAIL_CONFIRM_CLAIM, _txc);
+                        return true;
+                    }
+                    // SMS confirmation code
+                    else if(await uhc.Repositories.userRepository.assertClaim(principal.session.userId, SMS_CONFIRM_CLAIM, code, _txc))
+                    {
+                        await uhc.Repositories.userRepository.update(new User().copy({id: principal.session.userId, telVerified: true}), null, principal, _txc);
+                        await uhc.Repositories.userRepository.deleteClaim(principal.session.userId, SMS_CONFIRM_CLAIM, _txc);
+                        return true;
+                    }
+                    else
+                        return false;
+                 });
+            }
+            else  // Confirm e-mail anonymously
+                success = await uhc.Repositories.transaction(async (_txc) => {
+                    var user = await uhc.Repositories.userRepository.getByClaim(EMAIL_CONFIRM_CLAIM, code, _txc);
+                    if(user.length > 0) {
+                        user[0].emailVerified = true;
+                        await uhc.Repositories.userRepository.update(user[0], null, principal, _txc);
+                        return true;
+                    }
+                    return false;
+                });
+            
+            // Outcome?
+            if(!success)
+                throw new exception.Exception("Could not verify contact information. Token appears to be invalid", exception.ErrorCodes.RULES_VIOLATION);
+            
+        }
+        catch (e) {
+            uhc.log.error(`Error confirming contact information: ${e.message}`);
+            throw new exception.Exception("Error confirming contact information", e.code || exception.ErrorCodes.UNKNOWN, e);
         }
     }
 
@@ -170,25 +260,26 @@ const uhc = require('../uhc'),
             var session = await uhc.Repositories.transaction(async (_txc) => {
 
                 // Get session
-                var session = await uhc.Repositories.sessionRepository.getByRefreshToken(refreshToken, uhc.Config.security.refreshValidity, _tx);
+                var session = await uhc.Repositories.sessionRepository.getByRefreshToken(refreshToken, uhc.Config.security.refreshValidity, _txc);
                 if(session == null)
                     throw new exception.Exception("Invalid refresh token", exception.ErrorCodes.SECURITY_ERROR);
                 else if(session.applicationId != application.id)
                     throw new exception.Exception("Refresh must be performed by originator", exception.ErrorCodes.SECURITY_ERROR);
                 // Abandon the existing session
-                await uhc.Repositories.sessionRepository.abandon(session.id, _tx);
+                await uhc.Repositories.sessionRepository.abandon(session.id, _txc);
 
                 // Establish a new session
                 return await uhc.Repositories.sessionRepository.insert(
                     new model.Session(session.userId, session.applicationId, session.audience, uhc.Config.security.sessionLength, remoteAddr),
                     null,
-                    _tx
+                    _txc
                 );
                 
             }); 
         
             await session.loadGrants();
             await session.loadUser();
+            uhc.log.info(`Session ${session.id} was successfully refreshed`);
             return new security.Principal(session);
         }
         catch(e) {
@@ -199,27 +290,162 @@ const uhc = require('../uhc'),
 
     /**
      * @method
+     * @summary Resets the user's password
+     * @param {string} code The password reset token
+     * @param {string} newPassword The new password to be set
+     * @returns {void}
+     */
+    async resetPassword(code, newPassword) {
+
+        try {
+            // Verify the code against signature
+            this.validateSignedClaimToken(code);
+
+            // Get the user by claim
+            await uhc.Repositories.transaction(async (_txc) => {
+                var user = await uhc.Repositories.userRepository.getByClaim(PASSWORD_RESET_CLAIM, code, _txc);
+                if(user.length == 0)
+                    throw new exception.Exception("Invalid reset token", exception.ErrorCodes.SECURITY_ERROR);
+                else  {
+                    user[0].lockout = null;
+                    user[0].invalidLogins = 0;
+                    await uhc.Repositories.userRepository.update(user[0], newPassword, _txc);
+                    await uhc.Repositories.userRepository.deleteClaim(user[0].id, PASSWORD_RESET_CLAIM, _txc);
+                }
+                // Notify the user that their password has been reset
+                if(user[0].emailVerified && user[0].email) 
+                {
+                    await uhc.Mailer.sendEmail({
+                        template: uhc.Config.mail.templates.passwordChange,
+                        to: user[0].email,
+                        from: uhc.Config.mail.from,
+                        subject: "Your UHX password has been reset!"
+                    }, { user: user[0] });
+                }
+                else if(user[0].telVerified && user[0].tel)
+                {
+                    await uhc.Mailer.sendSms({
+                        to: user[0].tel,
+                        template: uhc.Config.mail.templates.passwordChange
+                    }, { user: user });
+                }
+            });
+        }
+        catch(e) {
+            uhc.log.error(`Error resetting password: ${e.message}`);
+            throw new exception.Exception("Error resetting password", e.code || exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
+
+    /**
+     * @method
+     * @summary Initiates the password reset workflow
+     * @param {string} email The e-mail address of the user
+     * @param {string} tel The telephone number of the user
+     * @returns {void}
+     */
+    async initiatePasswordReset(email, tel) {
+
+        try {
+
+            await uhc.Repositories.transaction(async (_txc)=>{
+
+                // Get the user
+                var users = await uhc.Repositories.userRepository.query(new User().copy({email: email, tel: tel}), 0, 1, _txc);
+                if(users.length == 0)
+                    return null;
+                var user = users[0];
+                // Cancel any current claim the user has for reset
+                await uhc.Repositories.userRepository.deleteClaim(user.id, PASSWORD_RESET_CLAIM, _txc);
+
+                // Generate the token
+                var claimToken = this.generateSignedClaimToken();
+                await uhc.Repositories.userRepository.addClaim(user.id, {
+                    type: PASSWORD_RESET_CLAIM,
+                    value: claimToken,
+                    expiry: new Date(new Date().getTime() + uhc.Config.security.resetValidity)
+                });
+
+                // Generate e-mail 
+                    var options = {
+                        to: email,
+                        from: uhc.Config.mail.from,
+                        subject: "Reset your UHX password",
+                        template: uhc.Config.mail.templates.resetPassword
+                    };
+                    await uhc.Mailer.sendEmail(options, { user: user, token: claimToken, ui_base: uhc.Config.api.ui_base });
+                
+                /*else if(tel)
+                    throw new exception.NotImplementedException("SMS password resets are disabled");*/
+                // else if(tel && user.telVerified) {
+                //     var options = {
+                //         to: user.tel,
+                //         template: uhc.Config.mail.templates.resetPassword
+                //     };
+                //     await uhc.Mailer.sendSms(options, { user: user, token: claimToken, ui_base: uhc.Config.api.ui_base });
+                // }
+                
+            });
+
+        }
+        catch (e) {
+            uhc.log.error("Error creating reset password workflow: " + e.message);
+            throw new exception.Exception("Error creating password refresh token: " + e.message, e.code || exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
+
+    /**
+     * @method
      * @summary Register a regular user 
      * @param {User} user The user to be registered
      * @param {string} password The password to set on the user
+     * @param {SecurityPrincipal} principal The user which is creating this user
      */
-    async registerInternalUser(user, password) {
+    async registerInternalUser(user, password, principal) {
 
         // First we register the user in our DB
         try {
-
+                
             // Validate the user
             this.validateUser(user, password);
-
             await uhc.Repositories.transaction(async (_txc) => {
 
                 // Insert the user
-                var stellarClient = await this.getStellarClient();
-                var wallet = await stellarClient.generateAccount();
-                wallet = await uhc.Repositories.walletRepository.insert(wallet, null, _txc);
-                user.walletId = wallet.id;
-                var retVal = await uhc.Repositories.userRepository.insert(user, password, null, _txc);
-                await uhc.Repositories.groupRepository.addUser(uhc.Config.security.sysgroups.users, retVal.id, null, _txc);
+
+
+                var stellarClient = uhc.StellarClient;
+                var strWallet = await stellarClient.generateAccount();
+                
+                strWallet = await uhc.Repositories.walletRepository.insert(strWallet, principal, _txc);
+                
+                user.walletId = strWallet.id;
+
+                var retVal = await uhc.Repositories.userRepository.insert(user, password, principal, _txc);
+                
+                //HACK: This is temporary until a better workflow for wallet funding is decided
+                await stellarClient.activateAccount(strWallet, "10",  await uhc.Repositories.walletRepository.get(uhc.Config.stellar.initiator_wallet_id));
+                var coin = await stellarClient.getAssetByCode("RECOIN")
+                await stellarClient.createTrust(strWallet, coin, "1000000")
+               
+                strWallet.userId = retVal.id;
+
+                if(uhc.Config.ethereum.enabled){
+                    var web3Client = uhc.Web3Client;
+                    var ethWallet = await web3Client.generateAccount()
+                    ethWallet = await uhc.Repositories.walletRepository.insert(ethWallet, principal, _txc);
+                    ethWallet.userId = retVal.id;
+                    
+                    web3Client.getBalance(ethWallet)
+                    await uhc.Repositories.walletRepository.update(ethWallet, principal, _txc);
+                }
+                
+                await uhc.Repositories.walletRepository.update(strWallet, principal, _txc);
+                await uhc.Repositories.groupRepository.addUser(uhc.Config.security.sysgroups.users, retVal.id, principal, _txc);
+                if(!user.emailVerified ){
+                    await this.sendConfirmationEmail(user, _txc);
+                }
+                if(user.tel)
+                    await this.sendConfirmationSms(user, _txc);
                 return retVal;
             });
 
@@ -240,16 +466,16 @@ const uhc = require('../uhc'),
 
         try {
 
-            return await uhc.Repositories.transact(async (_txc) => {
+            return await uhc.Repositories.transaction(async (_txc) => {
                 
                 // Create stellar client
-                var stellarClient = await this.getStellarClient();
+                var stellarClient = uhc.StellarClient;
                 
                 // Verify user
                 var user = await uhc.Repositories.userRepository.get(userId, _txc);
 
                 // Does user already have wallet?
-                var wallet = await user.loadWallet();
+                var wallet = await user.loadStellarWallet();
                 if(!wallet) { // Generate a KP
                     // Create a wallet
                     var wallet = await stellarClient.generateAccount();
@@ -262,7 +488,7 @@ const uhc = require('../uhc'),
 
                 // Activate wallet if not already active
                 if(!stellarClient.isActive(wallet))
-                    await stellarClient.activateAccount(wallet, "1",  await testRepository.walletRepository.get(uhc.Config.stellar.initiator_wallet_id));
+                    await stellarClient.activateAccount(wallet, "1",  await uhc.Repositories.walletRepository.get(uhc.Config.stellar.initiator_wallet_id));
                 return wallet;
             });
         }
@@ -271,6 +497,7 @@ const uhc = require('../uhc'),
             throw new exception.Exception("Error creating waller user", exception.ErrorCodes.UNKNOWN, e);
         }
     }
+
 
     /**
      * @method
@@ -303,28 +530,82 @@ const uhc = require('../uhc'),
                 // Get existing user
                 var existingUser = await uhc.Repositories.userRepository.get(user.id);
 
-                // Was the user's e-mail address verified? 
-                if(existingUser.emailVerified && existingUser.email != user.email) {
+                // Delete fields which can't be set by clients 
+                delete(user.walletId);
 
-                    // Undo token
+                // Was the user's e-mail address verified? 
+                if(newPassword) {
+                    if(existingUser.telVerified && existingUser.tel)
+                        await uhc.Mailer.sendSms({
+                            to: existingUser.tel,
+                            template: uhc.Config.mail.templates.passwordChange
+                        }, { user: existingUser });
+                    else if(existingUser.emailVerified && existingUser.email)
+                        await uhc.Mailer.sendEmail({
+                            to: existingUser.tel,
+                            from: uhc.Config.mail.from,
+                            template: uhc.Config.mail.templates.passwordChange,
+                            subject: "Did you change your UHX password?"
+                        }, { user: existingUser });
+                }
+                else if(user.tel && existingUser.telVerified && existingUser.tel != user.tel) {
+
+                    await uhc.Mailer.sendSms({
+                        to: existingUser.tel,
+                        template: uhc.Config.mail.templates.contactChange
+                    }, { old: existingUser, new: user, token: undoToken, ui_base: uhc.Config.api.ui_base });
+
+                    await this.sendConfirmationSms(user);
+
+                    user.telVerified = false;
+                }
+                else if(user.tel && !user.telVerified) {
+                    user.givenName = user.givenName || existingUser.givenName;
+                    user.familyName = user.familyName || existingUser.familyName;
+                    await this.sendConfirmationSms(user);
+                }
+                else if(user.email && existingUser.emailVerified && existingUser.email != user.email) {
+
                     var undoToken = this.generateSignedClaimToken();
                     await uhc.Repositories.userRepository.addClaim(user.id, {
-                        type: "$undo.email",
+                        type: PASSWORD_RESET_CLAIM,
                         value: undoToken,
-                        expiry: new Date(new Date().getTime() + uhc.Config.security.confirmationValidaty)
+                        expiry: new Date(new Date().getTime() + uhc.Config.security.resetValidity)
                      }, _txc);
 
                     // We want to send an e-mail to the previous e-mail address notifying the user of the change
-                    await new Emailer(uhc.Config.mail.smtp).sendTemplated({
+                    await uhc.Mailer.sendEmail({
                         to: existingUser.email,
                         from: uhc.Config.mail.from,
                         subject: "Did you change your e-mail address?",
-                        template: uhc.Config.mail.templates.emailChange
+                        template: uhc.Config.mail.templates.contactChange
                     }, { old: existingUser, new: user, token: undoToken, ui_base: uhc.Config.api.ui_base });
 
                     // TODO: We want to send a confirmation e-mail to the e-mail address
                     await this.sendConfirmationEmail(user);
                     user.emailVerified = false;
+                }
+                else if(user.tfaMethod && user.tfaMethod != existingUser.tfaMethod) {
+                    // Confirm to user that TFA was set
+                    if(user.tfaMethod == 1)
+                    {
+                        if(!existingUser.telVerified)
+                            throw new exception.BusinessRuleViolationException(new exception.RuleViolation("SMS Two-Factor requires a verified phone number", exception.ErrorCodes.RULES_VIOLATION, exception.RuleViolationSeverity.ERROR));
+                        await uhc.Mailer.sendSms({
+                            to: existingUser.tel,
+                            template: uhc.Config.mail.templates.tfaChange
+                        }, { old: existingUser, new: user, token: undoToken, ui_base: uhc.Config.api.ui_base });
+                    }
+                    else if(user.tfaMethod == 2) {
+                        if(!existingUser.emailVerified)
+                            throw new exception.BusinessRuleViolationException(new exception.RuleViolation("E-Mail Two-Factor requires a verified e-mail address", exception.ErrorCodes.RULES_VIOLATION, exception.RuleViolationSeverity.ERROR));
+                        await uhc.Mailer.sendEmail({
+                            to: existingUser.email,
+                            from: uhc.Config.mail.from,
+                            subject: "UHX Two-factor authentication setup successful",
+                            template: uhc.Config.mail.templates.tfaChange
+                        }, { old: existingUser, new: user, token: undoToken, ui_base: uhc.Config.api.ui_base });
+                    }
                 }
                 // Update the user
                 return await uhc.Repositories.userRepository.update(user, newPassword, null, _txc);
@@ -347,13 +628,13 @@ const uhc = require('../uhc'),
         try {
             var confirmToken = this.generateSignedClaimToken();
             await uhc.Repositories.userRepository.addClaim(user.id, {
-                type: "$confirm.email",
+                type: EMAIL_CONFIRM_CLAIM,
                 value: confirmToken,
-                expiry: new Date(new Date().getTime() + uhc.Config.security.confirmationValidaty)
+                expiry: new Date(new Date().getTime() + uhc.Config.security.confirmationValidity)
             }, _txc);
 
             // We want to send an e-mail to the previous e-mail address notifying the user of the change
-            await new Emailer(uhc.Config.mail.smtp).sendTemplated({
+            await uhc.Mailer.sendEmail({
                 to: user.email,
                 from: uhc.Config.mail.from,
                 subject: "Confirm your e-mail address on UHX",
@@ -363,6 +644,34 @@ const uhc = require('../uhc'),
         }
         catch(e) {
             uhc.log.error(`Error sending confirmation e-mail: ${JSON.stringify(e)}`);
+            throw e;
+        }
+    }
+
+    /**
+     * @method
+     * @summary Sends an SMS to the user to confirm their SMS address
+     * @param {User} user The user for which the confirmation SMS should be sent
+     * @param {*} _txc If the operation is being performed as part of a transaction then this is the transaction
+     */
+    async sendConfirmationSms(user, _txc) {
+        try {
+            var confirmToken = this.generateSignedClaimToken('tfa');
+            await uhc.Repositories.userRepository.addClaim(user.id, {
+                type: SMS_CONFIRM_CLAIM,
+                value: confirmToken,
+                expiry: new Date(new Date().getTime() + uhc.Config.security.confirmationValidaty)
+            }, _txc);
+
+            // We want to send an sms address to verify
+            await uhc.Mailer.sendSms({
+                to: user.tel,
+                template: uhc.Config.mail.templates.confirmation
+            }, { user: user, token: confirmToken, ui_base: uhc.Config.api.ui_base });
+
+        }
+        catch(e) {
+            uhc.log.error(`Error sending confirmation sms: ${JSON.stringify(e)}`);
             throw e;
         }
     }
@@ -401,17 +710,14 @@ const uhc = require('../uhc'),
         try {
 
             // First validate the token
-            var tokenParts = invitationToken.split(".");
-            if(tokenParts.length != 2)
-                throw new exception.ArgumentException("invitationToken");
-            else if(tokenParts[1] != crypto.createHmac('sha256', uhc.Config.security.hmac256secret).update(tokenParts[0]).digest('hex'))
-                throw new exception.Exception("Token signature does not match", exception.ErrorCodes.SECURITY_ERROR);
+            this.validateSignedClaimToken(invitationToken);
 
             // Fetch the invitation
-            var invitation = await uhc.Repositories.invitationRepository.getByClaimToken(tokenParts[0]);
+            var invitation = await uhc.Repositories.invitationRepository.getByClaimToken(invitationToken);
 
             // Create a user
-            var user = new User().copy(invitation);
+            var user = clone(new User().copy(invitation));
+
             user.name = invitation.email;
             user.emailVerified = true;
 
@@ -422,28 +728,32 @@ const uhc = require('../uhc'),
             return await uhc.Repositories.transaction(async (_txc) => {
 
                 // Insert the user and assign to user group
-                user = await uhc.Repositories.userRepository.insert(user, initialPassword, principal, _txc);
-                await uhc.Repositories.groupRepository.addUser(uhc.Config.security.sysgroups.users, user.id, principal, _txc);
+                
 
                 // Now we want to claim the token
-                await uhc.Repositories.invitationRepository.claim(invitation.id, user, _txc);
+                var newUser = await this.registerInternalUser(user, initialPassword, principal)
 
+                await uhc.Repositories.groupRepository.addUser(uhc.Config.security.sysgroups.users, newUser.id, principal, _txc);
+
+                await uhc.Repositories.invitationRepository.claim(invitation.id, newUser, _txc);
+
+                
                 // Now we want to notify the user
                 var sendOptions = {
-                    to: user.email,
+                    to: newUser.email,
                     from: uhc.Config.mail.from,
                     subject: "Welcome to the UHX community!",
                     template: uhc.Config.mail.templates.welcome
                 };
                 // Replacements
                 const replacements = {
-                    user: user,
+                    user: newUser,
                     ui_base: uhc.Config.api.ui_base
                 }
-                await new Emailer(uhc.Config.mail.smtp).sendTemplated(sendOptions, replacements);
+                await uhc.Mailer.sendEmail(sendOptions, replacements);
 
                 // Return the user
-                return user;
+                return newUser;
             });
 
         }
@@ -455,13 +765,54 @@ const uhc = require('../uhc'),
 
     /**
      * @method
+     * @summary Validates a claim token
+     * @param {string} token The token being validated
+     */
+    validateSignedClaimToken(token) {
+
+        if(token.length == 9) { // 9 code numeric with mod 10
+            var mod = (token.substring(0, 8).split('').reduce((a,b)=>parseInt(a)+parseInt(b)) % 10);
+            if(mod != token[token.length - 1])
+                throw new exception.Exception("Token has failed validation", exception.ErrorCodes.SECURITY_ERROR);
+        }
+        else {
+            var tokenParts = token.split(".");
+            if(tokenParts.length != 2)
+                throw new exception.ArgumentException("code");
+            else if(tokenParts[1] != crypto.createHmac('sha256', uhc.Config.security.hmac256secret).update(tokenParts[0]).digest('hex'))
+                throw new exception.Exception("Token signature does not match", exception.ErrorCodes.SECURITY_ERROR);
+        }
+    }
+
+    /**
+     * @method
      * @summary Generates and signs a random token
+     * @param {string} type Identifies the applicable method for gneerating a sign token (email can have longer tokens than sms for example)
      * @returns {string} The generated and signed claim token
      */
-    generateSignedClaimToken() {
-        var token = crypto.randomBytes(32).toString('hex');
-        var sig = crypto.createHmac('sha256', uhc.Config.security.hmac256secret).update(token).digest('hex');
-        return token + "." + sig;
+    generateSignedClaimToken(type) {
+        switch(type) {
+            case "tfa": // Generate a random 6 byte string which may or may not be unique
+            {
+                var token = "";
+                var bytes = crypto.randomBytes(8);
+                bytes.forEach((o)=>{ token += o % 10 });
+                token += (token.split('').reduce((a,b)=>parseInt(a)+parseInt(b)) % 10);
+                return token;
+            }
+            case "8byte": // a shorter 8 byte code
+            {
+                var token = crypto.randomBytes(8).toString('hex');
+                
+                var sig = crypto.createHmac('sha256', uhc.Config.security.hmac256secret).update(token).digest('hex');
+                return token + "." + sig;
+            }                
+            default: {
+                var token = crypto.randomBytes(32).toString('hex');
+                var sig = crypto.createHmac('sha256', uhc.Config.security.hmac256secret).update(token).digest('hex');
+                return token + "." + sig;
+            }
+        }
     }
 
     /**
@@ -504,7 +855,7 @@ const uhc = require('../uhc'),
                     ui_base: uhc.Config.api.ui_base
                 }
 
-                await new Emailer(uhc.Config.mail.smtp).sendTemplated(sendOptions, replacements);
+                await uhc.Mailer.sendEmail(sendOptions, replacements);
                 return invitation;
             });
         }

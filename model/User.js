@@ -106,6 +106,12 @@ const uhc = require('../uhc'),
   *             externalIds:
   *                 description: Systems for which the user has an external login registered
   *                 type: string
+  *             tfaMethod:
+  *                 description: The Two-factor authentication method set on the account
+  *                 type: number
+  *                 enum: 
+  *                 - 1: SMS
+  *                 - 2: E-MAIL
   *             claims:
   *                 description: Additional claims that systems have made about the user
   *                 schema:
@@ -137,6 +143,9 @@ const uhc = require('../uhc'),
   *             postalOrZip:
   *                 type: string
   *                 description: The postal or zip code for the address
+  *             poBox:
+  *                 type: string
+  *                 description: The post office box for the address
   *     
   */
  module.exports = class User extends ModelBase {
@@ -172,18 +181,19 @@ const uhc = require('../uhc'),
         this.profileText = dbUser.description;
         this.tel = dbUser.tel;
         this.telVerified = dbUser.tel_verified;
+        this.tfaMethod = dbUser.tfa_method;
         this.address = {
             street: dbUser.street,
             unitOrSuite: dbUser.unit_suite,
             city: dbUser.city,
             stateOrProvince: dbUser.state_prov,
             country: dbUser.country,
-            postalOrZip: dbUser.postal_zip
+            postalOrZip: dbUser.postal_zip,
+            poBox: dbUser.po_box
         },
         this.creationTime = dbUser.creation_time;
         this.updatedTime = dbUser.updated_time;
         this.deactivationTime = dbUser.deactivation_time;
-        this.walletId = dbUser.wallet_id;
         return this;
     }
 
@@ -205,6 +215,7 @@ const uhc = require('../uhc'),
             description: this.profileText,
             tel: this.tel,
             tel_verified: this.telVerified,
+            tfa_method: this.tfaMethod
             // creation timestamp properites are skipped beecause they are set by repo
         };
 
@@ -215,6 +226,7 @@ const uhc = require('../uhc'),
             retVal.state_prov = this.address.stateOrProvince;
             retVal.country = this.address.country;
             retVal.postal_zip = this.address.postalOrZip;
+            retVal.po_box = this.address.poBox;
         }
 
         return retVal;
@@ -232,20 +244,37 @@ const uhc = require('../uhc'),
      * @method
      * @summary Prefetch external identifiers if they aren't already
      */
-    async loadExternalIds() {
+    async loadExternalIds(_txc) {
         if(!this._externIds)
-            this._externIds = await uhc.Repositories.userRepository.getExternalIds(this);
+            this._externIds = await uhc.Repositories.userRepository.getExternalIds(this, _txc);
         return this._externIds;
     }
 
     /**
      * @method
-     * @summary Prefetch user's wallet information
+     * @summary Prefetch user's stellar wallet information
      */
-    async loadWallet() {
-      if(!this._wallet) 
-            this._wallet = await uhc.Repositories.walletRepository.get(this.walletId);
+    async loadStellarWallet(_txc) {
+      if(!this._wallet)  {
+            if(this._wallets)
+                this._wallet = this._wallets.find(o=>o.networkId == 1);
+            else 
+                this._wallet = await uhc.Repositories.walletRepository.getByUserId(this.id, _txc);
+            this._wallet._user = this;
+      }
       return this._wallet;
+    }
+
+    /**
+     * @method
+     * @summary Prefetch all user's wallet information
+     */
+    async loadWallets(_txc) {
+        if(!this._wallet)  {
+                this._wallets = await uhc.Repositories.walletRepository.getAllForUserId(this.id, _txc);
+                this._wallets.forEach(w=>w._user = this);
+        }
+        return this._wallets;
     }
 
     /**
@@ -253,12 +282,22 @@ const uhc = require('../uhc'),
      * @summary Load the groups and return them if needed
      * @returns {Group} The loaded groups to which the user belongs
      */
-    async loadGroups() {
+    async loadGroups(_txc) {
         if(!this._groups)
-            this._groups = await uhc.Repositories.groupRepository.getByUserId(this.id);
+            this._groups = await uhc.Repositories.groupRepository.getByUserId(this.id, _txc);
         return this._groups;
     }
 
+    /**
+     * @method
+     * @summary Load the tfa method of the user
+     */
+    async loadTfaMethod(_txc) {
+        if(!this.tfaMethod)
+            return null;
+        return await uhc.Repositories.userRepository.getTfaMethod(this.tfaMethod, _txc);
+    }
+    
     /**
      * @summary Gets the user groups for this user
      * @property
@@ -271,9 +310,9 @@ const uhc = require('../uhc'),
      * @summary Get the claims for the user
      * @return {*} The claims for the user
      */
-    async loadClaims() {
+    async loadClaims(_txc) {
         if(!this._claims)
-            this._claims = await uhc.Repositories.userRepository.getClaims(this.id);
+            this._claims = await uhc.Repositories.userRepository.getClaims(this.id, _txc);
         return this._claims;
     }
 
@@ -293,10 +332,26 @@ const uhc = require('../uhc'),
     toJSON() {
         var retVal = this.stripHiddenFields();
         retVal.externalIds = this._externIds;
-        retVal.wallet = this._wallet;
-        retVal.claims = this.stripHiddenFields(this._claims);
+        retVal.wallets = this._wallets;
+        retVal.claims = {};
+        for(var k in this._claims)
+            if(!k.startsWith("$"))
+                retVal.claims[k] = this._claims[k];
         retVal.groups = this._groups;
         return retVal;
     }
 
+    /**
+     * @method 
+     * @summary Returns a summary object
+     */
+    summary() {
+        return new User().copy({
+            id: this.id,
+            givenName: this.givenName,
+            familyName: this.familyName,
+            email: this.email,
+            name: this.name
+        });
+    }
 }

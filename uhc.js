@@ -22,17 +22,30 @@
     repositories = require('./repository/repository'),
     SecurityLogic = require('./logic/SecurityLogic'),
     TokenLogic = require('./logic/TokenLogic'),
-    winston = require('winston');
+    winston = require('winston'),
+    Mailer = require('./integration/mail'),
+    StellarClient = require("./integration/stellar"),
+    Web3Client = require("./integration/web3");
 
 winston.level = config.logging.level;
 
 if(config.logging.file) 
     winston.add(winston.transports.File, { filename: config.logging.file, rotationFormat: true, json: false, tailable: true } );
 
+ var repository = new repositories.UhcRepositories(config.db.server);
 
  // Exports section
  module.exports.SecurityLogic = new SecurityLogic();
  module.exports.TokenLogic = new TokenLogic();
  module.exports.Config = config;
- module.exports.Repositories = new repositories.UhcRepositories(config.db.server);
+ module.exports.Repositories = repository;
  module.exports.log = winston;
+ module.exports.Mailer = new Mailer(config.mail);
+
+ repository.assetRepository.query().then(function(result) {
+     winston.info("Stellar Client Initialized...")
+     module.exports.StellarClient = new StellarClient(config.stellar.horizon_server, result, config.stellar.testnet_use);
+     winston.info("Web3 Client Initialized...")
+     module.exports.Web3Client = new Web3Client(config.ethereum.geth_server, config.ethereum.geth_net_server);
+ });
+ 

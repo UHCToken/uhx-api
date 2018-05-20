@@ -208,7 +208,7 @@
         }
       }
       else { // There is no authorization, is it in the body as client_id and client_secret
-        clientAuthentication = [req.param("client_id"), req.param("client_secret")];
+        clientAuthentication = [req.body.client_id, req.body.client_secret];
       }
 
       // Authorization
@@ -275,6 +275,11 @@
      *        in: formData
      *        required: false
      *        type: string
+     *      - name: tfa_secret
+     *        description: The user's TFA secret
+     *        in: formData
+     *        required: false
+     *        type: string
      *    responses:
      *          200: 
      *             description: "Authentication was successful"
@@ -291,16 +296,22 @@
 
       var userPrincipal = null;
     
+      var forwardHeader = req.get("X-Forwarded-For");
+      if(forwardHeader) {
+        uhc.log.info(`Authentication on behalf of ${forwardHeader}`);
+        forwardHeader = forwardHeader.split(',')[0];
+      }
+
       // GRANT TYPE
-      switch(req.param("grant_type")){
+      switch(req.body.grant_type){
         case "password":
-          userPrincipal = await uhc.SecurityLogic.establishSession(principal, req.param("username"), req.param("password"), req.param("scope") || "*", req.ip);
+          userPrincipal = await uhc.SecurityLogic.establishSession(principal, req.body.username, req.body.password, req.body.scope || "*", req.body.tfa_secret, forwardHeader || req.ip);
           break;
         case "refresh_token":
-          userPrincipal = await uhc.SecurityLogic.refreshSession(principal, req.param("refresh_token"), req.ip);
+          userPrincipal = await uhc.SecurityLogic.refreshSession(principal, req.body.refresh_token, forwardHeader || req.ip);
           break;
         case "client_credentials":
-          userPrincipal = await uhc.SecurityLogic.establishClientSession(principal, req.param("scope") || "*", req.ip);
+          userPrincipal = await uhc.SecurityLogic.establishClientSession(principal, req.body.scope || "*", forwardHeader || req.ip);
           break;
         case "authorization_code":
           break;
@@ -315,6 +326,7 @@
       res.status(200).json(retVal);
       return true;
     }
+
     /**
      * Custom exception handler for OAUTH
      * @param {*} e The exception to be handled 
