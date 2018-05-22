@@ -104,7 +104,7 @@ const pg = require('pg'),
             if(!_txc) await dbc.connect();
             const rdr = await dbc.query("SELECT wallets.*, wallet_network.name AS network, wallet_network.symbol AS symbol FROM wallets INNER JOIN wallet_network ON (wallets.network_id = wallet_network.id) INNER JOIN users ON (users.id = wallets.user_id) WHERE users.id = $1 AND wallets.network_id = 1", [userId]);
             if(rdr.rows.length == 0)
-                throw new exception.NotFoundException('wallet', userId);
+                return null;
             else
                 return new model.Wallet().fromData(rdr.rows[0]);
         }

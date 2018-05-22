@@ -24,7 +24,6 @@ const uhc = require('../uhc'),
     User = require('./User'),
     ModelBase = require('./ModelBase');
 
-const uuidRegex = /[A-F0-9]{8}-(?:[A-F0-9]{4}\-){3}[A-F0-9]{12}/i;
 
 /**
  * @class
@@ -138,6 +137,9 @@ module.exports = class Transaction extends ModelBase {
                 case "String":
                     this.payorId = payor;
                     break;
+                default:
+                    this.payorId = null;
+                    break;
             }
 
         // Payee details
@@ -159,6 +161,9 @@ module.exports = class Transaction extends ModelBase {
                     break;   
                 case "String":
                     this.payeeId = payee;
+                    break;
+                default:
+                    this.payeeId = null;
                     break;
             }
 
@@ -249,6 +254,8 @@ module.exports = class Transaction extends ModelBase {
         this.updatedTime = dbTransaction.updated_time;
         this.updatedBy = dbTransaction.updated_by;
         this.postingDate = dbTransaction.transaction_time;
+        this.payeeId = null;
+        this.payorId = null;
         return this;
     }
 

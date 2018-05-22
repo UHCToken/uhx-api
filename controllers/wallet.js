@@ -50,7 +50,7 @@ class WalletApiResource {
             "routes" : [
                 {
                     "path" : "user/:uid/wallet",
-                    "post": {
+                    "put": {
                         "demand" : security.PermissionType.WRITE,
                         "method" : this.put
                     },

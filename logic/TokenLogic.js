@@ -35,6 +35,9 @@ const uhc = require('../uhc'),
     Airdrop = require("../model/Airdrop"),
     Purchase = require("../model/Purchase");
 
+    
+const uuidRegex = /[A-F0-9]{8}-(?:[A-F0-9]{4}\-){3}[A-F0-9]{12}/i;
+
 /**
  * @class
  * @summary Represents logic related to tokens
@@ -301,16 +304,14 @@ module.exports = class TokenLogic {
                 if(!wallet) { // Generate a KP
                     // Create a wallet
                     var wallet = await stellarClient.generateAccount();
+                    wallet.userId = user.id;
                     // Insert 
                     wallet = await uhc.Repositories.walletRepository.insert(wallet, null, _txc);
-                    // Update user
-                    user.walletId = wallet.id;
-                    await uhc.Repositories.userRepository.update(user, null, null, _txc);
                 }
 
                 // Activate wallet if not already active
-                if(!stellarClient.isActive(wallet))
-                    await stellarClient.activateAccount(wallet, "1",  await testRepository.walletRepository.get(uhc.Config.stellar.initiator_wallet_id));
+                if(!await stellarClient.isActive(wallet))
+                    await stellarClient.activateAccount(wallet, "1",  await uhc.Repositories.walletRepository.get(uhc.Config.stellar.initiator_wallet_id));
                 return wallet;
             });
         }
@@ -608,15 +609,24 @@ module.exports = class TokenLogic {
                 throw new exception.ArgumentException("amount missing");
             
             // Payor wallet!!!
-            var payorWallet = await uhc.Repositories.walletRepository.get(dropSpec.payorId);
-            if(!payorWallet)
+            var payorWallet = null;
+            
+            if(uuidRegex.test(dropSpec.payorId)) {
+                try { payorWallet = await uhc.Repositories.walletRepository.get(dropSpec.payorId); }
+                catch (e) { payorWallet = await (await uhc.Repositories.userRepository.get(dropSpec.payorId)).loadStellarWallet(); }
+            }
+            else if(dropSpec.payorId)
                 payorWallet = await uhc.Repositories.walletRepository.getByPublicKey(dropSpec.payorId);
 
             // Function that distributes the asset
             var distributeFn = 
                 /** @param {User} u */
                 async(u) => {
-                    var w = await uhc.StellarClient.isActive(await u.loadStellarWallet());
+                    var w = await u.loadStellarWallet();
+                    if(!w) return;
+                    else 
+                        w = await uhc.StellarClient.isActive(w);
+
                     var txns = [];
                     // Is the account active? If not and auto-activate add transaction for that
                     if((!w || !w.balances || w.balances.length == 0)) 
@@ -687,10 +697,10 @@ module.exports = class TokenLogic {
                                 break;
                             }
                         }
-                        txns.push(new Transaction(null, model.TransactionType.Deposit, `Airdrop of ${dropSpec.amount.code}`, null, payorWallet, u, amt, new MonetaryAmount(0.0000100, "XLM"), null, model.TransactionStatus.Pending));
+                        txns.push(new Transaction(null, model.TransactionType.Airdrop, `Airdrop of ${dropSpec.amount.code}`, null, payorWallet, u, amt, new MonetaryAmount(0.0000100, "XLM"), null, model.TransactionStatus.Pending));
                     }
 
-                    dropSpec.plan.concat(txns);
+                    dropSpec.plan = dropSpec.plan.concat(txns);
                 }
 
             // First we want to make sure that drop parameters are valid
@@ -699,7 +709,7 @@ module.exports = class TokenLogic {
                     // All we need is the amount
                     var scanFn = async (ofs) => {
                         var np = await uhc.Repositories.userRepository.query(new User(), ofs, 100)
-                        promises.concat(np.map(u=>distributeFn(u)));
+                        promises = promises.concat(np.map(u=>distributeFn(u)));
                         if(np.length == 100)
                             promises.push(scanFn(ofs + 100));
                     };
@@ -713,6 +723,20 @@ module.exports = class TokenLogic {
                     promises.concat(dropSpec.payeeId.map(o=> (async (u) => { promises.push(distributeFn(await uhc.Repositories.userRepository.get(u))); })(o)));
                     break;
             }
+
+            var retVals = [];
+            while(retVals.length < promises.length) {
+                retVals = retVals.concat(await Promise.all(promises));
+            }
+
+            // Summarize charges
+            dropSpec.summary = {
+                total: new MonetaryAmount(dropSpec.plan.filter(a=>a.amount.code == dropSpec.amount.code).map(a=>a.amount.value).reduce((a,b)=>Number(a)+Number(b), 0), dropSpec.amount.code),
+                fee: new MonetaryAmount(dropSpec.plan.map(a=>a.fee.value).reduce((a,b)=>Number(a)+Number(b), 0), "XLM"),
+                other: new MonetaryAmount(dropSpec.plan.filter(a=>a.amount.code == "XLM" && a.payorId == payorWallet.address).map(a=>a.amount.value).reduce((a,b)=>Number(a)+Number(b), 0), "XLM")
+            };
+
+            return dropSpec;
         }
         catch(e) {
             uhc.log.error(`Error planning airdrop: ${e.message} : ${e.stack}`);

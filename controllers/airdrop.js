@@ -98,8 +98,8 @@ module.exports.AirdropApiResource = class AirdropApiResource {
         
         var airdrop = await uhc.TokenLogic.planAirdrop(new Airdrop().copy(req.body), req.principal);
         airdrop.plan.forEach(t=>{
-            t._payor = null;
-            t._payee = t.payee.summary();
+            t._payor = t.payor ? t.payor.summary() : null;
+            t._payee = t.payee ? t.payee.summary() : null;
         });
         res.status(200).json(airdrop);
         return true;
