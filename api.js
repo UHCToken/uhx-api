@@ -116,6 +116,7 @@ class RouteHandler {
             if(this._routeInfo._instance.authorize && await this._routeInfo._instance.authorize(req, res) ||
                 await this.checkAccessCore(req, res))
                 {
+                    res.set("Cache-Control", "No-Cache");
                     var result = await this._routeInfo[req.method.toLowerCase()].method(req, res);
                     if(!result)
                         res.status(204).send();
@@ -228,7 +229,10 @@ class RouteHandler {
                 
                 var route  = routesInfo.routes[rid];
                 route._instance = this._resources[r];
-                var path = uhc.Config.api.base + "/" + route.path;
+
+                var path = route.path;
+                if(!path.startsWith("/"))
+                    path = uhc.Config.api.base + "/" + path;
                 
                 // Bind the HTTP parameters
                 for(var httpMethod in route) {

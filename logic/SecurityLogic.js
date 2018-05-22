@@ -734,6 +734,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                     subject: "Welcome to the UHX community!",
                     template: uhc.Config.mail.templates.welcome
                 };
+                
                 // Replacements
                 const replacements = {
                     user: newUser,

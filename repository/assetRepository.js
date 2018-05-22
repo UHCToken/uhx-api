@@ -348,7 +348,7 @@ module.exports = class AsssetRepository {
      * @param {number} offset The offset to start filter on
      * @param {number} count The number of results to return
      * @param {Client} _txc When present, the database transaction to use
-     * @return {Asset} The asset with the matching code
+     * @return {Array<Asset>} The asset with the matching code
      */
     async query(filter, offset, count, _txc) {
 
