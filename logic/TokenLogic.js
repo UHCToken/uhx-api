@@ -538,11 +538,10 @@ module.exports = class TokenLogic {
      * @method
      * @summary Creates a transaction
      * @param {Array} transactions The transactions that are being inserted or executed
-     * @param {User} sourceObject The source object (user or asset)
      * @param {SecurityPrincipal} principal The user that is creating the transaction
      * @returns {Array} The created to planned transactions
      */
-    async createTransaction(transactions, sourceObject, principal) {
+    async createTransaction(transactions, principal) {
 
         try {
            
@@ -554,7 +553,7 @@ module.exports = class TokenLogic {
             if(principal.grant["transaction"] & security.PermissionType.OWNER) // Principal is only allowed to create where they are the payor for themselves 
             {
                 if(transactions.find(o=>o.state != model.TransactionStatus.Pending || o.payorId && o.payorId == principal.session.userId))
-                    throw new exception.BusinessRuleViolationException(new exception.RuleViolation("User can only create PENDING transactions for themselves", exception.ErrorCodes.ARGUMENT_EXCEPTION, exception.RuleViolationSeverity.ERROR));
+                    throw new exception.BusinessRuleViolationException(new exception.RuleViolation("User can only create PENDING transactions for your own account", exception.ErrorCodes.ARGUMENT_EXCEPTION, exception.RuleViolationSeverity.ERROR));
                 
                 // Copy the transactions and make them safe
                 transactions = transactions.map(t=>new Transaction(t.id, t.type, t.memo, null, principal.session.userId, t.payee || t.payeeId, t.amount, null, null, model.TransactionStatus.Pending));

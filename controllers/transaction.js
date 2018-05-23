@@ -66,7 +66,7 @@ class TransactionApiResource {
                     }
                 },
                 {
-                    "path":"asset/:id/wallet/transaction",
+                    "path":"transaction",
                     "post": {
                         "demand": security.PermissionType.WRITE | security.PermissionType.EXECUTE,
                         "method": this.post
@@ -234,22 +234,17 @@ class TransactionApiResource {
      *      security:
      *      - uhc_auth:
      *          - "write:transaction"
-     * /asset/{assetid}/wallet/transaction:
+     * /transaction:
      *  post:
      *      tags:
      *      - "transaction"
-     *      summary: "Posts a new transaction to the asset wallet"
-     *      description: "This method will request that a transaction be posted to the assets's wallet. Note: All requests to this resource require that the token presented be for the {userid} of this wallet. All other requests will fail. To request a payment from another user, use the /contract mechanism"
+     *      summary: "Posts a new transaction for general processing"
+     *      description: "This method will request that a transaction be posted to the UHX API for further processing"
      *      consumes: 
      *      - "application/json"
      *      produces:
      *      - "application/json"
      *      parameters:
-     *      - name: "assetid"
-     *        in: "path"
-     *        description: "The ID of the asset whose wallet this transaction should be posed to"
-     *        required: true
-     *        type: "string"
      *      - in: "body"
      *        name: "body"
      *        description: "The transaction details"
@@ -286,17 +281,10 @@ class TransactionApiResource {
         if(!req.body)
             throw new exception.ArgumentException("body missing");
 
-        // Payor corrections
-        var sourceObject = null;
-        if(req.params.uid) 
-            sourceObject = await uhc.Repositories.userRepository.get(req.params.id);
-        else if(req.params.id)
-            sourceObject = await uhc.Repositories.assetRepository.get(req.params.id);
-
         if(!Array.isArray(req.body))
             req.body = [req.body];
         
-        var transactions = await uhc.TokenLogic.createTransaction(req.body.map(o=>new Transaction().copy(o)), sourceObject, req.principal);
+        var transactions = await uhc.TokenLogic.createTransaction(req.body.map(o=>new Transaction().copy(o)), req.principal);
 
         var status = transactions.find(o=>o.state != 2) ? 202 : 201;
         res.status(status).json(transactions);
