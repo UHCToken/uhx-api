@@ -260,7 +260,8 @@ const uhc = require('../uhc'),
                 this._wallet = this._wallets.find(o=>o.networkId == 1);
             else 
                 this._wallet = await uhc.Repositories.walletRepository.getByUserId(this.id, _txc);
-            this._wallet._user = this;
+            if(this._wallet)
+                this._wallet._user = this;
       }
       return this._wallet;
     }

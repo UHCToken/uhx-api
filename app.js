@@ -34,6 +34,7 @@
     reports = require('./controllers/stats'),
     swagger = require('./controllers/js-doc'),
     stellarFederation = require('./federation/stellar-fed.js'),
+    airdrop = require('./controllers/airdrop'),
     toobusy = require('toobusy-js'),
     https = require('https'),
     helmet = require('helmet'),
@@ -76,6 +77,8 @@ restApi.addResource(new invitation.InvitationApiResource());
 restApi.addResource(new reports.StatisticsApiResource());
 restApi.addResource(new transaction.TransactionApiResource());
 restApi.addResource(new stellarFederation.StellarFederationApiResource());
+restApi.addResource(new airdrop.AirdropApiResource());
+
 // Start REST API
 restApi.start();
 
