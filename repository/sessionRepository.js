@@ -43,7 +43,7 @@
 
     /**
      * @method
-     * @summary Retrieve a specific user from the database
+     * @summary Retrieve a specific user session from the database
      * @param {uuid} id Gets the specified session
      * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {Session} The session information

@@ -317,6 +317,38 @@ module.exports = class AsssetRepository {
     /**
      * @method
      * @summary Gets the specified asset by ID
+     * @param {string} code The public code symbol
+     * @param {Client} _txc When present, the database transaction to use
+     * @returns {Asset} The asset with identifier matching
+     */
+    async getByCode(code, _txc) {
+        var dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+
+            // Get by ID
+            var rdr = null;
+            if(code.indexOf("-") == -1)  // code is just code
+                rdr = await dbc.query("SELECT DISTINCT assets.* FROM assets WHERE code = $1", [code]);
+            else  // code is in stellar CODE-ISSUER format
+                rdr = await dbc.query("SELECT DISTINCT assets.* FROM wallets " +
+                        "LEFT JOIN asset_offer ON (wallet_id = wallets.id) " +
+                        "LEFT JOIN assets ON (asset_offer.asset_id = assets.id OR wallets.id = assets.dist_wallet_id) " + 
+                        "WHERE assets.id IS NOT NULL AND address = $2 AND code = $1 ", code.split('-'));
+                        
+            if (rdr.rows.length == 0)
+                return null;
+            else
+                return new Asset().fromData(rdr.rows[0]);
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Gets the specified asset by ID
      * @param {string} addr The public address of the asset to get
      * @param {Client} _txc When present, the database transaction to use
      * @returns {Asset} The asset with identifier matching

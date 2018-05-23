@@ -142,7 +142,7 @@ class PurchaseApiResource {
             throw new exception.ArgumentException("assetId missing");
         else if(!req.body.quantity)
             throw new exception.ArgumentException("quantity missing");
-        else if(req.body.invoicedAmount || req.body.buyer || req.body.buyerId || req.body.state)
+        else if(req.body.amount || req.body.buyer || req.body.buyerId || req.body.state)
             throw new exception.ArgumentException("prohibited field supplied");
 
         req.body.buyerId = req.params.uid;

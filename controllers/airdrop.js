@@ -96,7 +96,7 @@ module.exports.AirdropApiResource = class AirdropApiResource {
         if(!req.body.distribution)
             throw new exception.ArgumentException("distribution missing");
         
-        var airdrop = await uhc.TokenLogic.planAirdrop(new Airdrop().copy(req.body), req.principal);
+        var airdrop = await uhc.TokenLogic.planAirdrop(new Airdrop().copy(req.body), req.params.id, req.principal);
         airdrop.plan.forEach(t=>{
             t._payor = t.payor ? t.payor.summary() : null;
             t._payee = t.payee ? t.payee.summary() : null;

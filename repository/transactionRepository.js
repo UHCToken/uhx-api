@@ -41,6 +41,7 @@ const pg = require('pg'),
         this.insert = this.insert.bind(this);
         this.update = this.update.bind(this);
         this.getByHash = this.getByHash.bind(this);
+        this.getByBatch = this.getByBatch.bind(this);
     }
 
     /**
@@ -67,6 +68,34 @@ const pg = require('pg'),
 
     }
 
+    
+    /**
+     * @method
+     * @summary Retrieve a transactions by batch id
+     * @param {uuid} batchId Gets the specified batch
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {Array<Transaction>} The fetched transactions
+     */
+    async getByBatch(batchId, _txc) {
+
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+            const rdr = await dbc.query("SELECT * FROM transactions LEFT JOIN purchase USING (id) WHERE batch_id = $1 ORDER BY seq_id", [batchId]);
+            return rdr.rows.map(r=>{
+                if(r.type_id == "2") {
+                    var p = new Purchase().fromData(r)._fromData(r);
+                    return p;
+                }
+                else
+                    return new Transaction().fromData(r);
+            });
+        }
+        finally {
+            if(!_txc) dbc.end();
+        }
+
+    }
     
     /**
      * @method

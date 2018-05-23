@@ -25,6 +25,7 @@
     winston = require('winston'),
     Mailer = require('./integration/mail'),
     StellarClient = require("./integration/stellar"),
+    poolio = require('poolio'),
     Web3Client = require("./integration/web3");
 
 winston.level = config.logging.level;
@@ -41,11 +42,22 @@ if(config.logging.file)
  module.exports.Repositories = repository;
  module.exports.log = winston;
  module.exports.Mailer = new Mailer(config.mail);
-
  repository.assetRepository.query().then(function(result) {
      winston.info("Stellar Client Initialized...")
      module.exports.StellarClient = new StellarClient(config.stellar.horizon_server, result, config.stellar.testnet_use);
      winston.info("Web3 Client Initialized...")
      module.exports.Web3Client = new Web3Client(config.ethereum.geth_server, config.ethereum.geth_net_server);
  });
+
+ /**
+  * @method
+  * @summary Initializes the worker pool 
+  */
+ module.exports.init = () => {
+    module.exports.WorkerPool = new poolio.Pool({
+        filePath: 'worker.js',
+        size: 1
+    });
+    module.exports.WorkerPool.on("error", (e)=>winston.error(`Worker process failed: ${JSON.stringify(e)}`));
+ }
  

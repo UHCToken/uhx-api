@@ -79,6 +79,7 @@ module.exports = class StellarClient {
         this.isActive = this.isActive.bind(this);
         this.toTransaction = this.toTransaction.bind(this);
         this.setOptions = this.setOptions.bind(this);
+        this.execute = this.execute.bind(this);
     }
 
     /**
@@ -245,8 +246,9 @@ module.exports = class StellarClient {
      * @param {Wallet} userWallet The wallet of the user which is to be activated 
      * @param {number} startingBalance The starting balance of the account in lumens
      * @param {Wallet} initiatorWallet The wallet which is creating the account from which the startingBalance should be drawn
+     * @param {String} refId The reference identifier to append to the transaction
      */
-    async activateAccount(userWallet, startingBalance, initiatorWallet) {
+    async activateAccount(userWallet, startingBalance, initiatorWallet, refId) {
 
         try {
 
@@ -264,7 +266,15 @@ module.exports = class StellarClient {
                     destination: userWallet.address,
                     startingBalance: startingBalance // Initial lumen balance from the central distributor ... 
                     // TODO: If we're doing this through a payment gateway, would the fee be used to replenish the distributor account to deposit the lumens?
-                })).build();
+                }));
+
+            // Add ref as memo
+            if(refId) {
+                var memoObject = Stellar.Memo.hash(crypto.createHash('sha256').update(refId).digest('hex'));
+                newAcctTx.addMemo(memoObject);
+            }
+            newAcctTx = newAcctTx.build();
+
             // Get the source key to create a trust
             var sourceKey = await Stellar.Keypair.fromSecret(initiatorWallet.seed);
 
@@ -293,8 +303,9 @@ module.exports = class StellarClient {
      * @param {Wallet} userWallet The wallet to establish trust with the asset defined on this class
      * @param {Asset} asset The asset to create a trust on
      * @param {number} limit The limit of the trust
+     * @param {String} refId The reference identifier to append to the transaction
      */
-    async createTrust(userWallet, asset, limit) {
+    async createTrust(userWallet, asset, limit, refId) {
 
         try {
             // Load stellar user acct
@@ -321,6 +332,12 @@ module.exports = class StellarClient {
                         source: userWallet.address
                     }));
                 }
+
+            // Add memo
+            if(refId) {
+                var memoObject = Stellar.Memo.hash(crypto.createHash('sha256').update(refId).digest('hex'));
+                changeTrustTx.addMemo(memoObject);
+            }             
 
             // Build the transaction
             changeTrustTx = changeTrustTx.build();
@@ -607,8 +624,8 @@ module.exports = class StellarClient {
                             dbData = await uhc.Repositories.transactionRepository.getByHash(Buffer.from(r.memo, 'base64'), _txc);
 
                         // Loop through operations
-                        for (var opNo in ops._embedded.records) {
-                            var o = ops._embedded.records[opNo];
+                        for (var opNo in ops.records) {
+                            var o = ops.records[opNo];
                             try {
                                 if ((!filter.asset || o.asset_code == filter.asset) &&
                                     rNo++ >= (filter._offset || 0) && retVal.length < (filter._count || 20)) {
@@ -707,5 +724,48 @@ module.exports = class StellarClient {
                 model.TransactionStatus.Complete
             );
         }
+    }
+
+    /**
+     * @method
+     * @summary Executes a described transaction against the stellar network
+     * @param {Transaction} transaction The transaction to be executed
+     */
+    async execute(transaction) {
+        try {
+
+            if(transaction.state != model.TransactionStatus.Pending)
+                return transaction;
+
+            await transaction.loadPayeeWallet();
+            await transaction.loadPayorWallet();
+            uhc.log.info(`Execute transaction: ${transaction.id} (${transaction.type}) (${transaction._payorWallet.id} > ${transaction._payeeWallet.id} - ${transaction.amount.value} ${transaction.amount.code})`);
+
+            // Do the transaction
+            switch(Number(transaction.type)) {
+                case model.TransactionType.AccountManagement:
+                    await this.activateAccount(transaction._payeeWallet, transaction.amount.value, transaction._payorWallet, transaction.id);
+                    break;
+                case model.TransactionType.Trust:
+                    await this.createTrust(transaction._payeeWallet, await uhc.Repositories.assetRepository.getByCode(transaction.amount.code), null,  transaction.id);
+                    break;
+                case model.TransactionType.Purchase:
+                case model.TransactionType.Deposit:
+                case model.TransactionType.Airdrop:
+                    await this.createPayment(transaction._payorWallet, transaction._payeeWallet, transaction.amount, transaction.id);
+                    break;
+                default:
+                    throw new exception.Exception(`Cannot understand ${transaction.type}`);
+            }
+            transaction.state = model.TransactionStatus.Complete;
+            transaction.postingDate = new Date();
+        }
+        catch(e) {
+            uhc.log.error(`Could not perform transaction  ${transaction.id} due to ${e.message}`);
+            transaction.state = model.TransactionStatus.Failed;
+            transaction.ref = exception.ErrorCodes.COM_FAILURE;
+            transaction.postingDate = new Date();
+        }
+        return transaction;
     }
 }

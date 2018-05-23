@@ -46,19 +46,19 @@
     if(!buyerStrWallet)
         await uhc.StellarClient.activateAccount(buyerStrWallet, "1.6", distributionAccount);
 
-    var sourceEthBalance = buyerEthWallet.balances.find(o=>o.code == orderInfo.invoicedAmount.code);
+    var sourceEthBalance = buyerEthWallet.balances.find(o=>o.code == orderInfo.amount.code);
 
     var sourceStrBalance = buyerStrWallet.balances.find(o=>o.code == "XLM");
-    if(!sourceEthBalance || parseFloat(sourceEthBalance.value) < parseFloat(orderInfo.invoicedAmount)) // Must carry min balance
+    if(!sourceEthBalance || parseFloat(sourceEthBalance.value) < parseFloat(orderInfo.amount.value)) // Must carry min balance
     {
         orderInfo.memo = exception.ErrorCodes.INSUFFICIENT_FUNDS;
-        return model.PurchaseState.REJECT;
+        return model.TransactionStatus.Failed;
     }
 
     if(!sourceStrBalance || sourceStrBalance.value < 1) // Must carry min balance
     {
         orderInfo.memo = exception.ErrorCodes.INSUFFICIENT_FUNDS;
-        return model.PurchaseState.REJECT;
+        return model.TransactionStatus.Failed;
     }
 
     // We want to do a multipart transaction now ...
@@ -67,19 +67,19 @@
         if(!buyerStrWallet.balances.find(o=>o.code == asset.code))
             await uhc.StellarClient.createTrust(buyerStrWallet, asset);
         // TODO: If this needs to go to escrow this will need to be changed
-        await uhc.Web3Client.createPayment(buyerEthWallet, uhc.Config.ethereum.distribution_wallet_address, orderInfo.invoicedAmount)
+        await uhc.Web3Client.createPayment(buyerEthWallet, uhc.Config.ethereum.distribution_wallet_address, orderInfo.amount)
         await uhc.StellarClient.createPayment(distributionAccount, buyerStrWallet, {value: orderInfo.amount, code: asset.code})
 
         //orderInfo.ref = transaction.ref;
         //orderInfo.memo = transaction.id;
         orderInfo.transactionTime = new Date();
-        return model.PurchaseState.COMPLETE;
+        return model.TransactionStatus.Complete;
     }
     catch(e) {
         uhc.log.error(`Error transacting with ethereum network: ${e.message}`);
         orderInfo.ref = e.code || exception.ErrorCodes.COM_FAILURE;
         orderInfo.transactionTime = new Date();
-        return model.PurchaseState.REJECT;
+        return model.TransactionStatus.Failed;
     }
 
  }

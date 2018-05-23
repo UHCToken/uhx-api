@@ -261,6 +261,10 @@ class TransactionApiResource {
      *             description: "The requested resource was created successfully"
      *             schema: 
      *                  $ref: "#/definitions/Transaction"
+     *          202: 
+     *              description: "The request was performed however some of the transaction batch failed, or have not yet completed"
+     *              schema: 
+     *                  $ref: "#/definitions/Transaction"
      *          404:
      *              description: "The specified user cannot be found or the specified user does not have an active wallet"
      *              schema: 
@@ -279,14 +283,8 @@ class TransactionApiResource {
      */
     async post(req, res) {
         
-        if(!req.body.type)
-            throw new exception.ArgumentException("type missing");
-        else if(!req.body.payee && !req.body.payeeId)
-            throw new exception.ArgumentException("payee missing");
-        else if(!req.body.test)
-            throw new exception.ArgumentException("test indicator missing");
-        else if(!req.body.amount)
-            throw new exception.ArgumentException("amount missing");
+        if(!req.body)
+            throw new exception.ArgumentException("body missing");
 
         // Payor corrections
         var sourceObject = null;
@@ -300,7 +298,8 @@ class TransactionApiResource {
         
         var transactions = await uhc.TokenLogic.createTransaction(req.body.map(o=>new Transaction().copy(o)), sourceObject, req.principal);
 
-        res.status(201).json(retVal);
+        var status = transactions.find(o=>o.state != 2) ? 202 : 201;
+        res.status(status).json(transactions);
 
         return true;
     }

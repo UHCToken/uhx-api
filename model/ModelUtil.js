@@ -134,7 +134,7 @@ module.exports = class ModelUtil {
         var parmId = 1, colNames = "", values = "", parameters = [];
         for(var k in dbModel) {
             var val = dbModel[k];
-            if(val) {
+            if(val !== undefined) {
 
                 if(k.startsWith("$")) {
                     colNames += `${k.substring(1)},`;

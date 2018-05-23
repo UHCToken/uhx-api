@@ -54,9 +54,6 @@ const Transaction = require('./Transaction'),
  *              quote:
  *                  $ref: "#/definitions/AssetQuote"
  *                  description: The quote which was used to execute the purchase
- *              invoicedAmount:
- *                  $ref: "#/definitions/MonetaryAmount"
- *                  description: The amount of currency collected from the buyer
  *              assetId:
  *                  type: string
  *                  description: The unique identifier for the asset class being purchased
@@ -66,12 +63,6 @@ const Transaction = require('./Transaction'),
  *              quantity:
  *                  type: number
  *                  description: The amount of the asset that was purchased
- *              memo:
- *                  type: string
- *                  description: A short memo field on the invoice / purchase
- *              ref:
- *                  type: string
- *                  description: A reference to the transaction which facilitated the purchase (could be an Etherium transaction, bank wire, etc.)
  *              creationTime:
  *                  type: date
  *                  description: The time the transaction was created
@@ -131,14 +122,12 @@ module.exports = class Purchase extends Transaction {
         this.id = dbPurchase.id;
         this.buyerId = dbPurchase.user_id;
         this.quoteId = dbPurchase.quote_id;
-        this.invoicedAmount = new MonetaryAmount(dbPurchase.charge_amount, dbPurchase.charge_currency);
         this.assetId = dbPurchase.asset_id;
-        this.quantity = dbPurchase.amount;
+        this.quantity = dbPurchase.quantity;
         this.creationTime = dbPurchase.creation_time;
         this.createdBy = dbPurchase.created_by;
         this.updatedTime = dbPurchase.updated_time;
         this.updatedBy = dbPurchase.updated_by;
-        this.state = dbPurchase.state;
         this.distributorWalletId = dbPurchase.dist_wallet_id;
         return this;
     }
@@ -152,11 +141,8 @@ module.exports = class Purchase extends Transaction {
             id : this.id,
             user_id: this.buyerId,
             quote_id: this.quoteId,
-            charge_amount: this.invoicedAmount.value,
-            charge_currency: this.invoicedAmount.code,
             asset_id: this.assetId,
-            amount: this.quantity,
-            state: this.state,
+            quantity: this.quantity,
             dist_wallet_id: this.distributorWalletId
             // tracking fields not updated
         }

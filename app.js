@@ -79,6 +79,7 @@ restApi.addResource(new transaction.TransactionApiResource());
 restApi.addResource(new stellarFederation.StellarFederationApiResource());
 restApi.addResource(new airdrop.AirdropApiResource());
 
+uhc.init();
 // Start REST API
 restApi.start();
 

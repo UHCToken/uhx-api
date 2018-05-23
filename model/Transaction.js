@@ -24,6 +24,7 @@ const uhc = require('../uhc'),
     User = require('./User'),
     ModelBase = require('./ModelBase');
 
+const uuidRegex = /[A-F0-9]{8}-(?:[A-F0-9]{4}\-){3}[A-F0-9]{12}/i;
 
 /**
  * @class
@@ -214,6 +215,50 @@ module.exports = class Transaction extends ModelBase {
     }
 
     /**
+     * @method
+     * @summary Load the payor wallet 
+     * @param {*} _txc The transaction context
+     */
+    async loadPayorWallet(_txc) {
+        if(!this._payorWallet) 
+        {
+            if(this._payorWalletId)
+                this._payorWallet = await uhc.Repositories.walletRepository.get(this._payorWalletId, _txc);
+            else if(!uuidRegex.test(this.payorId))
+                this._payorWallet = await uhc.Repositories.walletRepository.getByPublicKey(this.payorId, _txc);
+            else {
+                try { this._payorWallet = await uhc.Repositories.walletRepository.get(this.payorId, _txc); }
+                catch(e) { 
+                    this._payorWallet = await uhc.Repositories.walletRepository.getByUserId(this.payorId, _txc);
+                }
+            }
+        }
+        return this._payorWallet;
+    }
+
+        /**
+     * @method
+     * @summary Load the payee wallet 
+     * @param {*} _txc The transaction context
+     */
+    async loadPayeeWallet(_txc) {
+        if(!this._payeeWallet) 
+        {
+            if(this._payeeWalletId)
+                this._payeeWallet = await uhc.Repositories.walletRepository.get(this._payeeWalletId, _txc);
+            else if(!uuidRegex.test(this.payeeId))
+                this._payeeWallet = await uhc.Repositories.walletRepository.getByPublicKey(this.payeeId, _txc);
+            else {
+                try { this._payeeWallet = await uhc.Repositories.walletRepository.get(this.payeeId, _txc); }
+                catch(e) { 
+                    this._payeeWallet = await uhc.Repositories.walletRepository.getByUserId(this.payeeId, _txc);
+                }
+            }
+        }
+        return this._payeeWallet;
+    }
+
+    /**
      * @summary Represent the object in JSON
      * @method
      */
@@ -254,8 +299,10 @@ module.exports = class Transaction extends ModelBase {
         this.updatedTime = dbTransaction.updated_time;
         this.updatedBy = dbTransaction.updated_by;
         this.postingDate = dbTransaction.transaction_time;
+        this.state = dbTransaction.state_id;
         this.payeeId = null;
         this.payorId = null;
+        this.amount = new MonetaryAmount(dbTransaction.amount, dbTransaction.asset_code);
         return this;
     }
 
@@ -274,15 +321,18 @@ module.exports = class Transaction extends ModelBase {
     _toData() {
         return {
             id: this.id,
-            payee_wallet_id: this._payeeWalletId,
-            payor_wallet_id: this._payorWalletId,
+            payee_wallet_id: this._payeeWallet ? this._payeeWallet.id : this._payeeWalletId,
+            payor_wallet_id: this._payorWallet ? this._payorWallet.id :this._payorWalletId,
             type_id: this.type,
             batch_id : this.batchId,
             memo: this.memo,
             ref : this.ref,
             escrow: this.escrowInfo,
             escrow_time: this.escrowTerm,
-            transaction_time: this.postingDate
+            transaction_time: this.postingDate,
+            state_id: this.state,
+            amount: this.amount.value,
+            asset_code: this.amount.code
         };
     }
 }
