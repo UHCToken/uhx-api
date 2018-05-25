@@ -164,7 +164,8 @@
          */
         client: {
             name: 'StellarClient',
-            balanceFn: 'getAccount'
+            balanceFn: 'getAccount',
+            activeFn: 'isActive'
         },
          /**
           * @summary The wallet from which the initial balance of XLM should be retrieved
@@ -202,7 +203,6 @@
          client: {
             name: 'Web3Client',
             balanceFn: 'getBalance',
-            activeFn: 'isActive'
         },
      /**
       * @summary Flag for using ethereum
