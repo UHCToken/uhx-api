@@ -46,10 +46,10 @@
     if(!buyerStrWallet)
         await uhc.StellarClient.activateAccount(buyerStrWallet, "1.6", distributionAccount);
 
-    var sourceEthBalance = buyerEthWallet.balances.find(o=>o.code == orderInfo.amount.code);
+    var sourceEthBalance = buyerEthWallet.balances.find(o=>o.code == orderInfo.invoicedAmount.code);
 
     var sourceStrBalance = buyerStrWallet.balances.find(o=>o.code == "XLM");
-    if(!sourceEthBalance || parseFloat(sourceEthBalance.value) < parseFloat(orderInfo.amount.value)) // Must carry min balance
+    if(!sourceEthBalance || parseFloat(sourceEthBalance.value) < parseFloat(orderInfo.invoicedAmount.value)) // Must carry min balance
     {
         orderInfo.memo = exception.ErrorCodes.INSUFFICIENT_FUNDS;
         return model.TransactionStatus.Failed;
@@ -67,12 +67,12 @@
         if(!buyerStrWallet.balances.find(o=>o.code == asset.code))
             await uhc.StellarClient.createTrust(buyerStrWallet, asset);
         // TODO: If this needs to go to escrow this will need to be changed
-        await uhc.Web3Client.createPayment(buyerEthWallet, uhc.Config.ethereum.distribution_wallet_address, orderInfo.amount)
-        await uhc.StellarClient.createPayment(distributionAccount, buyerStrWallet, {value: orderInfo.amount, code: asset.code})
+        await uhc.Web3Client.createPayment(buyerEthWallet, uhc.Config.ethereum.distribution_wallet_address, orderInfo.invoicedAmount)
+        await uhc.StellarClient.createPayment(distributionAccount, buyerStrWallet, {value: orderInfo.quantity, code: asset.code})
 
         //orderInfo.ref = transaction.ref;
         //orderInfo.memo = transaction.id;
-        orderInfo.transactionTime = new Date();
+        orderInfo.postingDate = orderInfo.transactionTime = new Date();
         return model.TransactionStatus.Complete;
     }
     catch(e) {

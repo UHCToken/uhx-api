@@ -56,6 +56,7 @@ module.exports = class TokenLogic {
         this.createTransaction = this.createTransaction.bind(this);
         this.planAirdrop = this.planAirdrop.bind(this);
         this.getAllBalancesForWallets = this.getAllBalancesForWallets.bind(this);
+        this.getTransaction = this.getTransaction.bind(this);
     }
 
     /**
@@ -349,7 +350,7 @@ module.exports = class TokenLogic {
                     quoteId: purchaseInfo.quoteId, 
                     assetId: purchaseInfo.assetId,
                     quantity: purchaseInfo.quantity,
-                    amount: purchaseInfo.amount,
+                    invoicedAmount: purchaseInfo.invoicedAmount,
                     buyerId: purchaseInfo.buyerId,
                     memo: purchaseInfo.memo,
                     state: purchaseInfo.state,
@@ -373,8 +374,8 @@ module.exports = class TokenLogic {
                     else if(quote.expiry < new Date())
                         throw new exception.BusinessRuleViolationException(new exception.RuleViolation(`Quote is expired`, exception.ErrorCodes.EXPIRED, exception.RuleViolationSeverity.error));
                     // 2. Set the invoice amount
-                    if(!purchase.amount || !purchase.amount.code && !purchase.amount.value)
-                        purchase.amount = new MonetaryAmount(purchase.quantity * quote.rate.value, quote.rate.code);
+                    if(!purchase.invoicedAmount || !purchase.invoicedAmount.code && !purchase.invoicedAmount.value)
+                        purchase.invoicedAmount = new MonetaryAmount(purchase.quantity * quote.rate.value, quote.rate.code);
 
                     // 2a. Verify buyer is logged in user
                     var buyer = await purchase.loadBuyer(_txc);
@@ -400,20 +401,24 @@ module.exports = class TokenLogic {
                     var claims = await buyer.loadClaims(_txc);
                     if(claims["kyc.limit"]) {
                         // KYC Limit in USD, get total value of trade
-                        var exchange = await new Bittrex().getExchange({ from: "USDT", to: purchase.amount.code, via: [ "BTC" ]});
-                        if(exchange[0] * purchase.amount.value > claims["kyc.limit"])
+                        var exchange = await new Bittrex().getExchange({ from: "USDT", to: purchase.invoicedAmount.code, via: [ "BTC" ]});
+                        if(exchange[0] * purchase.invoicedAmount.value > claims["kyc.limit"])
                             throw new exception.BusinessRuleViolationException(new exception.RuleViolation(`The estimated trade value of ${exchange[0] * purchase.amount.value} exceeds this account's AML limit`, exception.ErrorCodes.AML_CHECK, exception.RuleViolationSeverity.ERROR));
                     }
                     
                     // 3. Insert purchase as a transaction and as a purchase
                     purchase._payorWalletId = offerWallet.id;
                     purchase._payeeWalletId = (await buyer.loadStellarWallet(_txc)).id;
+                    await purchase.loadPayee(_txc);
+                    await purchase.loadPayor(_txc);
+                    
+                    purchase.amount = new MonetaryAmount(purchase.quantity, asset.code);
                     purchase = await uhc.Repositories.transactionRepository.insert(purchase, principal, _txc);
                     purchase = await uhc.Repositories.transactionRepository.insertPurchase(purchase, principal, _txc);
                     
                     // 7. Attempt to execute purchase
                     var linkedTxns = [];
-                    purchase.state = await require("../payment_processor/" + purchase.amount.code)(purchase, offerWallet, linkedTxns);
+                    purchase.state = await require("../payment_processor/" + purchase.invoicedAmount.code)(purchase, offerWallet, linkedTxns);
                     
                     for(var i in linkedTxns)
                         await uhc.Repositories.transactionRepository.insert(linkedTxns[i], principal, _txc);
@@ -513,17 +518,45 @@ module.exports = class TokenLogic {
         try {
 
             // First we want to fetch the transaction history from stellar 
-            return await uhc.Repositories.transaction(async (_txc) => {
-
-                // Load primary data from wallet
-                var user = await uhc.Repositories.userRepository.get(userId, _txc);
-                var userWallet = await user.loadStellarWallet(_txc);
+            if(userId) // user querying for self 
+            {
+                var user = await uhc.Repositories.userRepository.get(userId);
+                var userWallet = await user.loadStellarWallet();
 
                 // Get the stellar transaction history for the user
                 var transactionHistory = await uhc.StellarClient.getTransactionHistory(userWallet, filter);
-
                 return transactionHistory;
-            });
+            }
+            else if((!filter._localOnly && (filter.payorId || filter.payeeId)) && !(principal.grant["transaction"] & security.PermissionType.OWNER)) {
+                var txFilter = new Transaction(null, null, null, null, filter.payorId, filter.payeeId, null, null, null, null);
+
+                var wallet = null;
+                if(filter.payorId)
+                    wallet = await txFilter.loadPayorWallet();
+                else 
+                    wallet = await txFilter.loadPayeeWallet();
+
+                var transactionHistory = await uhc.StellarClient.getTransactionHistory(wallet, filter);
+                return transactionHistory;
+            }
+            else if(!(principal.grant["transaction"] & security.PermissionType.OWNER)) { // just filter on our local database
+                return await uhc.Repositories.transaction(async (_txc) => {
+                    var txFilter = new Transaction(filter.id, filter.type, filter.memo, filter.postingDate, filter.payorId, filter.payeeId, new MonetaryAmount(filter.amount, filter.asset), null, null, filter.state);
+                    await txFilter.loadPayeeWallet(_txc);
+                    await txFilter.loadPayorWallet(_txc);
+                    var transactionHistory = await uhc.Repositories.transactionRepository.query(txFilter, filter._offset, filter._count, _txc);
+                    for(var t in transactionHistory) {
+                        await transactionHistory[t].loadPayee(_txc);
+                        await transactionHistory[t].loadPayor(_txc);
+                        if(transactionHistory[t].loadBuyer)
+                            await transactionHistory[t].loadBuyer(_txc);
+                        if(transactionHistory[t].loadAsset)
+                            await transactionHistory[t].loadAsset(_txc);
+                    }
+                    return transactionHistory;
+    
+                });
+            }
 
         }
         catch(e) {
@@ -795,4 +828,49 @@ module.exports = class TokenLogic {
         }
     }
 
+    /**
+     * @method
+     * @summary Gets the specified transaction from the local database or from the block chain 
+     * @param {String} txId The identifier of the transaction to retrieve
+     * @param {SecurityPrincipal} principal The user who is making the request
+     */
+    async getTransaction(txId, principal) {
+
+        try {
+
+            if(uuidRegex.test(txId)) // txid is a UUID, we should have this info locally
+            {
+                // Step 1. First we load the transaction from the DB
+                var txInfo = await uhc.Repositories.transaction(async (_txc) => {
+                    var transaction = await uhc.Repositories.transactionRepository.get(txId, _txc);
+                    await transaction.loadPayee(_txc);
+                    await transaction.loadPayor(_txc);
+                    if(transaction.loadBuyer)
+                        await transaction.loadBuyer(_txc);
+                    if(transaction.loadAsset)
+                        await transaction.loadAsset(_txc);
+                    return transaction;
+                });
+                
+                // Security check
+                if((principal.grant["transaction"] & security.PermissionType.OWNER) &&
+                    txInfo.payorId != principal.session.userId &&
+                    txInfo.payeeId != principal.session.userId)
+                    throw new security.SecurityException(new security.Permission("transaction", security.PermissionType.READ));
+                
+                    return txInfo;
+
+            }
+            else {
+                // Retrieve the stellar operation or transaction
+            }
+        }
+        catch(e) {
+            uhc.log.error(`Error retrieving transaction: ${e.message}`);
+            while(e.code == exception.ErrorCodes.DATA_ERROR && e.cause) 
+                e = e.cause[0];
+            throw new exception.Exception("Error retrieving transaction", e.code || exception.ErrorCodes.UNKNOWN, e);
+
+        }
+    }
 }

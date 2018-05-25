@@ -52,6 +52,7 @@ module.exports = class AsssetRepository {
         this.insertQuote = this.insertQuote.bind(this);
         this.getQuote = this.getQuote.bind(this);
         this.getByPublicAddress = this.getByPublicAddress.bind(this);
+        this.getByWalletId = this.getByWalletId.bind(this);
     }
 
     /**
@@ -363,6 +364,33 @@ module.exports = class AsssetRepository {
                     "LEFT JOIN asset_offer ON (wallet_id = wallets.id) " +
                     "LEFT JOIN assets ON (asset_offer.asset_id = assets.id OR wallets.id = assets.dist_wallet_id) " + 
                     "WHERE assets.id IS NOT NULL AND address = $1", [addr]);
+            if (rdr.rows.length == 0)
+                return null;
+            else
+                return new Asset().fromData(rdr.rows[0]);
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Gets the specified asset by ID
+     * @param {string} walletId The identifier of the wallet to retrieve
+     * @param {Client} _txc When present, the database transaction to use
+     * @returns {Asset} The asset with identifier matching
+     */
+    async getByWalletId(walletId, _txc) {
+        var dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+
+            // Get by ID
+            var rdr = await dbc.query("SELECT DISTINCT assets.* FROM wallets " +
+                    "LEFT JOIN asset_offer ON (wallet_id = wallets.id) " +
+                    "LEFT JOIN assets ON (asset_offer.asset_id = assets.id OR wallets.id = assets.dist_wallet_id) " + 
+                    "WHERE assets.id IS NOT NULL AND wallets.id = $1", [walletId]);
             if (rdr.rows.length == 0)
                 return null;
             else

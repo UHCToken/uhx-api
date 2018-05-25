@@ -42,12 +42,6 @@ const Transaction = require('./Transaction'),
  *              id:
  *                  type: string
  *                  description: The unique identifier this system tracks the purchase with
- *              buyerId:
- *                  type: string
- *                  description: The unique identifier of the user who purchased (or received) the asset
- *              buyer:
- *                  $ref: "#/definitions/User"
- *                  description: The user who purchased the asset
  *              quoteId:
  *                  type: string
  *                  description: Identifies the quote which was used to execute the purchase
@@ -129,6 +123,7 @@ module.exports = class Purchase extends Transaction {
         this.updatedTime = dbPurchase.updated_time;
         this.updatedBy = dbPurchase.updated_by;
         this.distributorWalletId = dbPurchase.dist_wallet_id;
+        this.invoicedAmount = new MonetaryAmount(dbPurchase.charge_amount, dbPurchase.charge_currency);
         return this;
     }
 
@@ -143,7 +138,9 @@ module.exports = class Purchase extends Transaction {
             quote_id: this.quoteId,
             asset_id: this.assetId,
             quantity: this.quantity,
-            dist_wallet_id: this.distributorWalletId
+            dist_wallet_id: this.distributorWalletId,
+            charge_currency: this.invoicedAmount.code,
+            charge_amount: this.invoicedAmount.value
             // tracking fields not updated
         }
     }

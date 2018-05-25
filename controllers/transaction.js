@@ -70,6 +70,17 @@ class TransactionApiResource {
                     "post": {
                         "demand": security.PermissionType.WRITE | security.PermissionType.EXECUTE,
                         "method": this.post
+                    },
+                    "get": {
+                        "demand": security.PermissionType.LIST,
+                        "method": this.getAll
+                    }
+                },
+                {
+                    "path": "transaction/:txid",
+                    "get": {
+                        "demand": security.PermissionType.READ,
+                        "method": this.get
                     }
                 }
 
@@ -121,7 +132,10 @@ class TransactionApiResource {
      *          - "read:transaction"
      */
     async get(req, res) {
-        throw new exception.NotImplementedException();
+        
+        var txInfo = await uhc.TokenLogic.getTransaction(req.params.txid, req.principal);
+        res.status(200).json(txInfo);
+        return true;
     }
 
     /**
@@ -170,16 +184,75 @@ class TransactionApiResource {
      *      security:
      *      - uhc_auth:
      *          - "list:transaction"
+     * /transaction:
+     *  get:
+     *      tags:
+     *      - "transaction"
+     *      summary: "Gets all transactions posted matching the filter parameter"
+     *      description: "This method will request the server to produce a complete list of transactions. When payorId or payeeId are specified the blockchain is used to fetch records, when these fields are missing only locally registered transactions are returned"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "payorId"
+     *        in: "query"
+     *        description: "The ID of the wallet or user which paid the transaction cost"
+     *        required: false
+     *        type: "string"
+     *      - name: "payeeId"
+     *        in: "query"
+     *        description: "The ID of the wallet or user which was paid the transaction cost"
+     *        required: false
+     *        type: "string"
+     *      - in: "query"
+     *        name: "asset"
+     *        description: "The code of the asset to query"
+     *        required: false
+     *        type: string
+     *      - in: "query"
+     *        name: "_count"
+     *        description: "Limit the number of results to the provided number"
+     *        required: false
+     *        type: number
+     *      - in: "query"
+     *        name: "_offset"
+     *        description: "The offset of the first result"
+     *        required: false
+     *        type: number
+     *      - in: "query"
+     *        name: "_localOnly"
+     *        description: "When true, indicates the query should be done against the local api database only not the blockchain"
+     *        required: false
+     *        type: boolean
+     *      responses:
+     *          200: 
+     *             description: "The query completed successfully and the results are in the payload"
+     *             schema: 
+     *                  $ref: "#/definitions/Transaction"
+     *          404:
+     *              description: "The specified user cannot be found or the specified user does not have an active wallet"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhc_auth:
+     *          - "list:transaction"
      */
     async getAll(req, res) {
         var transactions = await uhc.TokenLogic.getTransactionHistory(req.params.uid, req.query, req.principal);
 
         // Minify user information
         transactions = transactions.map((t)=> {
-            if(t.payee)
-                t._payee = t.payee.summary();
-            if(t.payor)
-                t._payor = t.payor.summary();
+            if(t._payor)
+                t._payor = t._payor.summary();
+            if(t._payee) 
+                t._payee = t._payee.summary();
+            if(t._buyer)
+                t._buyer = t._buyer.summary();
+            if(t._asset)
+                t._asset = t._asset.summary();
             return t;
         });
         res.status(200).json(transactions);

@@ -47,8 +47,8 @@
         return model.TransactionStatus.Failed;
     }
 
-    var sourceBalance = buyerWallet.balances.find(o=>o.code == orderInfo.amount.code);
-    if(!sourceBalance || sourceBalance.value < Number(orderInfo.amount.value) + (1 + (buyerWallet.balances.length) * 0.5)) // Must carry min balance
+    var sourceBalance = buyerWallet.balances.find(o=>o.code == orderInfo.invoicedAmount.code);
+    if(!sourceBalance || sourceBalance.value < Number(orderInfo.invoicedAmount.value) + (1 + (buyerWallet.balances.length) * 0.5)) // Must carry min balance
     {
         orderInfo.memo = exception.ErrorCodes.INSUFFICIENT_FUNDS;
         return model.TransactionStatus.Failed;
@@ -60,20 +60,23 @@
         if(!buyerWallet.balances.find(o=>o.code == asset.code))
             await uhc.StellarClient.createTrust(buyerWallet, asset);
         // TODO: If this needs to go to escrow this will need to be changed
-        var transaction = await uhc.StellarClient.exchangeAsset(buyerWallet, distributionAccount, orderInfo.amount, new MonetaryAmount(orderInfo.quantity, asset.code), orderInfo.batchId);
+        var transaction = await uhc.StellarClient.exchangeAsset(buyerWallet, distributionAccount, orderInfo.invoicedAmount, new MonetaryAmount(orderInfo.quantity, asset.code), orderInfo.batchId);
 
+        orderInfo.amount = new MonetaryAmount(orderInfo.quantity, asset.code)
         orderInfo.ref = transaction.ref;
         orderInfo.memo = transaction.id;
-        orderInfo.transactionTime = new Date();
+        orderInfo.postingDate = orderInfo.transactionTime = new Date();
 
         // Now record the payment to DIST for our own copy of records
         transaction.type = model.TransactionType.Payment;
         transaction._payeeWalletId = distributionAccount.id;
         transaction._payorWalletId = buyerWallet.id;
+        transaction._payor = orderInfo._payee;
+        transaction._payee = orderInfo._payor;
         transaction.batchId = orderInfo.batchId;
         transaction.memo = transaction.id; // Ledger identifier
-        transaction.transactionTime = new Date();
-        transaction.amount = orderInfo.amount;
+        orderInfo.postingDate = transaction.transactionTime = new Date();
+        transaction.amount = orderInfo.invoicedAmount;
         delete(transaction.id);
         linkedTxns.push(transaction);
 

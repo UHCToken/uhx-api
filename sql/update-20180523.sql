@@ -21,8 +21,6 @@ ALTER TABLE purchase DROP COLUMN state CASCADE;
 
 ALTER TABLE transactions ADD COLUMN amount NUMERIC(20,7);
 ALTER TABLE transactions ADD COLUMN asset_code VARCHAR(12);
-ALTER TABLE purchase DROP COLUMN charge_amount;
-ALTER TABLE purchase DROP COLUMN charge_currency; 
 ALTER TABLE purchase RENAME COLUMN amount TO quantity;
 
 -- UPDATE REPORTS
@@ -30,12 +28,12 @@ ALTER TABLE purchase RENAME COLUMN amount TO quantity;
 CREATE OR REPLACE VIEW rpt_purchase_by_currency AS
     SELECT 
         assets.code, 
-        transactions.asset_code as charge_currency, 
-        sum(transactions.amount) as total_charge, 
-        avg(transactions.amount) as average_charge, 
+        charge_currency, 
+        sum(charge_amount) as total_charge, 
+        avg(charge_amount) as average_charge, 
         count(purchase.id) as num_purchases,
-        min(transactions.amount) as smallest_charge,
-        max(transactions.amount) as largest_charge,
+        min(charge_amount) as smallest_charge,
+        max(charge_amount) as largest_charge,
         sum(purchase.quantity) as amount,
         count(distinct user_id) as num_buyers
     FROM 
@@ -50,13 +48,13 @@ CREATE OR REPLACE VIEW rpt_purchase_by_currency AS
 CREATE OR REPLACE VIEW rpt_purchase_by_currency_date AS
     SELECT 
         assets.code, 
-        transactions.asset_code as charge_currency, 
+        charge_currency, 
         to_char(transactions.transaction_time, 'yyyy-MM-dd') as date,
-        sum(amount) as total_charge, 
-        avg(amount) as average_charge, 
+        sum(charge_amount) as total_charge, 
+        avg(charge_amount) as average_charge, 
         count(purchase.id) as num_purchases,
-        min(amount) as smallest_charge,
-        max(amount) as largest_charge,
+        min(charge_amount) as smallest_charge,
+        max(charge_amount) as largest_charge,
         sum(quantity) as amount,
         count(distinct user_id) as num_buyers
     FROM 
