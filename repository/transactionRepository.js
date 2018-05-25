@@ -57,7 +57,7 @@ const pg = require('pg'),
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM transactions LEFT JOIN purchase USING (id) WHERE id = $1", [id]);
+            const rdr = await dbc.query("SELECT transactions.*, purchase.user_id, purchase.quote_id, purchase.asset_id, purchase.dist_wallet_id, purchase.quantity, purchase.charge_amount, purchase.charge_currency FROM transactions LEFT JOIN purchase USING (id) WHERE id = $1", [id]);
             if(rdr.rows.length == 0)
                 throw new exception.NotFoundException('purchase', id);
             else if(rdr.rows[0].type_id == "2")
@@ -84,7 +84,7 @@ const pg = require('pg'),
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM transactions LEFT JOIN purchase USING (id) WHERE batch_id = $1 ORDER BY seq_id", [batchId]);
+            const rdr = await dbc.query("SELECT transactions.*, purchase.user_id, purchase.quote_id, purchase.asset_id, purchase.dist_wallet_id, purchase.quantity, purchase.charge_amount, purchase.charge_currency FROM transactions LEFT JOIN purchase USING (id) WHERE batch_id = $1 ORDER BY seq_id", [batchId]);
             return rdr.rows.map(r=>{
                 if(r.type_id == "2") {
                     var p = new Purchase().fromData(r)._fromData(r);
@@ -112,7 +112,7 @@ const pg = require('pg'),
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM transactions LEFT JOIN purchase USING (id) WHERE digest(id::TEXT, 'sha256') = $1 OR digest(batch_id::TEXT, 'sha256') = $1 ORDER BY seq_id", [idHash]);
+            const rdr = await dbc.query("SELECT transactions.*, purchase.user_id, purchase.quote_id, purchase.asset_id, purchase.dist_wallet_id, purchase.quantity, purchase.charge_amount, purchase.charge_currency FROM transactions LEFT JOIN purchase USING (id) WHERE digest(id::TEXT, 'sha256') = $1 OR digest(batch_id::TEXT, 'sha256') = $1 ORDER BY seq_id", [idHash]);
             var retVal = rdr.rows.map(r=> {
                 if(r.type_id == "2") {
                     var p = new Purchase().fromData(r)._fromData(r);
@@ -146,7 +146,8 @@ const pg = require('pg'),
 
             var dbFilter = filter.toData();
 
-            var sqlCmd = model.Utils.generateSelect(dbFilter, ["transactions", "purchase"], offset, count, { col: ["seq_id"], order: "desc"});
+            var sqlCmd = model.Utils.generateSelect(dbFilter, ["transactions", "purchase"], offset, count, { col: ["seq_id"], order: "desc"}, 
+                ["transactions.*", "purchase.user_id", "purchase.quote_id", "purchase.asset_id", "purchase.dist_wallet_id", "purchase.quantity", "purchase.charge_amount", "purchase.charge_currency"]);
             const rdr = await dbc.query(sqlCmd.sql, sqlCmd.args);
             
             var retVal = rdr.rows.map(r=> {

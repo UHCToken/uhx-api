@@ -737,7 +737,8 @@ module.exports = class StellarClient {
     async execute(transaction) {
         try {
 
-            if(transaction.state != model.TransactionStatus.Pending)
+            if(transaction.state != model.TransactionStatus.Pending && 
+                transaction.state != model.TransactionStatus.Active)
                 return transaction;
 
             await transaction.loadPayeeWallet();

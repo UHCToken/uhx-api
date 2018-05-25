@@ -26,7 +26,8 @@
     Mailer = require('./integration/mail'),
     StellarClient = require("./integration/stellar"),
     poolio = require('poolio'),
-    Web3Client = require("./integration/web3");
+    Web3Client = require("./integration/web3"),
+    worker = require('./worker');
 
 winston.level = config.logging.level;
 
@@ -59,5 +60,11 @@ if(config.logging.file)
         size: 1
     });
     module.exports.WorkerPool.on("error", (e)=>winston.error(`Worker process failed: ${JSON.stringify(e)}`));
+    
+    setTimeout( () => {
+        module.exports.WorkerPool.anyp({action: 'backlogTransactions' })
+            .then(e=> winston.info("Exhaust backlogged transactions completed"))
+            .catch(e => winston.error(e.message));
+    }, 1000);
  }
  
