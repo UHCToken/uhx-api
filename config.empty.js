@@ -201,7 +201,8 @@
           */
          client: {
             name: 'Web3Client',
-            balanceFn: 'getBalance'
+            balanceFn: 'getBalance',
+            activeFn: 'isActive'
         },
      /**
       * @summary Flag for using ethereum
