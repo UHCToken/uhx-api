@@ -411,7 +411,7 @@ module.exports = class TokenLogic {
                     purchase._payeeWalletId = (await buyer.loadStellarWallet(_txc)).id;
                     await purchase.loadPayee(_txc);
                     await purchase.loadPayor(_txc);
-                    
+
                     purchase.amount = new MonetaryAmount(purchase.quantity, asset.code);
                     purchase = await uhc.Repositories.transactionRepository.insert(purchase, principal, _txc);
                     purchase = await uhc.Repositories.transactionRepository.insertPurchase(purchase, principal, _txc);
@@ -542,6 +542,8 @@ module.exports = class TokenLogic {
             else if(!(principal.grant["transaction"] & security.PermissionType.OWNER)) { // just filter on our local database
                 return await uhc.Repositories.transaction(async (_txc) => {
                     var txFilter = new Transaction(filter.id, filter.type, filter.memo, filter.postingDate, filter.payorId, filter.payeeId, new MonetaryAmount(filter.amount, filter.asset), null, null, filter.state);
+                    txFilter.batchId = filter.batchId;
+                    txFilter.state = filter.state;
                     await txFilter.loadPayeeWallet(_txc);
                     await txFilter.loadPayorWallet(_txc);
                     var transactionHistory = await uhc.Repositories.transactionRepository.query(txFilter, filter._offset, filter._count, _txc);
@@ -618,15 +620,11 @@ module.exports = class TokenLogic {
                 if(transactions.length > 4)
                     uhc.WorkerPool.anyp({action: 'processTransactions', batchId: batchId, sessionId: principal.session.id });
                 else {
-                    var stellarPromises = transactions
-                        .filter(o=>o.state == model.TransactionStatus.Pending)
-                        .map(o=>uhc.StellarClient.execute(o));
-
-                    Promise.all(stellarPromises); // Wait for activations to complete
-
                     // Update the transactions 
-                    for(var i in transactions)
+                    for(var i in transactions) {
+                        await uhc.StellarClient.execute(transactions[i]);
                         await uhc.Repositories.transactionRepository.update(transactions[i], principal, _txc);
+                    }
                 }
 
 
@@ -754,7 +752,7 @@ module.exports = class TokenLogic {
                                 break;
                             }
                         }
-                        txns.push(new Transaction(null, model.TransactionType.Deposit, dropSpec.memo || `Airdrop of ${dropSpec.amount.code}`, null, payorWallet, u, amt, new MonetaryAmount(0.0000100, "XLM"), null, model.TransactionStatus.Pending));
+                        txns.push(new Transaction(null, model.TransactionType.Airdrop, dropSpec.memo || `Airdrop of ${dropSpec.amount.code}`, null, payorWallet, u, amt, new MonetaryAmount(0.0000100, "XLM"), null, model.TransactionStatus.Pending));
                     }
 
                     dropSpec.plan = dropSpec.plan.concat(txns);

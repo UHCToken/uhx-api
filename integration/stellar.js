@@ -452,7 +452,7 @@ module.exports = class StellarClient {
             uhc.log.info(`Payment ${payorWallet.address} > ${payeeWallet.address} (${amount.value} ${amount.code}) success`);
 
             // Build transaction 
-            return new model.Transaction(paymentResult.ledger, new Date(), await payorWallet.loadUser(), await payeeWallet.loadUser(), amount, null, paymentResult._links.transaction.href);
+            return new model.Transaction(paymentResult.ledger, model.TransactionType.Payment, null, new Date(), await payorWallet.loadUser(), await payeeWallet.loadUser(), amount, null, paymentResult._links.transaction.href, model.TransactionStatus.Complete);
         }
         catch (e) {
             uhc.log.error(`Account payment has failed: ${e.message}`);
