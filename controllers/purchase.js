@@ -122,6 +122,10 @@ class PurchaseApiResource {
      *              description: "The purchase request was successfully created"
      *              schema: 
      *                  $ref: "#/definitions/Purchase"
+     *          207: 
+     *              description: "The purchase request was recorded, however the transaction failed"
+     *              schema:
+     *                  $ref: "#/definitions/Purchase"
      *          422:
      *              description: "The purchase request failed due to a business rule being violated"
      *              schema:
@@ -142,7 +146,7 @@ class PurchaseApiResource {
             throw new exception.ArgumentException("assetId missing");
         else if(!req.body.quantity)
             throw new exception.ArgumentException("quantity missing");
-        else if(req.body.amount || req.body.buyer || req.body.buyerId || req.body.state)
+        else if(req.body.amount || req.body.buyer || req.body.buyerId)
             throw new exception.ArgumentException("prohibited field supplied");
 
         req.body.buyerId = req.params.uid;

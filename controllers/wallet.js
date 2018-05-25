@@ -69,6 +69,13 @@ class WalletApiResource {
                         "demand": security.PermissionType.READ,
                         "method": this.getAssetWallet
                     }
+                },
+                {
+                    "path": "wallet/:walletId",
+                    "get": {
+                        "demand": security.PermissionType.READ,
+                        "method": this.getWallet
+                    }
                 }
             ]
         };
@@ -281,6 +288,20 @@ class WalletApiResource {
         });
 
         res.status(200).json(assetWalletStat);
+        return true;
+    }
+
+    /**
+     * @summary Gets the specified wallet
+     * @method
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to the client
+     */
+    async getWallet(req, res) {
+
+        var wallet = await uhc.Repositories.walletRepository.get(req.params.walletId);
+        wallet = await uhc.TokenLogic.getAllBalancesForWallets(wallet);
+        res.status(200).json(wallet);
         return true;
     }
 

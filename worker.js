@@ -28,8 +28,17 @@ const actions = {
         uhc.log.info(`Worker process will transact ${transactions.length} for batch ${workData.batchId}`);
         for(var i in transactions) {
             if(transactions[i].state == model.TransactionStatus.Pending) {
-                transactions[i] = await uhc.StellarClient.execute(transactions[i]);
-                await uhc.Repositories.transactionRepository.update(transactions[i], principal);
+                try {
+                    uhc.log.info(`Start processing ${transactions[i].id}...`);
+                    transactions[i] = await uhc.StellarClient.execute(transactions[i]);
+                    uhc.log.info(`Processing complete ${transactions[i].id}...`);
+                    await uhc.Repositories.transactionRepository.update(transactions[i], principal);
+                }
+                catch(e) {
+                    transactions[i].state = model.TransactionStatus.Failed;
+                    transactions[i].postingDate = new Date();
+                    await uhc.Repositories.transactionRepository.update(transactions[i], principal);
+                }
             }
             else 
                 uhc.log.info(`Transaction ${transactions[i].id} has state of ${transactions[i].state}, will not retry`);

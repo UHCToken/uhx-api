@@ -285,11 +285,13 @@ module.exports = class StellarClient {
             uhc.log.info(`activateAccount(): Account ${kp.publicKey()} activated on Horizon API`);
 
             // return 
-            return new model.Wallet().copy({
+            var retVal = new model.Wallet().copy({
                 seed: kp.secret(),
                 address: kp.publicKey(),
                 network: "STELLAR"
             });
+            retVal.ref = distResult._links.transaction.href;
+            return retVal
         }
         catch (e) {
             uhc.log.error(`Account creation has failed : ${JSON.stringify(e)}`);
@@ -350,6 +352,7 @@ module.exports = class StellarClient {
 
             uhc.log.info(`createTrust(): Account ${userWallet.address} trust has been changed`);
 
+            userWallet.ref = distResult._links.transaction.href;
             return userWallet;
         }
         catch (e) {
@@ -449,7 +452,7 @@ module.exports = class StellarClient {
             uhc.log.info(`Payment ${payorWallet.address} > ${payeeWallet.address} (${amount.value} ${amount.code}) success`);
 
             // Build transaction 
-            return new model.Transaction(paymentResult.ledger, new Date(), await payorWallet.loadUser(), await payeeWallet.loadUser(), amount, null, paymentResult._links.transaction.href);
+            return new model.Transaction(paymentResult.ledger, model.TransactionType.Payment, null, new Date(), await payorWallet.loadUser(), await payeeWallet.loadUser(), amount, null, paymentResult._links.transaction.href, model.TransactionStatus.Complete);
         }
         catch (e) {
             uhc.log.error(`Account payment has failed: ${e.message}`);
@@ -689,8 +692,8 @@ module.exports = class StellarClient {
         // Load blockchain fill data if needed
         if (payor === undefined) {
             payor = userMap[source] = await uhc.Repositories.userRepository.getByPublicAddress(source, _txc);
-            if (!payee) // is it an asset account or offering?
-                payor = userMap[source] = await uhc.Repositories.assetRepository.getByPublicAddress(destination, _txc);
+            if (!payor) // is it an asset account or offering?
+                payor = userMap[source] = await uhc.Repositories.assetRepository.getByPublicAddress(source, _txc);
         }
         if (payee === undefined) {
             payee = userMap[destination] = await uhc.Repositories.userRepository.getByPublicAddress(destination, _txc);
@@ -742,21 +745,23 @@ module.exports = class StellarClient {
             uhc.log.info(`Execute transaction: ${transaction.id} (${transaction.type}) (${transaction._payorWallet.id} > ${transaction._payeeWallet.id} - ${transaction.amount.value} ${transaction.amount.code})`);
 
             // Do the transaction
+            var stlrTx = null;
             switch(Number(transaction.type)) {
                 case model.TransactionType.AccountManagement:
-                    await this.activateAccount(transaction._payeeWallet, transaction.amount.value, transaction._payorWallet, transaction.id);
+                    stlrTx = await this.activateAccount(transaction._payeeWallet, transaction.amount.value, transaction._payorWallet, transaction.id);
                     break;
                 case model.TransactionType.Trust:
-                    await this.createTrust(transaction._payeeWallet, await uhc.Repositories.assetRepository.getByCode(transaction.amount.code), null,  transaction.id);
+                    stlrTx = await this.createTrust(transaction._payeeWallet, await uhc.Repositories.assetRepository.getByCode(transaction.amount.code), null,  transaction.id);
                     break;
                 case model.TransactionType.Purchase:
                 case model.TransactionType.Deposit:
                 case model.TransactionType.Airdrop:
-                    await this.createPayment(transaction._payorWallet, transaction._payeeWallet, transaction.amount, transaction.id);
+                    stlrTx = await this.createPayment(transaction._payorWallet, transaction._payeeWallet, transaction.amount, transaction.id);
                     break;
                 default:
                     throw new exception.Exception(`Cannot understand ${transaction.type}`);
             }
+            transaction.ref = stlrTx.ref;
             transaction.state = model.TransactionStatus.Complete;
             transaction.postingDate = new Date();
         }

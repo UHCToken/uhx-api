@@ -52,7 +52,7 @@ const pg = require('pg'),
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM wallets WHERE id = $1", [id]);
+            const rdr = await dbc.query("SELECT wallets.*, wallet_network.name AS network FROM wallets INNER JOIN wallet_network ON (wallets.network_id = wallet_network.id) WHERE wallets.id = $1", [id]);
             if(rdr.rows.length == 0)
                 throw new exception.NotFoundException('wallet', id);
             else

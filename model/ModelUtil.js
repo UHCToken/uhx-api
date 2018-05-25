@@ -81,13 +81,14 @@ module.exports = class ModelUtil {
 
         var parmId = 1, parameters = [], whereClause = "";
         for(var k in dbModel) 
-            if(dbModel[k]) {
+            if(dbModel[k] !== undefined &&
+                dbModel[k] !== null) {
                 
                 if(dbModel[k] == "null")
                     whereClause += `${k} IS NULL AND `;
                 else {
                     var op = "=";
-                    if(dbModel[k].indexOf("*") > -1)
+                    if(dbModel[k].indexOf && dbModel[k].indexOf("*") > -1)
                     {
                         op = "ILIKE";
                         dbModel[k] = dbModel[k].replace(/\*/g, '%');
@@ -111,9 +112,24 @@ module.exports = class ModelUtil {
             control += `OFFSET ${offset} `;
         if(count)
             control += `LIMIT ${count} `;
+        else 
+            control += "LIMIT 100";
 
+        // Join
+        if(Array.isArray(tableName))
+        {
+            var join = "";
+            for(var i in tableName) {
+                join += tableName[i];
+                if(i > 0)
+                    join += " USING(id) ";
+                join += " LEFT JOIN ";
+            }
+            tableName = join.substr(0, join.length - 10);
+        }
+        
         var retVal = {
-            sql: `SELECT * FROM ${tableName} ${whereClause} ${control}`,
+            sql: `SELECT DISTINCT * FROM ${tableName} ${whereClause} ${control}`,
             args : parameters
         };
         uhc.log.debug(`Generated select : ${retVal.sql}`);
