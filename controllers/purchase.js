@@ -146,8 +146,6 @@ class PurchaseApiResource {
             throw new exception.ArgumentException("assetId missing");
         else if(!req.body.quantity)
             throw new exception.ArgumentException("quantity missing");
-        else if(req.body.amount || req.body.buyer || req.body.buyerId)
-            throw new exception.ArgumentException("prohibited field supplied");
 
         req.body.buyerId = req.params.uid;
         var purchase = await uhc.TokenLogic.createPurchase(new Purchase().copy(req.body), req.principal);

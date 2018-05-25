@@ -29,9 +29,9 @@ const actions = {
         for(var i in transactions) {
             if(transactions[i].state == model.TransactionStatus.Pending) {
                 try {
-                    uhc.log.info(`Start processing ${transactions[i].id}...`);
+                    transactions[i].state = model.TransactionStatus.Active;
+                    await uhc.Repositories.transactionRepository.update(transactions[i], principal);
                     transactions[i] = await uhc.StellarClient.execute(transactions[i]);
-                    uhc.log.info(`Processing complete ${transactions[i].id}...`);
                     await uhc.Repositories.transactionRepository.update(transactions[i], principal);
                 }
                 catch(e) {
