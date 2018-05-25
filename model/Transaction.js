@@ -335,8 +335,8 @@ module.exports = class Transaction extends ModelBase {
             escrow_time: this.escrowTerm,
             transaction_time: this.postingDate,
             state_id: this.state,
-            amount: this.amount.value,
-            asset_code: this.amount.code
+            amount: this.amount ? this.amount.value : null,
+            asset_code: this.amount ? this.amount.code : null
         };
     }
 }

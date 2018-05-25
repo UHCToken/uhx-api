@@ -150,7 +150,10 @@ module.exports = class Purchase extends Transaction {
      * @summary Creates the transaction data
      */
     toTransactionData() {
-        return this._toData();
+        var retVal = this._toData();
+        retVal.amount = this.quantity;
+        retVal.asset_code = this._asset.code;
+        return retVal;
     }
 
     /**

@@ -47,9 +47,8 @@ CREATE OR REPLACE VIEW rpt_purchase_by_currency AS
 
 CREATE OR REPLACE VIEW rpt_purchase_by_currency_date AS
     SELECT 
-        assets.code, 
-        charge_currency, 
         to_char(transactions.transaction_time, 'yyyy-MM-dd') as date,
+        assets.code, 
         sum(charge_amount) as total_charge, 
         avg(charge_amount) as average_charge, 
         count(purchase.id) as num_purchases,
@@ -64,6 +63,6 @@ CREATE OR REPLACE VIEW rpt_purchase_by_currency_date AS
     WHERE
         state_id = 2
     GROUP BY
-        code, charge_currency, date
+        code, date
     ORDER BY 
-        date;  
+        date;   

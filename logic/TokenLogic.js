@@ -1,3 +1,4 @@
+
 // <Reference path="./model/model.js"/>
 'use strict';
 
@@ -335,7 +336,11 @@ module.exports = class TokenLogic {
 
             var purchase = purchaseInfo;
             // Is this a user purchase or an admin purchase? Clean inputs based on permission level
-            if(principal.grant["purchase"] & security.PermissionType.OWNER) // Principal is only allowed to buy for themselves
+            if(principal.grant["purchase"] & security.PermissionType.OWNER) // Principal is only allowed to buy for themselves 
+            {
+                if(purchaseInfo.amount || purchaseInfo.buyer || purchaseInfo.buyerId)
+                    throw new exception.ArgumentException("prohibited field supplied");
+
                 purchase = new Purchase().copy({
                     type: model.TransactionType.Purchase,
                     quoteId: purchaseInfo.quoteId,
@@ -344,6 +349,7 @@ module.exports = class TokenLogic {
                     buyerId: principal.session.userId,
                     state: 1 // PENDING
                 });
+            }
             else 
                 purchase = new Purchase().copy({
                     type: model.TransactionType.Purchase,
@@ -433,9 +439,9 @@ module.exports = class TokenLogic {
                 } 
                 else if(purchase.state == model.TransactionStatus.Active) // We are just recording an ACTIVE purchase which means we just want to deposit 
                 {
-                    // 1. Insert the ACTIVE order
-                    purchase = await uhc.Repositories.transactionRepository.insert(purchase, principal, _txc);
-                    purchase = await uhc.Repositories.transactionRepository.insertPurchase(purchase, principal, _txc);
+                    // 1. Load the buyer & asset
+                    var buyer = await purchase.loadBuyer(_txc);
+                    var asset = await purchase.loadAsset(_txc);
 
                     // 2. Is the distributor wallet specifically specified?
                     var sourceWallet = null;
@@ -457,28 +463,39 @@ module.exports = class TokenLogic {
                         throw new exception.Exception("Not enough assets on offering to fulfill this order", exception.ErrorCodes.INSUFFICIENT_FUNDS);
                     purchase.distributorWalletId = sourceWallet.id;
 
-                    // 4. Load the buyer & asset
-                    var buyer = await purchase.loadBuyer(_txc);
-                    var asset = await purchase.loadAsset(_txc);
-
+                    // 4. Insert the ACTIVE order
+                    purchase._payorWalletId = sourceWallet.id;
+                    purchase._payeeWalletId = (await buyer.loadStellarWallet(_txc)).id;
+                    await purchase.loadPayee(_txc);
+                    await purchase.loadPayor(_txc);
+                    
+                    purchase = await uhc.Repositories.transactionRepository.insert(purchase, principal, _txc);
+                    purchase = await uhc.Repositories.transactionRepository.insertPurchase(purchase, principal, _txc);
+                    
                     // 5. Now just dump the asset into the user's wallet
                     try {
 
                         var buyerWallet = await buyer.loadStellarWallet(_txc);
                         // If the user wallet is not active, activate it with 2 XLM
                         if(!await uhc.StellarClient.isActive(buyerWallet)) 
-                            buyerWallet = await uhc.StellarClient.activateAccount(userWallet, "2", sourceWallet);
-
+                        {
+                            if(purchaseInfo.autoActivate)
+                                buyerWallet = await uhc.StellarClient.activateAccount(userWallet, "1.6", sourceWallet);
+                            else
+                                throw new exception.BusinessRuleViolationException(new exception.RuleViolation("Buyer's Stellar account is not active", exception.ErrorCodes.INVALID_ACCOUNT, exception.RuleViolationSeverity.ERROR));
+                        }
+                        
                         // If the buyer wallet does not have a trust line, trust the asset
                         buyerWallet = await uhc.StellarClient.getAccount(buyerWallet);
                         if(!buyerWallet.balances.find(o=>o.code == asset.code))
                             buyerWallet = await uhc.StellarClient.createTrust(buyerWallet, asset);
 
                         // Process the payment
-                        var transaction = uhc.StellarClient.createPayment(sourceWallet, buyer, new MonetaryAmount(purchase.quantity, asset.code), purchase.id, 'hash');
+                        var transaction = await uhc.StellarClient.createPayment(sourceWallet, buyerWallet, new MonetaryAmount(purchase.quantity, asset.code), purchase.id, 'hash');
                         purchase.state = model.TransactionStatus.Complete;
                         purchase.ref = transaction.ref;
-                        purchase.transactionTime = purchase.transactionTime || new Date();
+                        purchase.postingDate = purchase.transactionTime = purchase.transactionTime || new Date();
+                        await uhc.Repositories.transactionRepository.update(purchase, principal, _txc);
                         await uhc.Repositories.transactionRepository.updatePurchase(purchase, principal, _txc);
                     }
                     catch (e) {
