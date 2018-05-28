@@ -149,7 +149,7 @@ const pg = require('pg'),
      * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {User} The matching users
      */
-    async query(filter, offset, count, _txc) {
+    async query(filter, offset, count, sort, _txc) {
         const dbc =  _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
@@ -157,7 +157,27 @@ const pg = require('pg'),
             var dbFilter = filter.toData();
             dbFilter.deactivation_time = filter.deactivationTime; // Filter for deactivation time?
 
-            var sqlCmd = model.Utils.generateSelect(dbFilter, "users", offset, count, { col: ["updated_time", "creation_time"], order: "desc"});
+            if(sort) {
+                var sortExpr = {}, order = "asc";
+                // Is there a column : order?
+                if(sort.indexOf(":") > -1)
+                {
+                    order = sort.split(":")[1];
+                    sort = sort.split(":")[0];
+                }
+                sortExpr[sort] = "__sort_control__";
+                var dbSort = new User().copy(sortExpr).toData();
+                for(var k in dbSort)
+                    if(dbSort[k] == "__sort_control__") {
+                        sort = { col: [ k ], order: order }
+                        break;
+                    }
+            }
+            else {
+                sort = { col: ["updated_time", "creation_time"], order: "desc"};
+            }
+
+            var sqlCmd = model.Utils.generateSelect(dbFilter, "users", offset, count, sort );
             const rdr = await dbc.query(sqlCmd.sql, sqlCmd.args);
             
             var retVal = [];

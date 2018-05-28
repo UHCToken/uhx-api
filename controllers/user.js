@@ -89,6 +89,14 @@ class UserApiResource {
                     "delete" : {
                         "demand":security.PermissionType.WRITE | security.PermissionType.READ,
                         "method": this.delete
+                    },
+                    "lock" : {
+                        "demand": security.PermissionType.WRITE,
+                        "method": this.lock
+                    },
+                    "unlock": {
+                        "demand": security.PermissionType.WRITE,
+                        "method": this.unlock
                     }
                 },
                 {
@@ -345,7 +353,7 @@ class UserApiResource {
             deactivationTime: req.query._all ? null : "null"
         });
         
-        var results = await uhc.Repositories.userRepository.query(filterUser, req.query._offset, req.query._count);
+        var results = await uhc.Repositories.userRepository.query(filterUser, req.query._offset, req.query._count, req.query._sort);
         results.forEach((o)=>{ o._externalIds = null;});
         res.status(200).json(results);
         return true;
@@ -574,6 +582,96 @@ class UserApiResource {
         return true;
     }
     
+    /**
+     * @method
+     * @summary Locks a user account
+     * @param {Express.Request} req The HTTP request
+     * @param {Express.Response} res The HTTP response
+     * /user/{userId}:
+     *  lock:
+     *      tags:
+     *      - "user"
+     *      summary: "Locks a user"
+     *      description: "This method will lock the user until the end of time"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "userId"
+     *        in: "path"
+     *        description: "The user to be locked"
+     *        required: true
+     *        type: "string"
+     *      responses:
+     *          204: 
+     *             description: "The reset request was successful and no content is required to be returned"
+     *          404:
+     *              description: "The specified user cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhc_auth:
+     *          - "write:user"
+     */
+    async lock(req, res) {
+        if(req.principal.grant["user"] & security.PermissionType.OWNER)
+            throw new security.SecurityException(new security.Permission("user", 1));
+        
+        var usr = await uhc.Repositories.userRepository.get(req.params.uid);
+        usr.lockout = new Date("9999-12-31T00:00:00Z");
+        await uhc.Repositories.userRepository.update(usr, null, req.principal);
+        res.status(204).send();
+        return true;
+    }
+
+    /**
+     * @method
+     * @summary Unlocks a user account
+     * @param {Express.Request} req The HTTP request
+     * @param {Express.Response} res The HTTP response
+     * /user/{userId}:
+     *  unlock:
+     *      tags:
+     *      - "user"
+     *      summary: "Unlocks a user"
+     *      description: "This method will unlock the user until the end of time"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "userId"
+     *        in: "path"
+     *        description: "The user to be unlocked"
+     *        required: true
+     *        type: "string"
+     *      responses:
+     *          204: 
+     *             description: "The reset request was successful and no content is required to be returned"
+     *          404:
+     *              description: "The specified user cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhc_auth:
+     *          - "write:user"
+     */
+    async unlock(req, res) {
+        if(req.principal.grant["user"] & security.PermissionType.OWNER)
+            throw new security.SecurityException(new security.Permission("user", 1));
+        
+        var usr = await uhc.Repositories.userRepository.get(req.params.uid);
+        usr.lockout = null;
+        await uhc.Repositories.userRepository.update(usr, null, req.principal);
+        res.status(204).send();
+        return true;
+    }
+
     /**
      * @method
      * @summary Determines additional access control on the user resource

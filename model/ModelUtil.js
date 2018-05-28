@@ -107,7 +107,7 @@ module.exports = class ModelUtil {
         // Order? 
         var control = "";
         if(order) 
-            control += `ORDER BY ${order.col.join(',')} ${order.order} `;
+            control += `ORDER BY ${order.col.join(` ${order.order} ,`)} ${order.order} `;
         if(offset)
             control += `OFFSET ${offset} `;
         if(count)

@@ -351,7 +351,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
             await uhc.Repositories.transaction(async (_txc)=>{
 
                 // Get the user
-                var users = await uhc.Repositories.userRepository.query(new User().copy({email: email, tel: tel}), 0, 1, _txc);
+                var users = await uhc.Repositories.userRepository.query(new User().copy({email: email, tel: tel}), 0, 1, null, _txc);
                 if(users.length == 0)
                     return null;
                 var user = users[0];
