@@ -193,11 +193,10 @@ module.exports.GroupApiResource = class GroupApiResource {
         if(!req.body) 
             throw new exception.Exception("Missing payload", exception.ErrorCodes.MISSING_PAYLOAD);
         
-        var user = new User().copy(req.body);
-        if(!user.id) 
+        if(!req.body.id) 
             throw new exception.Exception("User object is missing ID", exception.ErrorCodes.MISSING_PROPERTY);
 
-        res.status(200).json(await uhc.Repositories.groupRepository.addUser(req.params.gid, user.id));
+        res.status(200).json(await uhc.Repositories.groupRepository.addUser(req.params.gid, req.body.id));
         return true;
     }
 

@@ -126,7 +126,7 @@ module.exports = class GroupRepository {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM groups WHERE deactivated_time IS NULL");
+            const rdr = await dbc.query("SELECT * FROM groups WHERE deactivation_time IS NULL");
             var retVal = [];
             for(var r in rdr.rows)
                 retVal.push(new Group().fromData(rdr.rows[r]));

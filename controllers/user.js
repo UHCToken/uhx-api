@@ -277,6 +277,8 @@ class UserApiResource {
         
         await user.loadExternalIds();
         await user.loadClaims();
+        await user.loadGroups();
+        
         res.status(200).json(user);
         return true;
     }
