@@ -228,7 +228,7 @@ module.exports = class TokenLogic {
             asset = asset[0];
             if(!asset)
                 throw new exception.Exception(`Invalid asset : ${sellCurrency}, only assets configured on this service can be quoted`, exception.ErrorCodes.RULES_VIOLATION);
-            else if (asset.locked)
+            else if (asset.locked && !nostore)
                 throw new exception.Exception(`Selling of ${asset.code} from this distributor is currently locked`, exception.ErrorCodes.ASSET_LOCKED);
             // Get current offer
             var currentOffer = await uhc.Repositories.assetRepository.getActiveOffer(asset.id);

@@ -75,8 +75,9 @@ module.exports = class ModelUtil {
      * @param {*} order The order control 
      * @param {string} order.order The ordering (asc or desc)
      * @param {Array} order.col The columns to sort on
+     * @param {Array} columns Columns to select 
      */
-    generateSelect(filter, tableName, offset, count, order) {
+    generateSelect(filter, tableName, offset, count, order, columns) {
         var dbModel = filter.toData ? filter.toData() : filter;
 
         var parmId = 1, parameters = [], whereClause = "";
@@ -129,7 +130,7 @@ module.exports = class ModelUtil {
         }
         
         var retVal = {
-            sql: `SELECT DISTINCT * FROM ${tableName} ${whereClause} ${control}`,
+            sql: `SELECT DISTINCT ${columns ? columns.join(",") : "*"} FROM ${tableName} ${whereClause} ${control}`,
             args : parameters
         };
         uhc.log.debug(`Generated select : ${retVal.sql}`);
