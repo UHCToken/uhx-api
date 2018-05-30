@@ -18,7 +18,7 @@
  */
 
  const swagger = require('swagger-jsdoc'),
-    uhc = require('../uhc'),
+    uhx = require('../uhx'),
     security = require('../security');
  /**
   * @class
@@ -31,19 +31,19 @@
      * @summary Initializes the swagger metadata spec
      */
     constructor() {
-        this._spec = swagger(uhc.Config.swagger);
+        this._spec = swagger(uhx.Config.swagger);
 
         // Add security def
         this._spec.securityDefinitions = {
-            "uhc_auth" : {
+            "uhx_auth" : {
                 type: "oauth2",
                 flow: "password",
-                tokenUrl: uhc.Config.security.tokenServiceUri
+                tokenUrl: uhx.Config.security.tokenServiceUri
             },
             "app_auth" : {
                 type: "oauth2",
                 flow: "application",
-                tokenUrl: uhc.Config.security.tokenServiceUri
+                tokenUrl: uhx.Config.security.tokenServiceUri
             }
         };
         
@@ -79,19 +79,19 @@
     async swagger(req, res) {
 
         // Load permission sets
-        if(!this._spec.securityDefinitions.uhc_auth.scopes) {
-            this._spec.securityDefinitions.uhc_auth.scopes = {
+        if(!this._spec.securityDefinitions.uhx_auth.scopes) {
+            this._spec.securityDefinitions.uhx_auth.scopes = {
                 "*" : "all permissions for user"
             };
             this._spec.securityDefinitions.app_auth.scopes = {
                 "*" : "all permissions for application"
             };
 
-            var permissions = await uhc.Repositories.permissionRepository.getAll();
+            var permissions = await uhx.Repositories.permissionRepository.getAll();
             permissions.forEach((o) => {
                 Object.keys(security.PermissionType).forEach((p) => {
                     if(p == "OWNER" || p == "RWX") return;
-                    this._spec.securityDefinitions.uhc_auth.scopes[p.toLowerCase() + ":" + o.name] = p + " " + o.description; 
+                    this._spec.securityDefinitions.uhx_auth.scopes[p.toLowerCase() + ":" + o.name] = p + " " + o.description; 
                     this._spec.securityDefinitions.app_auth.scopes[p.toLowerCase() + ":" + o.name] = p + " " + o.description; 
 
                 });

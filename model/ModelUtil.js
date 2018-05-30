@@ -17,7 +17,7 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
-const uhc = require('../uhc');
+const uhx = require('../uhx');
 
 /**
   * @class
@@ -61,7 +61,7 @@ module.exports = class ModelUtil {
             sql: `UPDATE ${tableName} SET ${updateSet} WHERE ${whereClause} RETURNING *`,
             args : parameters
         };
-        uhc.log.debug(`Generated update : ${retVal.sql}`);
+        uhx.log.debug(`Generated update : ${retVal.sql}`);
         return retVal;
     }
 
@@ -75,19 +75,21 @@ module.exports = class ModelUtil {
      * @param {*} order The order control 
      * @param {string} order.order The ordering (asc or desc)
      * @param {Array} order.col The columns to sort on
+     * @param {Array} columns Columns to select 
      */
-    generateSelect(filter, tableName, offset, count, order) {
+    generateSelect(filter, tableName, offset, count, order, columns) {
         var dbModel = filter.toData ? filter.toData() : filter;
 
         var parmId = 1, parameters = [], whereClause = "";
         for(var k in dbModel) 
-            if(dbModel[k]) {
+            if(dbModel[k] !== undefined &&
+                dbModel[k] !== null) {
                 
                 if(dbModel[k] == "null")
                     whereClause += `${k} IS NULL AND `;
                 else {
                     var op = "=";
-                    if(dbModel[k].indexOf("*") > -1)
+                    if(dbModel[k].indexOf && dbModel[k].indexOf("*") > -1)
                     {
                         op = "ILIKE";
                         dbModel[k] = dbModel[k].replace(/\*/g, '%');
@@ -106,17 +108,32 @@ module.exports = class ModelUtil {
         // Order? 
         var control = "";
         if(order) 
-            control += `ORDER BY ${order.col.join(',')} ${order.order} `;
+            control += `ORDER BY ${order.col.join(` ${order.order} ,`)} ${order.order} `;
         if(offset)
             control += `OFFSET ${offset} `;
         if(count)
             control += `LIMIT ${count} `;
+        else 
+            control += "LIMIT 100";
 
+        // Join
+        if(Array.isArray(tableName))
+        {
+            var join = "";
+            for(var i in tableName) {
+                join += tableName[i];
+                if(i > 0)
+                    join += " USING(id) ";
+                join += " LEFT JOIN ";
+            }
+            tableName = join.substr(0, join.length - 10);
+        }
+        
         var retVal = {
-            sql: `SELECT * FROM ${tableName} ${whereClause} ${control}`,
+            sql: `SELECT DISTINCT ${columns ? columns.join(",") : "*"} FROM ${tableName} ${whereClause} ${control}`,
             args : parameters
         };
-        uhc.log.debug(`Generated select : ${retVal.sql}`);
+        uhx.log.debug(`Generated select : ${retVal.sql}`);
         return retVal;
 
     }
@@ -134,7 +151,7 @@ module.exports = class ModelUtil {
         var parmId = 1, colNames = "", values = "", parameters = [];
         for(var k in dbModel) {
             var val = dbModel[k];
-            if(val) {
+            if(val !== undefined) {
 
                 if(k.startsWith("$")) {
                     colNames += `${k.substring(1)},`;
@@ -152,7 +169,7 @@ module.exports = class ModelUtil {
             sql: `INSERT INTO ${tableName} (${colNames.substring(0, colNames.length - 1)}) VALUES (${values.substring(0, values.length - 1)}) RETURNING *`,
             args: parameters
         };
-        uhc.log.debug(`Generated insert : ${retVal.sql}`);
+        uhx.log.debug(`Generated insert : ${retVal.sql}`);
         return retVal;
 
     }

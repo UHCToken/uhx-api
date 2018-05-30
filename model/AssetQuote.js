@@ -18,7 +18,7 @@
  */
 
  const ModelBase = require('./ModelBase'),
-    uhc = require('../uhc'),
+    uhx = require('../uhx'),
     MonetaryAmount = require("./MonetaryAmount");
 
  /**
@@ -98,7 +98,7 @@
     async loadAsset() {
 
         if(!this._asset)    
-            this._asset = await uhc.Repositories.assetRepository.get(this.assetId);
+            this._asset = await uhx.Repositories.assetRepository.get(this.assetId);
         return this._asset;
 
     }

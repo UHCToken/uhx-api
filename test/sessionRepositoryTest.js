@@ -19,7 +19,7 @@
 
  const assert = require('assert'),
     oauth = require('../controllers/oauth'),
-    uhc = require('../uhc'),
+    uhx = require('../uhx'),
     testRepo = require('../repository/repository'),
     exception = require('../exception'),
     model = require('../model/model'),
@@ -27,7 +27,7 @@
 
 describe("Session Repository Test Suite", function() {
 
-    var testRepository = new testRepo.UhcRepositories(uhc.Config.db.test_server);
+    var testRepository = new testRepo.UhcRepositories(uhx.Config.db.test_server);
 
     /**
      * @test

@@ -19,7 +19,7 @@
 
 
 const ModelBase = require('./ModelBase'),
-    uhc = require('../uhc'),
+    uhx = require('../uhx'),
     Application = require('./Application'),
     User = require('./User'),
     crypto = require('crypto');
@@ -127,7 +127,7 @@ module.exports = class Session extends ModelBase {
      */
     async loadUser() {
         if(!this._user)
-            this._user = await uhc.Repositories.userRepository.get(this.userId);
+            this._user = await uhx.Repositories.userRepository.get(this.userId);
         return this._user;
     }
 
@@ -138,7 +138,7 @@ module.exports = class Session extends ModelBase {
      */
     async loadApplication() {
         if(!this._application)
-            this._application = await uhc.Repositories.applicationRepository.get(this.applicationId);
+            this._application = await uhx.Repositories.applicationRepository.get(this.applicationId);
         return this._application;
     }
 
@@ -154,17 +154,17 @@ module.exports = class Session extends ModelBase {
 
             // User is NIL_USER so use app
             if(this.userId == "00000000-0000-0000-0000-000000000000") {
-                var appPerms = await uhc.Repositories.permissionRepository.getApplicationPermission(this.applicationId, true);
+                var appPerms = await uhx.Repositories.permissionRepository.getApplicationPermission(this.applicationId, true);
                 for(var p in appPerms)
                     this._grants[appPerms[p].name] = appPerms[p].grant;
             }
             else {
                 // Fetch from the user and application objects
-                var usrPerms = await uhc.Repositories.permissionRepository.getUserPermission(this.userId);
+                var usrPerms = await uhx.Repositories.permissionRepository.getUserPermission(this.userId);
                 for(var p in usrPerms)
                     this._grants[usrPerms[p].name] = usrPerms[p].grant;
                 
-                var appPerms = await uhc.Repositories.permissionRepository.getApplicationPermission(this.applicationId);
+                var appPerms = await uhx.Repositories.permissionRepository.getApplicationPermission(this.applicationId);
                 for(var p in appPerms) {
                     var gp = this._grants[appPerms[p].name];
                     if(gp)

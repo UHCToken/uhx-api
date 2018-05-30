@@ -17,7 +17,7 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
- const uhc = require('../uhc'),
+ const uhx = require('../uhx'),
  security = require('../security'),
   exception = require('../exception');
 
@@ -27,7 +27,7 @@
    * @swagger
    * tags:
    *    - name: "stats"
-   *      description: Tools for running reports against the UHC API
+   *      description: Tools for running reports against the UHX API
    */
 class StatisticsApiResource {
 
@@ -95,11 +95,11 @@ class StatisticsApiResource {
      *              schema:
      *                  $ref: "#/definitions/Exception"
      *      security:
-     *      - uhc_auth:
+     *      - uhx_auth:
      *          - "list:reporting"          
      */
     async getReports(req, res) {
-        res.status(200).json(await uhc.Repositories.reportRepository.query(req.query, req.query._offset, req.query._count));
+        res.status(200).json(await uhx.Repositories.reportRepository.query(req.query, req.query._offset, req.query._count));
         return true;
     }
 
@@ -138,12 +138,12 @@ class StatisticsApiResource {
      *              schema:
      *                  $ref: "#/definitions/Exception"
      *      security:
-     *      - uhc_auth:
+     *      - uhx_auth:
      *          - "execute:reporting"          
      */
     async runReport(req, res) {
 
-        var reportData = await uhc.Repositories.reportRepository.execute(req.params.id, req.query, req.query._offset, req.query._count);
+        var reportData = await uhx.Repositories.reportRepository.execute(req.params.id, req.query, req.query._offset, req.query._count);
         switch(req.params.format) {
             case "htm":
             case "txt":

@@ -20,7 +20,7 @@
  const assert = require('assert'),
     security = require('../security'),
     exception = require('../exception'),
-    uhc = require('../uhc');
+    uhx = require('../uhx');
 
 describe("Permission Infrastructure Tests", function() {
 

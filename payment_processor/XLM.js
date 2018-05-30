@@ -23,7 +23,7 @@
     crypto = require("crypto"),
     exception = require("../exception"),
     model = require("../model/model"),
-    uhc = require("../uhc");
+    uhx = require("../uhx");
 
  module.exports = 
   /**
@@ -39,44 +39,54 @@
     // Step 1. We want to ensure that the buyer has sufficient XLM
     var asset = await orderInfo.loadAsset();
     var buyer = await orderInfo.loadBuyer();
-    var buyerWallet = await uhc.StellarClient.getAccount(await buyer.loadStellarWallet());
+    var buyerWallet = await uhx.StellarClient.isActive(await buyer.loadStellarWallet());
+
+    // Buyer is attempting to buy but their acct is not even active!
+    if(!buyerWallet) {
+        orderInfo.memo = exception.ErrorCodes.INVALID_ACCOUNT;
+        return model.TransactionStatus.Failed;
+    }
+
     var sourceBalance = buyerWallet.balances.find(o=>o.code == orderInfo.invoicedAmount.code);
     if(!sourceBalance || sourceBalance.value < Number(orderInfo.invoicedAmount.value) + (1 + (buyerWallet.balances.length) * 0.5)) // Must carry min balance
     {
         orderInfo.memo = exception.ErrorCodes.INSUFFICIENT_FUNDS;
-        return model.PurchaseState.REJECT;
+        return model.TransactionStatus.Failed;
     }
 
     // We want to do a multipart transaction now ...
     try {
         // Does the buyer wallet trust our asset?
         if(!buyerWallet.balances.find(o=>o.code == asset.code))
-            await uhc.StellarClient.createTrust(buyerWallet, asset);
+            await uhx.StellarClient.createTrust(buyerWallet, asset);
         // TODO: If this needs to go to escrow this will need to be changed
-        var transaction = await uhc.StellarClient.exchangeAsset(buyerWallet, distributionAccount, orderInfo.invoicedAmount, new MonetaryAmount(orderInfo.quantity, asset.code), orderInfo.batchId);
+        var transaction = await uhx.StellarClient.exchangeAsset(buyerWallet, distributionAccount, orderInfo.invoicedAmount, new MonetaryAmount(orderInfo.quantity, asset.code), orderInfo.batchId);
 
+        orderInfo.amount = new MonetaryAmount(orderInfo.quantity, asset.code)
         orderInfo.ref = transaction.ref;
         orderInfo.memo = transaction.id;
-        orderInfo.transactionTime = new Date();
+        orderInfo.postingDate = orderInfo.transactionTime = new Date();
 
         // Now record the payment to DIST for our own copy of records
         transaction.type = model.TransactionType.Payment;
         transaction._payeeWalletId = distributionAccount.id;
         transaction._payorWalletId = buyerWallet.id;
+        transaction._payor = orderInfo._payee;
+        transaction._payee = orderInfo._payor;
         transaction.batchId = orderInfo.batchId;
         transaction.memo = transaction.id; // Ledger identifier
-        transaction.transactionTime = new Date();
+        orderInfo.postingDate = transaction.transactionTime = new Date();
         transaction.amount = orderInfo.invoicedAmount;
         delete(transaction.id);
         linkedTxns.push(transaction);
 
-        return model.PurchaseState.COMPLETE;
+        return model.TransactionStatus.Complete;
     }
     catch(e) {
-        uhc.log.error(`Error transacting with Stellar network: ${e.message}`);
+        uhx.log.error(`Error transacting with Stellar network: ${e.message}`);
         orderInfo.ref = e.code || exception.ErrorCodes.COM_FAILURE;
         orderInfo.transactionTime = new Date();
-        return model.PurchaseState.REJECT;
+        return model.TransactionStatus.Failed;
     }
 
  }

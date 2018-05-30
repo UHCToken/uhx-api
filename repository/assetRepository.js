@@ -52,6 +52,7 @@ module.exports = class AsssetRepository {
         this.insertQuote = this.insertQuote.bind(this);
         this.getQuote = this.getQuote.bind(this);
         this.getByPublicAddress = this.getByPublicAddress.bind(this);
+        this.getByWalletId = this.getByWalletId.bind(this);
     }
 
     /**
@@ -317,6 +318,38 @@ module.exports = class AsssetRepository {
     /**
      * @method
      * @summary Gets the specified asset by ID
+     * @param {string} code The public code symbol
+     * @param {Client} _txc When present, the database transaction to use
+     * @returns {Asset} The asset with identifier matching
+     */
+    async getByCode(code, _txc) {
+        var dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+
+            // Get by ID
+            var rdr = null;
+            if(code.indexOf("-") == -1)  // code is just code
+                rdr = await dbc.query("SELECT DISTINCT assets.* FROM assets WHERE code = $1", [code]);
+            else  // code is in stellar CODE-ISSUER format
+                rdr = await dbc.query("SELECT DISTINCT assets.* FROM wallets " +
+                        "LEFT JOIN asset_offer ON (wallet_id = wallets.id) " +
+                        "LEFT JOIN assets ON (asset_offer.asset_id = assets.id OR wallets.id = assets.dist_wallet_id) " + 
+                        "WHERE assets.id IS NOT NULL AND address = $2 AND code = $1 ", code.split('-'));
+                        
+            if (rdr.rows.length == 0)
+                return null;
+            else
+                return new Asset().fromData(rdr.rows[0]);
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Gets the specified asset by ID
      * @param {string} addr The public address of the asset to get
      * @param {Client} _txc When present, the database transaction to use
      * @returns {Asset} The asset with identifier matching
@@ -343,12 +376,39 @@ module.exports = class AsssetRepository {
 
     /**
      * @method
+     * @summary Gets the specified asset by ID
+     * @param {string} walletId The identifier of the wallet to retrieve
+     * @param {Client} _txc When present, the database transaction to use
+     * @returns {Asset} The asset with identifier matching
+     */
+    async getByWalletId(walletId, _txc) {
+        var dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+
+            // Get by ID
+            var rdr = await dbc.query("SELECT DISTINCT assets.* FROM wallets " +
+                    "LEFT JOIN asset_offer ON (wallet_id = wallets.id) " +
+                    "LEFT JOIN assets ON (asset_offer.asset_id = assets.id OR wallets.id = assets.dist_wallet_id) " + 
+                    "WHERE assets.id IS NOT NULL AND wallets.id = $1", [walletId]);
+            if (rdr.rows.length == 0)
+                return null;
+            else
+                return new Asset().fromData(rdr.rows[0]);
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
      * @summary Get the specified asset by code
      * @param {Asset} filter The filter to query on
      * @param {number} offset The offset to start filter on
      * @param {number} count The number of results to return
      * @param {Client} _txc When present, the database transaction to use
-     * @return {Asset} The asset with the matching code
+     * @return {Array<Asset>} The asset with the matching code
      */
     async query(filter, offset, count, _txc) {
 

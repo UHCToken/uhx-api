@@ -18,7 +18,7 @@
  */
 
 const ModelBase = require('./ModelBase'),
-    uhc = require('../uhc');
+    uhx = require('../uhx');
 
 /**
 * @class
@@ -98,7 +98,7 @@ module.exports = class Invitation extends ModelBase {
      */
     async loadCreatedBy() {
         if(!this._createdBy)
-            this._createdBy = uhc.Repositories.userRepository.get(this.createdById);
+            this._createdBy = uhx.Repositories.userRepository.get(this.createdById);
         return this._createdBy;
     }
 

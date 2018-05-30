@@ -22,7 +22,7 @@ const pg = require('pg'),
     exception = require('../exception'),
     security = require('../security'),
     model = require('../model/model'),
-    uhc = require("../uhc");
+    uhx = require("../uhx");
 
  /**
   * @class
@@ -87,7 +87,7 @@ const pg = require('pg'),
             if(rdr.rows.length == 0)
                 throw new exception.NotFoundException("reports", reportId);
             else {
-                var selectCmd = model.Utils.generateSelect(filter, rdr.rows[0].view_name, offset, count);
+                var selectCmd = model.Utils.generateSelect(filter, rdr.rows[0].view_name, offset, count, { col: ["1"], order: "ASC" });
                 var retVal = {
                     name: rdr.rows[0].name,
                     description: rdr.rows[0].description,

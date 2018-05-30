@@ -17,7 +17,7 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
-const uhc = require('../uhc'),
+const uhx = require('../uhx'),
     exception = require('../exception'),
     security = require('../security'),
     Purchase = require("../model/Purchase");
@@ -122,6 +122,10 @@ class PurchaseApiResource {
      *              description: "The purchase request was successfully created"
      *              schema: 
      *                  $ref: "#/definitions/Purchase"
+     *          207: 
+     *              description: "The purchase request was recorded, however the transaction failed"
+     *              schema:
+     *                  $ref: "#/definitions/Purchase"
      *          422:
      *              description: "The purchase request failed due to a business rule being violated"
      *              schema:
@@ -131,7 +135,7 @@ class PurchaseApiResource {
      *              schema:
      *                  $ref: "#/definitions/Exception"
      *      security:
-     *      - uhc_auth:
+     *      - uhx_auth:
      *          - write:purchase
      */
     async post(req, res)  {
@@ -142,11 +146,9 @@ class PurchaseApiResource {
             throw new exception.ArgumentException("assetId missing");
         else if(!req.body.quantity)
             throw new exception.ArgumentException("quantity missing");
-        else if(req.body.invoicedAmount || req.body.buyer || req.body.buyerId || req.body.state)
-            throw new exception.ArgumentException("prohibited field supplied");
 
         req.body.buyerId = req.params.uid;
-        var purchase = await uhc.TokenLogic.createPurchase(new Purchase().copy(req.body), req.principal);
+        var purchase = await uhx.TokenLogic.createPurchase(new Purchase().copy(req.body), req.principal);
         purchase.forEach(o=>{
             if(o.payor)
                 o._payor = o.payor.summary();
@@ -156,7 +158,7 @@ class PurchaseApiResource {
                 o._buyer = o.buyer.summary();
         })
         res.status(201)
-            .set("Location", `${uhc.Config.api.scheme}://${uhc.Config.api.host}:${uhc.Config.api.port}${uhc.Config.api.base}/user/${req.params.uid}/purchase/${purchase.id}`)
+            .set("Location", `${uhx.Config.api.scheme}://${uhx.Config.api.host}:${uhx.Config.api.port}${uhx.Config.api.base}/user/${req.params.uid}/purchase/${purchase.id}`)
             .json(purchase);
         return true;
     }
@@ -200,7 +202,7 @@ class PurchaseApiResource {
      *              schema:
      *                  $ref: "#/definitions/Exception"
      *      security:
-     *      - uhc_auth:
+     *      - uhx_auth:
      *          - list:purchase
      */
     async getAll(req, res) {
@@ -242,7 +244,7 @@ class PurchaseApiResource {
      *              schema:
      *                  $ref: "#/definitions/Exception"
      *      security:
-     *      - uhc_auth:
+     *      - uhx_auth:
      *          - get:purchase
      */
     async get(req, res) {
@@ -321,7 +323,7 @@ class PurchaseApiResource {
     async acl(principal, req, res) {
 
         if(!(principal instanceof security.Principal)) {
-            uhc.log.error("ACL requires a security principal to be passed");
+            uhx.log.error("ACL requires a security principal to be passed");
             return false;
         }
 

@@ -20,22 +20,22 @@
  const winston = require('winston');
 
  /**
-  * @class UHC API Configuration
+  * @class UHX API Configuration
   * @description Configuration parameters for the stellar API
   */
  module.exports = {
      /**
-      * @summary Groups configuration flags related to UHC database API
+      * @summary Groups configuration flags related to UHX database API
       */
      db : {
          /**
           * @summary The location of the PostgreSQL database server
           */
-        server: 'postgres://postgres:postgres@localhost:5432/uhc',
+        server: 'postgres://postgres:postgres@localhost:5432/uhx',
         /**
          * @summary The location of the PostgreSQL server to run unit tests against
          */
-        test_server: 'postgres://postgres:postgres@localhost:5432/uhc'
+        test_server: 'postgres://postgres:postgres@localhost:5432/uhx'
      },
      /**
       * @summary Groups configuration related to the STRIPE payment network
@@ -164,7 +164,8 @@
          */
         client: {
             name: 'StellarClient',
-            balanceFn: 'getAccount'
+            balanceFn: 'getAccount',
+            activeFn: 'isActive'
         },
          /**
           * @summary The wallet from which the initial balance of XLM should be retrieved
@@ -201,7 +202,7 @@
           */
          client: {
             name: 'Web3Client',
-            balanceFn: 'getBalance'
+            balanceFn: 'getBalance',
         },
      /**
       * @summary Flag for using ethereum
@@ -268,7 +269,7 @@
     logging : {
         level: 'info',
         console: true,
-        file: 'uhc.log'
+        file: 'uhx.log'
     }
  }
 

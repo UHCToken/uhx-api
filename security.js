@@ -18,7 +18,7 @@
  */
 
  module.exports.Config = require('./config');
- const uhc = require('./uhc'),
+ const uhx = require('./uhx'),
     exception = require('./exception'),
     crypto = require('crypto'),
     model = require('./model/model');
@@ -28,7 +28,7 @@
  * @namespace Security
  */
  /**
-  * @enum UHC Permissions
+  * @enum UHX Permissions
   * @description Permissions
   */
  const PermissionType = {
@@ -180,7 +180,7 @@
                 application: sessionOrUser, 
                 applicationId: sessionOrUser.id, 
                 notBefore: new Date(),
-                notAfter: new Date(new Date().getTime() + uhc.Config.security.sessionLength),
+                notAfter: new Date(new Date().getTime() + uhx.Config.security.sessionLength),
                 grant: sessionOrUser._grants,
                 loadApplication: async () => { } };
         }

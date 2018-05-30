@@ -20,7 +20,7 @@
 // HTTP operations that are premitted
 const ALLOWED_OPS = [ 'use', 'options', 'get', 'post', 'put', 'delete', 'lock', 'unlock' ];
 
-const uhc = require("./uhc"),
+const uhx = require("./uhx"),
     security = require("./security"),
     jwt = require('jsonwebtoken'),
     express = require('express'),
@@ -64,7 +64,7 @@ class RouteHandler {
 
             // No auth header?
             if(!authHeader) {
-                res.setHeader("WWW-Authenticate", `Bearer authorization_uri="${uhc.Config.security.tokenServiceUri}"`);
+                res.setHeader("WWW-Authenticate", `Bearer authorization_uri="${uhx.Config.security.tokenServiceUri}"`);
                 // TODO: Send to auth service
                 throw new exception.Exception("Missing authorization header", exception.ErrorCodes.UNAUTHORIZED);
             }
@@ -79,7 +79,7 @@ class RouteHandler {
                     else if(!authParts[1] || authParts[1].split(".").length != 3)
                         throw new exception.Exception("Invalid bearer token format, this service expects IETF RFC 7519 format tokens", exception.ErrorCodes.SECURITY_ERROR);
                     else { // Validate the jwt
-                        var token = jwt.verify(authParts[1], uhc.Config.security.hmac256secret);
+                        var token = jwt.verify(authParts[1], uhx.Config.security.hmac256secret);
                         
                         // Now we want to create a principal from the token
                         var principal = new security.JwtPrincipal(token, true);
@@ -93,7 +93,7 @@ class RouteHandler {
                     }
                 }
                 catch(e) {
-                    uhc.log.error(`Error validting security - ${e}`);
+                    uhx.log.error(`Error validting security - ${e}`);
                     if(e instanceof exception.Exception)
                         throw new exception.Exception("Error validating security", exception.ErrorCodes.SECURITY_ERROR, e);
                     else 
@@ -116,6 +116,7 @@ class RouteHandler {
             if(this._routeInfo._instance.authorize && await this._routeInfo._instance.authorize(req, res) ||
                 await this.checkAccessCore(req, res))
                 {
+                    res.set("Cache-Control", "No-Cache");
                     var result = await this._routeInfo[req.method.toLowerCase()].method(req, res);
                     if(!result)
                         res.status(204).send();
@@ -162,7 +163,7 @@ class RouteHandler {
                 }
 
                 // Output to error log
-                uhc.log.error(`Error executing ${req.method} ${req.path} :  ${JSON.stringify(retVal)}`);
+                uhx.log.error(`Error executing ${req.method} ${req.path} :  ${JSON.stringify(retVal)}`);
     
                 // Send result
                 res.status(httpStatusCode).json(retVal);
@@ -172,7 +173,7 @@ class RouteHandler {
 }
 /**
  * @class
- * @summary UHC Api class
+ * @summary UHX Api class
  */
  class RestApi {
 
@@ -218,7 +219,7 @@ class RouteHandler {
         for(var r in this._resources) {
 
             // Log
-            uhc.log.info("Adding instance of " + this._resources[r].constructor.name + " to API");
+            uhx.log.info("Adding instance of " + this._resources[r].constructor.name + " to API");
 
             // Route information
             var routesInfo = this._resources[r].routes;
@@ -228,7 +229,10 @@ class RouteHandler {
                 
                 var route  = routesInfo.routes[rid];
                 route._instance = this._resources[r];
-                var path = uhc.Config.api.base + "/" + route.path;
+
+                var path = route.path;
+                if(!path.startsWith("/"))
+                    path = uhx.Config.api.base + "/" + path;
                 
                 // Bind the HTTP parameters
                 for(var httpMethod in route) {
@@ -237,7 +241,7 @@ class RouteHandler {
 
                     if(fn && ALLOWED_OPS.indexOf(httpMethod) > -1) 
                     {
-                        uhc.log.info("\t" + httpMethod + " " + path + " => " + this._resources[r].constructor.name + "." + route[httpMethod].method.name);
+                        uhx.log.info("\t" + httpMethod + " " + path + " => " + this._resources[r].constructor.name + "." + route[httpMethod].method.name);
 
                         // This is a stub that will call the user's code, it wraps the 
                         // function from the API class in a common code which will handle
@@ -256,7 +260,7 @@ class RouteHandler {
     addResource(resourceInstance) {
         // Verify that the resource instance is valid
         if(!resourceInstance.routes) 
-            uhc.log.warn(resourceInstance.constructor.name + " does not define routes property, will use {base}/" + resourceInstance.constructor.name.toLowerCase());
+            uhx.log.warn(resourceInstance.constructor.name + " does not define routes property, will use {base}/" + resourceInstance.constructor.name.toLowerCase());
         this._resources.push(resourceInstance);
     }
     /**
@@ -264,7 +268,7 @@ class RouteHandler {
      * @swagger
      * /:
      *  options:
-     *      summary: Gets the operations uspported on this UHC API instance
+     *      summary: Gets the operations uspported on this UHX API instance
      *      description: "Note: When the session is authenticated this resource will only show routes which the authenticated user has access to"
      *      responses:
      *          200:
@@ -310,7 +314,7 @@ class RouteHandler {
                 new exception.Exception(e, exception.ErrorCodes.UNKNOWN); // exception is another class 
             
             // Output to error log
-            uhc.log.error("Error executing options: " + JSON.stringify(causedBy));
+            uhx.log.error("Error executing options: " + JSON.stringify(causedBy));
 
             // Send result
             res.status(500).json(

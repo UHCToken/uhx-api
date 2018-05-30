@@ -41,6 +41,8 @@ const pg = require('pg'),
         this.insert = this.insert.bind(this);
         this.update = this.update.bind(this);
         this.getByHash = this.getByHash.bind(this);
+        this.getByBatch = this.getByBatch.bind(this);
+        this.query = this.query.bind(this);
     }
 
     /**
@@ -55,9 +57,11 @@ const pg = require('pg'),
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM transactions LEFT JOIN purchase USING (id) WHERE id = $1", [id]);
+            const rdr = await dbc.query("SELECT transactions.*, purchase.user_id, purchase.quote_id, purchase.asset_id, purchase.dist_wallet_id, purchase.quantity, purchase.charge_amount, purchase.charge_currency FROM transactions LEFT JOIN purchase USING (id) WHERE id = $1", [id]);
             if(rdr.rows.length == 0)
                 throw new exception.NotFoundException('purchase', id);
+            else if(rdr.rows[0].type_id == "2")
+                return new Purchase().fromData(rdr.rows[0])._fromData(rdr.rows[0]);
             else
                 return new Transaction().fromData(rdr.rows[0]);
         }
@@ -67,6 +71,34 @@ const pg = require('pg'),
 
     }
 
+    
+    /**
+     * @method
+     * @summary Retrieve a transactions by batch id
+     * @param {uuid} batchId Gets the specified batch
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {Array<Transaction>} The fetched transactions
+     */
+    async getByBatch(batchId, _txc) {
+
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+            const rdr = await dbc.query("SELECT transactions.*, purchase.user_id, purchase.quote_id, purchase.asset_id, purchase.dist_wallet_id, purchase.quantity, purchase.charge_amount, purchase.charge_currency FROM transactions LEFT JOIN purchase USING (id) WHERE batch_id = $1 ORDER BY seq_id", [batchId]);
+            return rdr.rows.map(r=>{
+                if(r.type_id == "2") {
+                    var p = new Purchase().fromData(r)._fromData(r);
+                    return p;
+                }
+                else
+                    return new Transaction().fromData(r);
+            });
+        }
+        finally {
+            if(!_txc) dbc.end();
+        }
+
+    }
     
     /**
      * @method
@@ -80,7 +112,7 @@ const pg = require('pg'),
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM transactions LEFT JOIN purchase USING (id) WHERE digest(id::TEXT, 'sha256') = $1 OR digest(batch_id::TEXT, 'sha256') = $1 ORDER BY seq_id", [idHash]);
+            const rdr = await dbc.query("SELECT transactions.*, purchase.user_id, purchase.quote_id, purchase.asset_id, purchase.dist_wallet_id, purchase.quantity, purchase.charge_amount, purchase.charge_currency FROM transactions LEFT JOIN purchase USING (id) WHERE digest(id::TEXT, 'sha256') = $1 OR digest(batch_id::TEXT, 'sha256') = $1 ORDER BY seq_id", [idHash]);
             var retVal = rdr.rows.map(r=> {
                 if(r.type_id == "2") {
                     var p = new Purchase().fromData(r)._fromData(r);
@@ -97,6 +129,43 @@ const pg = require('pg'),
 
     }
     
+    /**
+     * @method
+     * @summary Retrieve a matching transactions from the database
+     * @param {Transaction} filter The filter to apply to the database
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @param {Number} offset The offset of the result set
+     * @param {Number} count The count of records to return
+     * @returns {Array<Transaction>} The fetched transactions
+     */
+    async query(filter, offset, count, _txc) {
+
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+
+            var dbFilter = filter.toData();
+
+            var sqlCmd = model.Utils.generateSelect(dbFilter, ["transactions", "purchase"], offset, count, { col: ["seq_id"], order: "desc"}, 
+                ["transactions.*", "purchase.user_id", "purchase.quote_id", "purchase.asset_id", "purchase.dist_wallet_id", "purchase.quantity", "purchase.charge_amount", "purchase.charge_currency"]);
+            const rdr = await dbc.query(sqlCmd.sql, sqlCmd.args);
+            
+            var retVal = rdr.rows.map(r=> {
+                if(r.type_id == "2") {
+                    var p = new Purchase().fromData(r)._fromData(r);
+                    return p;
+                }
+                else
+                    return new Transaction().fromData(r);
+            });
+            return retVal;
+        }
+        finally {
+            if(!_txc) dbc.end();
+        }
+
+    }
+
     /**
      * @method
      * @summary Retrieve all purhcases made by a specific user

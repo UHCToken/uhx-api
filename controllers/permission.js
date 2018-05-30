@@ -17,7 +17,7 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
- const uhc = require('../uhc'),
+ const uhx = require('../uhx'),
  security = require('../security'),
   exception = require('../exception'),
   PermissionSet = require('../model/PermissionSet');
@@ -28,7 +28,7 @@
    * @swagger
    * tags:
    *    - name: permission
-   *      description: A resource to fetch permission information from the UHC API
+   *      description: A resource to fetch permission information from the UHX API
    */
 module.exports.PermissionApiResource = class PermissionApiResource {
 
@@ -73,13 +73,13 @@ module.exports.PermissionApiResource = class PermissionApiResource {
      * @param {Express.Response} res The HTTP response from the server
      */
     async getAll(req, res) {
-        res.status(200).json(await uhc.Repositories.permissionRepository.getAll());
+        res.status(200).json(await uhx.Repositories.permissionRepository.getAll());
         return true;
     }
 
     /**
      * @method
-     * @summary Creates a new permission in the UHC API
+     * @summary Creates a new permission in the UHX API
      * @param {Express.Request} req The HTTP request fromthis client
      * @param {Express.Response} res The HTTP response going to the client
      */
@@ -89,13 +89,13 @@ module.exports.PermissionApiResource = class PermissionApiResource {
             throw new exception.Exception("Missing body", exception.ErrorCodes.MISSING_PAYLOAD);
         
         var permission = new PermissionSet().copy(req.body);
-        res.status(201).json(await uhc.Repositories.permissionRepository.insert(permission, req.Principal));
+        res.status(201).json(await uhx.Repositories.permissionRepository.insert(permission, req.Principal));
         return true;
     }
 
     /**
      * @method
-     * @summary Get a specific permission in the UHC API
+     * @summary Get a specific permission in the UHX API
      * @param {Express.Request} req The HTTP request fromthis client
      * @param {Express.Response} res The HTTP response going to the client
      */
@@ -103,13 +103,13 @@ module.exports.PermissionApiResource = class PermissionApiResource {
         if(!req.params.pid)
             throw new exception.Exception("Missing permission id parameter", exception.ErrorCodes.MISSING_PROPERTY);
 
-        res.status(200).json(await uhc.Repositories.permissionRepository.get(req.params.pid));
+        res.status(200).json(await uhx.Repositories.permissionRepository.get(req.params.pid));
         return true;
     }
 
     /**
      * @method
-     * @summary Deactivates the specified permission from the UHC API
+     * @summary Deactivates the specified permission from the UHX API
      * @param {Express.Request} req The HTTP request fromthis client
      * @param {Express.Response} res The HTTP response going to the client
      */
@@ -117,7 +117,7 @@ module.exports.PermissionApiResource = class PermissionApiResource {
         if(!req.params.pid)
             throw new exception.Exception("Missing permission id parameter", exception.ErrorCodes.MISSING_PROPERTY);
 
-        res.status(201).json(await uhc.Repositories.permissionRepository.delete(req.params.pid));
+        res.status(201).json(await uhx.Repositories.permissionRepository.delete(req.params.pid));
         return true;
     }
 }

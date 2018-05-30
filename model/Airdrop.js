@@ -19,7 +19,7 @@
  */
 
  const Transaction = require('./Transaction'),
-    uhc = require('../uhc');
+    uhx = require('../uhx');
 
 
 /**
@@ -80,6 +80,9 @@ module.exports = class Airdrop extends Transaction {
             each: null
         };
         this.issues = [];
+        this.autoTrust = false;
+        this.autoTopUp = false;
+        this.autoActivate = false;
     }
 
     /**

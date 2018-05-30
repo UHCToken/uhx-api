@@ -17,7 +17,7 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
-const uhc = require('../uhc'),
+const uhx = require('../uhx'),
     ModelBase = require('./ModelBase');
  
  /**
@@ -246,7 +246,7 @@ const uhc = require('../uhc'),
      */
     async loadExternalIds(_txc) {
         if(!this._externIds)
-            this._externIds = await uhc.Repositories.userRepository.getExternalIds(this, _txc);
+            this._externIds = await uhx.Repositories.userRepository.getExternalIds(this, _txc);
         return this._externIds;
     }
 
@@ -259,8 +259,9 @@ const uhc = require('../uhc'),
             if(this._wallets)
                 this._wallet = this._wallets.find(o=>o.networkId == 1);
             else 
-                this._wallet = await uhc.Repositories.walletRepository.getByUserId(this.id, _txc);
-            this._wallet._user = this;
+                this._wallet = await uhx.Repositories.walletRepository.getByUserId(this.id, _txc);
+            if(this._wallet)
+                this._wallet._user = this;
       }
       return this._wallet;
     }
@@ -271,7 +272,7 @@ const uhc = require('../uhc'),
      */
     async loadWallets(_txc) {
         if(!this._wallet)  {
-                this._wallets = await uhc.Repositories.walletRepository.getAllForUserId(this.id, _txc);
+                this._wallets = await uhx.Repositories.walletRepository.getAllForUserId(this.id, _txc);
                 this._wallets.forEach(w=>w._user = this);
         }
         return this._wallets;
@@ -284,7 +285,7 @@ const uhc = require('../uhc'),
      */
     async loadGroups(_txc) {
         if(!this._groups)
-            this._groups = await uhc.Repositories.groupRepository.getByUserId(this.id, _txc);
+            this._groups = await uhx.Repositories.groupRepository.getByUserId(this.id, _txc);
         return this._groups;
     }
 
@@ -295,7 +296,7 @@ const uhc = require('../uhc'),
     async loadTfaMethod(_txc) {
         if(!this.tfaMethod)
             return null;
-        return await uhc.Repositories.userRepository.getTfaMethod(this.tfaMethod, _txc);
+        return await uhx.Repositories.userRepository.getTfaMethod(this.tfaMethod, _txc);
     }
     
     /**
@@ -312,7 +313,7 @@ const uhc = require('../uhc'),
      */
     async loadClaims(_txc) {
         if(!this._claims)
-            this._claims = await uhc.Repositories.userRepository.getClaims(this.id, _txc);
+            this._claims = await uhx.Repositories.userRepository.getClaims(this.id, _txc);
         return this._claims;
     }
 

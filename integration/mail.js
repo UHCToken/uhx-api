@@ -18,7 +18,7 @@
  */
 
  const Stellar = require('stellar-sdk'),
-    uhc = require("../uhc"),
+    uhx = require("../uhx"),
     model = require("../model/model"),
     handlebars = require('handlebars'),
     nodemailer = require('nodemailer'),
@@ -96,7 +96,7 @@ module.exports = class MailWrapper {
         //options.cc = "justin.fyfe1@mohawkcollege.ca";
         var transport = nodemailer.createTransport(this._options.smtp);
         await transport.sendMail(options);
-        uhc.log.info(`E-Mail has successfully been sent to ${options.to}`);
+        uhx.log.info(`E-Mail has successfully been sent to ${options.to}`);
 
     }
 
@@ -117,7 +117,7 @@ module.exports = class MailWrapper {
                 from: options.from || this._options.sms.from
             }, function(err, msg) {
                 if(!err) {
-                    uhc.log.info(`SMS successfully sent to ${options.to}`);
+                    uhx.log.info(`SMS successfully sent to ${options.to}`);
                     fulfill(); 
                 } 
                 else

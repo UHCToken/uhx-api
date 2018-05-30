@@ -18,7 +18,7 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
  
-const uhc = require('../uhc'),
+const uhx = require('../uhx'),
     exception = require('../exception'),
     Transaction = require('../model/Transaction'),
     security = require('../security');
@@ -66,10 +66,21 @@ class TransactionApiResource {
                     }
                 },
                 {
-                    "path":"asset/:id/wallet/transaction",
+                    "path":"transaction",
                     "post": {
                         "demand": security.PermissionType.WRITE | security.PermissionType.EXECUTE,
                         "method": this.post
+                    },
+                    "get": {
+                        "demand": security.PermissionType.LIST,
+                        "method": this.getAll
+                    }
+                },
+                {
+                    "path": "transaction/:txid",
+                    "get": {
+                        "demand": security.PermissionType.READ,
+                        "method": this.get
                     }
                 }
 
@@ -117,11 +128,14 @@ class TransactionApiResource {
      *              schema:
      *                  $ref: "#/definitions/Exception"
      *      security:
-     *      - uhc_auth:
+     *      - uhx_auth:
      *          - "read:transaction"
      */
     async get(req, res) {
-        throw new exception.NotImplementedException();
+        
+        var txInfo = await uhx.TokenLogic.getTransaction(req.params.txid, req.principal);
+        res.status(200).json(txInfo);
+        return true;
     }
 
     /**
@@ -168,18 +182,77 @@ class TransactionApiResource {
      *              schema:
      *                  $ref: "#/definitions/Exception"
      *      security:
-     *      - uhc_auth:
+     *      - uhx_auth:
+     *          - "list:transaction"
+     * /transaction:
+     *  get:
+     *      tags:
+     *      - "transaction"
+     *      summary: "Gets all transactions posted matching the filter parameter"
+     *      description: "This method will request the server to produce a complete list of transactions. When payorId or payeeId are specified the blockchain is used to fetch records, when these fields are missing only locally registered transactions are returned"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "payorId"
+     *        in: "query"
+     *        description: "The ID of the wallet or user which paid the transaction cost"
+     *        required: false
+     *        type: "string"
+     *      - name: "payeeId"
+     *        in: "query"
+     *        description: "The ID of the wallet or user which was paid the transaction cost"
+     *        required: false
+     *        type: "string"
+     *      - in: "query"
+     *        name: "asset"
+     *        description: "The code of the asset to query"
+     *        required: false
+     *        type: string
+     *      - in: "query"
+     *        name: "_count"
+     *        description: "Limit the number of results to the provided number"
+     *        required: false
+     *        type: number
+     *      - in: "query"
+     *        name: "_offset"
+     *        description: "The offset of the first result"
+     *        required: false
+     *        type: number
+     *      - in: "query"
+     *        name: "_localOnly"
+     *        description: "When true, indicates the query should be done against the local api database only not the blockchain"
+     *        required: false
+     *        type: boolean
+     *      responses:
+     *          200: 
+     *             description: "The query completed successfully and the results are in the payload"
+     *             schema: 
+     *                  $ref: "#/definitions/Transaction"
+     *          404:
+     *              description: "The specified user cannot be found or the specified user does not have an active wallet"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
      *          - "list:transaction"
      */
     async getAll(req, res) {
-        var transactions = await uhc.TokenLogic.getTransactionHistory(req.params.uid, req.query, req.principal);
+        var transactions = await uhx.TokenLogic.getTransactionHistory(req.params.uid, req.query, req.principal);
 
         // Minify user information
         transactions = transactions.map((t)=> {
-            if(t.payee)
-                t._payee = t.payee.summary();
-            if(t.payor)
-                t._payor = t.payor.summary();
+            if(t._payor)
+                t._payor = t._payor.summary();
+            if(t._payee) 
+                t._payee = t._payee.summary();
+            if(t._buyer)
+                t._buyer = t._buyer.summary();
+            if(t._asset)
+                t._asset = t._asset.summary();
             return t;
         });
         res.status(200).json(transactions);
@@ -232,24 +305,19 @@ class TransactionApiResource {
      *              schema:
      *                  $ref: "#/definitions/Exception"
      *      security:
-     *      - uhc_auth:
+     *      - uhx_auth:
      *          - "write:transaction"
-     * /asset/{assetid}/wallet/transaction:
+     * /transaction:
      *  post:
      *      tags:
      *      - "transaction"
-     *      summary: "Posts a new transaction to the asset wallet"
-     *      description: "This method will request that a transaction be posted to the assets's wallet. Note: All requests to this resource require that the token presented be for the {userid} of this wallet. All other requests will fail. To request a payment from another user, use the /contract mechanism"
+     *      summary: "Posts a new transaction for general processing"
+     *      description: "This method will request that a transaction be posted to the UHX API for further processing"
      *      consumes: 
      *      - "application/json"
      *      produces:
      *      - "application/json"
      *      parameters:
-     *      - name: "assetid"
-     *        in: "path"
-     *        description: "The ID of the asset whose wallet this transaction should be posed to"
-     *        required: true
-     *        type: "string"
      *      - in: "body"
      *        name: "body"
      *        description: "The transaction details"
@@ -260,6 +328,10 @@ class TransactionApiResource {
      *          201: 
      *             description: "The requested resource was created successfully"
      *             schema: 
+     *                  $ref: "#/definitions/Transaction"
+     *          202: 
+     *              description: "The request was performed however some of the transaction batch failed, or have not yet completed"
+     *              schema: 
      *                  $ref: "#/definitions/Transaction"
      *          404:
      *              description: "The specified user cannot be found or the specified user does not have an active wallet"
@@ -274,33 +346,21 @@ class TransactionApiResource {
      *              schema:
      *                  $ref: "#/definitions/Exception"
      *      security:
-     *      - uhc_auth:
+     *      - uhx_auth:
      *          - "write:transaction"
      */
     async post(req, res) {
         
-        if(!req.body.type)
-            throw new exception.ArgumentException("type missing");
-        else if(!req.body.payee && !req.body.payeeId)
-            throw new exception.ArgumentException("payee missing");
-        else if(!req.body.test)
-            throw new exception.ArgumentException("test indicator missing");
-        else if(!req.body.amount)
-            throw new exception.ArgumentException("amount missing");
-
-        // Payor corrections
-        var sourceObject = null;
-        if(req.params.uid) 
-            sourceObject = await uhc.Repositories.userRepository.get(req.params.id);
-        else if(req.params.id)
-            sourceObject = await uhc.Repositories.assetRepository.get(req.params.id);
+        if(!req.body)
+            throw new exception.ArgumentException("body missing");
 
         if(!Array.isArray(req.body))
             req.body = [req.body];
         
-        var transactions = await uhc.TokenLogic.createTransaction(req.body.map(o=>new Transaction().copy(o)), sourceObject, req.principal);
+        var transactions = await uhx.TokenLogic.createTransaction(req.body.map(o=>new Transaction().copy(o)), req.principal);
 
-        res.status(201).json(retVal);
+        var status = transactions.find(o=>o.state != 2) ? 202 : 201;
+        res.status(status).json(transactions);
 
         return true;
     }
@@ -316,7 +376,7 @@ class TransactionApiResource {
     async acl(principal, req, res) {
 
         if(!(principal instanceof security.Principal)) {
-            uhc.log.error("ACL requires a security principal to be passed");
+            uhx.log.error("ACL requires a security principal to be passed");
             return false;
         }
 

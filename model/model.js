@@ -18,7 +18,7 @@
  * 
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
- const uhc = require('../uhc'),
+ const uhx = require('../uhx'),
     crypto = require('crypto'),
     security = require('../security'),
     User = require('./User'),
@@ -50,25 +50,14 @@ const TransactionType = {
 
 /**
  * @enum
- * @summary Identifies the purchase state
- */
-const PurchaseState = {
-    NEW: 1, 
-    COMPLETE: 2,
-    CANCEL: 3,
-    REJECT: 4,
-    HOLD: 5,
-    ACTIVE: 6
-}
-
-/**
- * @enum
  * @summary Identifies the status of the transaction
  */
 const TransactionStatus = {
-    Pending: 0,
-    Complete: 1,
-    Failed: 2
+    Pending: 1,
+    Complete: 2,
+    Failed: -1,
+    Active: 3,
+    Hold: 4
 }
 
 // Module exports
@@ -84,4 +73,3 @@ module.exports.MonetaryAmount = MonetaryAmount;
 module.exports.Transaction = Transaction;
 module.exports.TransactionType = TransactionType;
 module.exports.TransactionStatus = TransactionStatus;
-module.exports.PurchaseState = PurchaseState;

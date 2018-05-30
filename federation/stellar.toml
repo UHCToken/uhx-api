@@ -1,0 +1,13 @@
+SIGNING_KEY=""
+
+NODE_NAMES=[
+]
+
+DESIRED_BASE_FEE=100
+DESIRED_MAX_TX_PER_LEDGER=400
+
+KNOWN_PEERS=[
+    "stellar.marc-hi.ca"
+]
+
+

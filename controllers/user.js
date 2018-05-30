@@ -17,7 +17,7 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
-const uhc = require('../uhc'),
+const uhx = require('../uhx'),
     exception = require('../exception'),
     security = require('../security'),
     model = require('../model/model');
@@ -28,7 +28,7 @@ const uhc = require('../uhc'),
  * @swagger
  * tags:
  *  - name: "user"
- *    description: "The user resource represents a single user (client, provider, etc.) which is a member of UHC"
+ *    description: "The user resource represents a single user (client, provider, etc.) which is a member of UHX"
  */
 class UserApiResource {
 
@@ -89,6 +89,14 @@ class UserApiResource {
                     "delete" : {
                         "demand":security.PermissionType.WRITE | security.PermissionType.READ,
                         "method": this.delete
+                    },
+                    "lock" : {
+                        "demand": security.PermissionType.WRITE,
+                        "method": this.lock
+                    },
+                    "unlock": {
+                        "demand": security.PermissionType.WRITE,
+                        "method": this.unlock
                     }
                 },
                 {
@@ -113,8 +121,8 @@ class UserApiResource {
      *  post:
      *      tags:
      *      - "user"
-     *      summary: "Registers a new user in the UHC API"
-     *      description: "This method will register a new user in the UHC API and create the necessary accounts and trust transactions"
+     *      summary: "Registers a new user in the UHX API"
+     *      description: "This method will register a new user in the UHX API and create the necessary accounts and trust transactions"
      *      consumes: 
      *      - "application/json"
      *      produces:
@@ -140,7 +148,7 @@ class UserApiResource {
      *              schema:
      *                  $ref: "#/definitions/Exception"
      *      security:
-     *      - uhc_auth:
+     *      - uhx_auth:
      *          - "write:user"
      *      - app_auth:
      *          - "write:user"
@@ -159,9 +167,9 @@ class UserApiResource {
         
         // USE CASE 1: User has passed up a username and password
         if(req.body.password && req.body.name) 
-            res.status(201).json(await uhc.SecurityLogic.registerInternalUser(user, req.body.password, req.principal));
+            res.status(201).json(await uhx.SecurityLogic.registerInternalUser(user, req.body.password, req.principal));
         else // USE CASE 2: User is attempting to sign up with an external identifier
-            res.status(201).json(await uhc.SecurityLogic.registerExternalUser(req.body.externalIds, req.principal));
+            res.status(201).json(await uhx.SecurityLogic.registerExternalUser(req.body.externalIds, req.principal));
 
         return true;
     }
@@ -175,8 +183,8 @@ class UserApiResource {
      *  put:
      *      tags:
      *      - "user"
-     *      summary: "Updates an existing user in the UHC API"
-     *      description: "This method will update an existing  user in the UHC API"
+     *      summary: "Updates an existing user in the UHX API"
+     *      description: "This method will update an existing  user in the UHX API"
      *      consumes: 
      *      - "application/json"
      *      produces:
@@ -211,7 +219,7 @@ class UserApiResource {
      *              schema:
      *                  $ref: "#/definitions/Exception"
      *      security:
-     *      - uhc_auth:
+     *      - uhx_auth:
      *          - "write:user"
      *          - "read:user"
      */
@@ -219,7 +227,7 @@ class UserApiResource {
         
         // does the request have a password if so we want to ensure that get's passed
         req.body.id = req.params.uid;
-        res.status(201).json(await uhc.SecurityLogic.updateUser(new model.User().copy(req.body), req.body.password));
+        res.status(201).json(await uhx.SecurityLogic.updateUser(new model.User().copy(req.body), req.body.password));
         return true;
     }
     /**
@@ -232,8 +240,8 @@ class UserApiResource {
      *  get:
      *      tags:
      *      - "user"
-     *      summary: "Gets an existing user from the UHC member database"
-     *      description: "This method will fetch an existing user from the UHC member database"
+     *      summary: "Gets an existing user from the UHX member database"
+     *      description: "This method will fetch an existing user from the UHX member database"
      *      produces:
      *      - "application/json"
      *      parameters:
@@ -256,25 +264,27 @@ class UserApiResource {
      *              schema:
      *                  $ref: "#/definitions/Exception"
      *      security:
-     *      - uhc_auth:
+     *      - uhx_auth:
      *          - "read:user"
      */
     async get(req, res) {
-        var user = await uhc.Repositories.userRepository.get(req.params.uid);
+        var user = await uhx.Repositories.userRepository.get(req.params.uid);
         await user.loadWallets();
 
         // Load balances from blockchain
         if(user._wallets)
-            user._wallets = await uhc.TokenLogic.getAllBalancesForWallets(user._wallets);
+            user._wallets = await uhx.TokenLogic.getAllBalancesForWallets(user._wallets);
         
         await user.loadExternalIds();
         await user.loadClaims();
+        await user.loadGroups();
+        
         res.status(200).json(user);
         return true;
     }
     /**
      * @method
-     * @summary Get all users from the UHC database (optional search parameters)
+     * @summary Get all users from the UHX database (optional search parameters)
      * @param {Express.Reqeust} req The request from the client 
      * @param {Express.Response} res The response from the client
      * @swagger
@@ -282,8 +292,8 @@ class UserApiResource {
      *  get:
      *      tags:
      *      - "user"
-     *      summary: "Queries the UHC member database for users matching the specified parameters"
-     *      description: "This method performs a query against the UHC user's database. This method will return additional information about the specified user including any external identities and wallet"
+     *      summary: "Queries the UHX member database for users matching the specified parameters"
+     *      description: "This method performs a query against the UHX user's database. This method will return additional information about the specified user including any external identities and wallet"
      *      produces:
      *      - "application/json"
      *      parameters:
@@ -332,7 +342,7 @@ class UserApiResource {
      *              schema:
      *                  $ref: "#/definitions/Exception"
      *      security:
-     *      - uhc_auth:
+     *      - uhx_auth:
      *          - "list:user"
      */
     async getAll(req, res) {
@@ -345,14 +355,14 @@ class UserApiResource {
             deactivationTime: req.query._all ? null : "null"
         });
         
-        var results = await uhc.Repositories.userRepository.query(filterUser, req.query._offset, req.query._count);
+        var results = await uhx.Repositories.userRepository.query(filterUser, req.query._offset, req.query._count, req.query._sort);
         results.forEach((o)=>{ o._externalIds = null;});
         res.status(200).json(results);
         return true;
     }
     /**
      * @method
-     * @summary Deactivate a user account from the UHC database
+     * @summary Deactivate a user account from the UHX database
      * @param {Express.Reqeust} req The request from the client 
      * @param {Express.Response} res The response from the client
      * @swagger
@@ -360,7 +370,7 @@ class UserApiResource {
      *  delete:
      *      tags:
      *      - "user"
-     *      summary: "Deactivates a user in the UHC member database"
+     *      summary: "Deactivates a user in the UHX member database"
      *      description: "This method will set the deactivation time of the specified user account so they no longer can login or appear in searches."
      *      produces:
      *      - "application/json"
@@ -384,12 +394,12 @@ class UserApiResource {
      *              schema:
      *                  $ref: "#/definitions/Exception"
      *      security:
-     *      - uhc_auth:
+     *      - uhx_auth:
      *          - "write:user"
      *          - "read:user"
      */
     async delete(req, res) {
-        res.status(201).json(await uhc.Repositories.userRepository.delete(req.params.uid));
+        res.status(201).json(await uhx.Repositories.userRepository.delete(req.params.uid));
         return true;
     }
 
@@ -435,7 +445,7 @@ class UserApiResource {
      *          - "execute:user"
     */
     async reset(req, res) {
-        await uhc.SecurityLogic.initiatePasswordReset(req.body.email, req.body.tel);
+        await uhx.SecurityLogic.initiatePasswordReset(req.body.email, req.body.tel);
         res.status(204).send();
         return true;
     }
@@ -489,7 +499,7 @@ class UserApiResource {
             throw new exception.ArgumentException("password");
 
         // Reset password 
-        await uhc.SecurityLogic.resetPassword(req.body.code, req.body.password);
+        await uhx.SecurityLogic.resetPassword(req.body.code, req.body.password);
         res.status(204).send();
         return true;
     }
@@ -560,7 +570,7 @@ class UserApiResource {
      *              schema:
      *                  $ref: "#/definitions/Exception"
      *      security:
-     *      - uhc_auth:
+     *      - uhx_auth:
      *          - "write:user"
      *          - "execute:user"
     */
@@ -569,11 +579,101 @@ class UserApiResource {
         if(!req.body.code)
             throw new exception.ArgumentException("code");
         
-        await uhc.SecurityLogic.confirmContact(req.body.code, req.principal);
+        await uhx.SecurityLogic.confirmContact(req.body.code, req.principal);
         res.status(204).send();
         return true;
     }
     
+    /**
+     * @method
+     * @summary Locks a user account
+     * @param {Express.Request} req The HTTP request
+     * @param {Express.Response} res The HTTP response
+     * /user/{userId}:
+     *  lock:
+     *      tags:
+     *      - "user"
+     *      summary: "Locks a user"
+     *      description: "This method will lock the user until the end of time"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "userId"
+     *        in: "path"
+     *        description: "The user to be locked"
+     *        required: true
+     *        type: "string"
+     *      responses:
+     *          204: 
+     *             description: "The reset request was successful and no content is required to be returned"
+     *          404:
+     *              description: "The specified user cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "write:user"
+     */
+    async lock(req, res) {
+        if(req.principal.grant["user"] & security.PermissionType.OWNER)
+            throw new security.SecurityException(new security.Permission("user", 1));
+        
+        var usr = await uhx.Repositories.userRepository.get(req.params.uid);
+        usr.lockout = new Date("9999-12-31T00:00:00Z");
+        await uhx.Repositories.userRepository.update(usr, null, req.principal);
+        res.status(204).send();
+        return true;
+    }
+
+    /**
+     * @method
+     * @summary Unlocks a user account
+     * @param {Express.Request} req The HTTP request
+     * @param {Express.Response} res The HTTP response
+     * /user/{userId}:
+     *  unlock:
+     *      tags:
+     *      - "user"
+     *      summary: "Unlocks a user"
+     *      description: "This method will unlock the user until the end of time"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "userId"
+     *        in: "path"
+     *        description: "The user to be unlocked"
+     *        required: true
+     *        type: "string"
+     *      responses:
+     *          204: 
+     *             description: "The reset request was successful and no content is required to be returned"
+     *          404:
+     *              description: "The specified user cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "write:user"
+     */
+    async unlock(req, res) {
+        if(req.principal.grant["user"] & security.PermissionType.OWNER)
+            throw new security.SecurityException(new security.Permission("user", 1));
+        
+        var usr = await uhx.Repositories.userRepository.get(req.params.uid);
+        usr.lockout = null;
+        await uhx.Repositories.userRepository.update(usr, null, req.principal);
+        res.status(204).send();
+        return true;
+    }
+
     /**
      * @method
      * @summary Determines additional access control on the user resource
@@ -585,7 +685,7 @@ class UserApiResource {
     async acl(principal, req, res) {
 
         if(!(principal instanceof security.Principal)) {
-            uhc.log.error("ACL requires a security principal to be passed");
+            uhx.log.error("ACL requires a security principal to be passed");
             return false;
         }
 

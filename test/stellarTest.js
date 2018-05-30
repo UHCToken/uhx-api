@@ -18,7 +18,7 @@
  */
 
  const assert = require('assert'),
-    uhc = require('../uhc'),
+    uhx = require('../uhx'),
     testRepo = require('../repository/repository'),
     exception = require('../exception'),
     model = require('../model/model'),
@@ -30,14 +30,14 @@ describe("Stellar API Wrapper", async function() {
     this.timeout(0);
 
     // Test repository
-    var testRepository = new testRepo.UhcRepositories(uhc.Config.db.test_server);
+    var testRepository = new testRepo.UhcRepositories(uhx.Config.db.test_server);
     var initiatorWallet = null;
     var sClient = null;
 
     // Stellar client
     before(async function() {
-        sClient = new StellarClient("https://horizon-testnet.stellar.org", await testRepository.assetRepository.query(), true, uhc.Config.stellar.fee_collector);
-        initiatorWallet = await testRepository.walletRepository.get(uhc.Config.stellar.initiator_wallet_id);
+        sClient = new StellarClient("https://horizon-testnet.stellar.org", await testRepository.assetRepository.query(), true, uhx.Config.stellar.fee_collector);
+        initiatorWallet = await testRepository.walletRepository.get(uhx.Config.stellar.initiator_wallet_id);
     })
 
     // Get or create wallet under test
@@ -49,7 +49,7 @@ describe("Stellar API Wrapper", async function() {
     }
 
     // only run in test network
-    if(uhc.Config.stellar.testnet_use) {
+    if(uhx.Config.stellar.testnet_use) {
         /**
          * @test
          * @summary Ensures that the stellar API generates a random keypair properly

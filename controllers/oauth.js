@@ -17,7 +17,7 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
- const uhc = require('../uhc'),
+ const uhx = require('../uhx'),
   exception = require('../exception'),
   security = require('../security'),
   jwt = require('jsonwebtoken');
@@ -215,7 +215,7 @@
       if(!clientAuthentication[0] || !clientAuthentication[1])
         throw new exception.Exception("Either Authorization HTTP header or client_id/client_secret must be specified. See RFC6749", exception.ErrorCodes.SECURITY_ERROR);
 
-      var principal = await uhc.SecurityLogic.authenticateClientApplication(clientAuthentication[0], clientAuthentication[1]);
+      var principal = await uhx.SecurityLogic.authenticateClientApplication(clientAuthentication[0], clientAuthentication[1]);
       req.principal = principal;
 
       return principal !== undefined;
@@ -246,7 +246,7 @@
      *          - client_credentials
      *          - authorization_code
      *      - name: username
-     *        description: The e-mail address of the UHC user
+     *        description: The e-mail address of the UHX user
      *        in: formData
      *        required: false
      *        type: string
@@ -298,20 +298,20 @@
     
       var forwardHeader = req.get("X-Forwarded-For");
       if(forwardHeader) {
-        uhc.log.info(`Authentication on behalf of ${forwardHeader}`);
+        uhx.log.info(`Authentication on behalf of ${forwardHeader}`);
         forwardHeader = forwardHeader.split(',')[0];
       }
 
       // GRANT TYPE
       switch(req.body.grant_type){
         case "password":
-          userPrincipal = await uhc.SecurityLogic.establishSession(principal, req.body.username, req.body.password, req.body.scope || "*", req.body.tfa_secret, forwardHeader || req.ip);
+          userPrincipal = await uhx.SecurityLogic.establishSession(principal, req.body.username, req.body.password, req.body.scope || "*", req.body.tfa_secret, forwardHeader || req.ip);
           break;
         case "refresh_token":
-          userPrincipal = await uhc.SecurityLogic.refreshSession(principal, req.body.refresh_token, forwardHeader || req.ip);
+          userPrincipal = await uhx.SecurityLogic.refreshSession(principal, req.body.refresh_token, forwardHeader || req.ip);
           break;
         case "client_credentials":
-          userPrincipal = await uhc.SecurityLogic.establishClientSession(principal, req.body.scope || "*", forwardHeader || req.ip);
+          userPrincipal = await uhx.SecurityLogic.establishClientSession(principal, req.body.scope || "*", forwardHeader || req.ip);
           break;
         case "authorization_code":
           break;
@@ -320,8 +320,8 @@
       }
 
       var payload = userPrincipal.toJSON();
-      payload.iss = uhc.Config.security.tokenServiceUri;
-      var retVal = new OAuthTokenResult(jwt.sign(payload, uhc.Config.security.hmac256secret), TOKEN_TYPE_JWT,  Math.floor(payload.exp - (new Date().getTime() / 1000)), userPrincipal.session.refreshToken);
+      payload.iss = uhx.Config.security.tokenServiceUri;
+      var retVal = new OAuthTokenResult(jwt.sign(payload, uhx.Config.security.hmac256secret), TOKEN_TYPE_JWT,  Math.floor(payload.exp - (new Date().getTime() / 1000)), userPrincipal.session.refreshToken);
 
       res.status(200).json(retVal);
       return true;
@@ -332,7 +332,7 @@
      * @param {*} e The exception to be handled 
      */
     async error(e, res) {
-      uhc.log.error(`Error executing OAUTH: ${JSON.stringify(e)} `);
+      uhx.log.error(`Error executing OAUTH: ${JSON.stringify(e)} `);
       if(e instanceof exception.Exception)
         res.status(400).json(new OAuthErrorResult(e.code, e.message));
       else

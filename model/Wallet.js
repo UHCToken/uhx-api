@@ -20,21 +20,21 @@
 const ModelBase = require('./ModelBase'),
     User = require('./User'),
     MonetaryAmount = require('./MonetaryAmount'),
-    uhc = require('../uhc');
+    uhx = require('../uhx');
 
 /**
  * @class
- * @summary Represents a wallet in the UHC data store
+ * @summary Represents a wallet in the UHX data store
  * @swagger
  * definitions:
  *  Wallet:
  *      properties:
  *          address:
  *              type: string
- *              description: The public address of the stellar account this UHC wallet represents
+ *              description: The public address of the stellar account this UHX wallet represents
  *          id:
  *              type: string
- *              description: The unique identifier for the wallet in the UHC user database
+ *              description: The unique identifier for the wallet in the UHX user database
  *          balances:
  *              $ref: "#/definitions/MonetaryAmount"
  *              description: The balance of assets held within the account
@@ -72,7 +72,7 @@ module.exports = class Wallet extends ModelBase {
      */
     async loadUser() {
         if(!this._user)
-            this._user = await uhc.Repositories.userRepository.getByWalletId(this.id);
+            this._user = await uhx.Repositories.userRepository.getByWalletId(this.id);
         return this._user;
     }
 

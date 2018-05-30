@@ -19,7 +19,7 @@
 
 
 const Transaction = require('./Transaction'),
-    uhc = require("../uhc"),
+    uhx = require("../uhx"),
     MonetaryAmount = require("./MonetaryAmount"),
     AssetQuote = require("./AssetQuote"),
     Asset = require("./Asset"),
@@ -42,21 +42,12 @@ const Transaction = require('./Transaction'),
  *              id:
  *                  type: string
  *                  description: The unique identifier this system tracks the purchase with
- *              buyerId:
- *                  type: string
- *                  description: The unique identifier of the user who purchased (or received) the asset
- *              buyer:
- *                  $ref: "#/definitions/User"
- *                  description: The user who purchased the asset
  *              quoteId:
  *                  type: string
  *                  description: Identifies the quote which was used to execute the purchase
  *              quote:
  *                  $ref: "#/definitions/AssetQuote"
  *                  description: The quote which was used to execute the purchase
- *              invoicedAmount:
- *                  $ref: "#/definitions/MonetaryAmount"
- *                  description: The amount of currency collected from the buyer
  *              assetId:
  *                  type: string
  *                  description: The unique identifier for the asset class being purchased
@@ -66,12 +57,6 @@ const Transaction = require('./Transaction'),
  *              quantity:
  *                  type: number
  *                  description: The amount of the asset that was purchased
- *              memo:
- *                  type: string
- *                  description: A short memo field on the invoice / purchase
- *              ref:
- *                  type: string
- *                  description: A reference to the transaction which facilitated the purchase (could be an Etherium transaction, bank wire, etc.)
  *              creationTime:
  *                  type: date
  *                  description: The time the transaction was created
@@ -131,15 +116,14 @@ module.exports = class Purchase extends Transaction {
         this.id = dbPurchase.id;
         this.buyerId = dbPurchase.user_id;
         this.quoteId = dbPurchase.quote_id;
-        this.invoicedAmount = new MonetaryAmount(dbPurchase.charge_amount, dbPurchase.charge_currency);
         this.assetId = dbPurchase.asset_id;
-        this.quantity = dbPurchase.amount;
+        this.quantity = dbPurchase.quantity;
         this.creationTime = dbPurchase.creation_time;
         this.createdBy = dbPurchase.created_by;
         this.updatedTime = dbPurchase.updated_time;
         this.updatedBy = dbPurchase.updated_by;
-        this.state = dbPurchase.state;
         this.distributorWalletId = dbPurchase.dist_wallet_id;
+        this.invoicedAmount = new MonetaryAmount(dbPurchase.charge_amount, dbPurchase.charge_currency);
         return this;
     }
 
@@ -152,12 +136,11 @@ module.exports = class Purchase extends Transaction {
             id : this.id,
             user_id: this.buyerId,
             quote_id: this.quoteId,
-            charge_amount: this.invoicedAmount.value,
-            charge_currency: this.invoicedAmount.code,
             asset_id: this.assetId,
-            amount: this.quantity,
-            state: this.state,
-            dist_wallet_id: this.distributorWalletId
+            quantity: this.quantity,
+            dist_wallet_id: this.distributorWalletId,
+            charge_currency: this.invoicedAmount.code,
+            charge_amount: this.invoicedAmount.value
             // tracking fields not updated
         }
     }
@@ -167,7 +150,10 @@ module.exports = class Purchase extends Transaction {
      * @summary Creates the transaction data
      */
     toTransactionData() {
-        return this._toData();
+        var retVal = this._toData();
+        retVal.amount = this.quantity;
+        retVal.asset_code = this._asset.code;
+        return retVal;
     }
 
     /**
@@ -187,7 +173,7 @@ module.exports = class Purchase extends Transaction {
      */
     async loadDistributionWallet(_txc) {
         if(!this._distributorWallet)
-            this._distributorWallet = await uhc.Repositories.walletRepository.get(this.distributorWalletId, _txc);
+            this._distributorWallet = await uhx.Repositories.walletRepository.get(this.distributorWalletId, _txc);
         return this._distributorWallet;
     }
     
@@ -198,7 +184,7 @@ module.exports = class Purchase extends Transaction {
      */
     async loadBuyer(_txc) {
         if(!this._buyer) {
-            this._buyer = await uhc.Repositories.userRepository.get(this.buyerId, _txc);
+            this._buyer = await uhx.Repositories.userRepository.get(this.buyerId, _txc);
             if(this.buyerId == this.createdBy)
                 this._createdBy = this._buyer;
         }
@@ -220,7 +206,7 @@ module.exports = class Purchase extends Transaction {
      */
     async loadQuote(_txc) {
         if(!this._quote)
-            this._quote = await uhc.Repositories.assetRepository.getQuote(this.quoteId, _txc);
+            this._quote = await uhx.Repositories.assetRepository.getQuote(this.quoteId, _txc);
         return this._quote;
     }
 
@@ -239,7 +225,7 @@ module.exports = class Purchase extends Transaction {
      */
     async loadAsset(_txc) {
         if(!this._asset)
-            this._asset = await uhc.Repositories.assetRepository.get(this.assetId, _txc);
+            this._asset = await uhx.Repositories.assetRepository.get(this.assetId, _txc);
         return this._asset;
     }
 
@@ -258,7 +244,7 @@ module.exports = class Purchase extends Transaction {
      */
     async loadCreatedBy(_txc) {
         if(!this._createdBy) {
-            this._createdBy = await uhc.Repositories.userRepository.get(this.createdBy, _txc);
+            this._createdBy = await uhx.Repositories.userRepository.get(this.createdBy, _txc);
             if(this.buyerId == this.createdBy)
                 this._buyer = this._createdBy;
         }
