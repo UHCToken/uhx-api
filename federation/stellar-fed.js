@@ -17,7 +17,7 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
-const uhc = require('../uhc'),
+const uhx = require('../uhx'),
     fs = require('fs');
  
 /**
@@ -64,7 +64,7 @@ class StellarFederationApiResource {
         var retVal = this._toml;
         
         // Get assets
-        var assets = await uhc.Repositories.assetRepository.query();
+        var assets = await uhx.Repositories.assetRepository.query();
         retVal += assets.map(o=>
             "[[CURRENCIES]]\r\n" + 
             `code="${o.code}"\r\n` + 

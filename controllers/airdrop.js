@@ -17,7 +17,7 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
- const uhc = require('../uhc'),
+ const uhx = require('../uhx'),
     security = require('../security'),
     exception = require('../exception'),
     Airdrop = require('../model/Airdrop');
@@ -87,7 +87,7 @@ module.exports.AirdropApiResource = class AirdropApiResource {
      *              schema:
      *                  $ref: "#/definitions/Exception"
      *      security:
-     *          - uhc_auth:
+     *          - uhx_auth:
      *              - "execute:transaction"
      *              - "write:transaction"
      */
@@ -96,7 +96,7 @@ module.exports.AirdropApiResource = class AirdropApiResource {
         if(!req.body.distribution)
             throw new exception.ArgumentException("distribution missing");
         req.body.plan = [];
-        var airdrop = await uhc.TokenLogic.planAirdrop(new Airdrop().copy(req.body), req.params.id, req.principal);
+        var airdrop = await uhx.TokenLogic.planAirdrop(new Airdrop().copy(req.body), req.params.id, req.principal);
         airdrop.plan.forEach(t=>{
             t._payor = t.payor ? t.payor.summary() : null;
             t._payee = t.payee ? t.payee.summary() : null;

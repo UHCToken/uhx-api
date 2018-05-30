@@ -28,12 +28,12 @@ const UserRepository = require('./userRepository'),
     TransactionRepository = require('./transactionRepository'),
     ReportRepository = require('./reportRepository'),
     pg = require('pg'),
-    uhc = require('../uhc'),
+    uhx = require('../uhx'),
     exception = require('../exception');
 
 /**
  * @class
- * @summary Represents UHC's database repositories
+ * @summary Represents UHX's database repositories
  */
 class UhcRepositories {
 
@@ -73,7 +73,7 @@ class UhcRepositories {
         }
         catch(e) {
             await dbc.query("ROLLBACK");
-            uhc.log.error(`Rolling back transaction due to: ${e.message}`);
+            uhx.log.error(`Rolling back transaction due to: ${e.message}`);
             throw new exception.Exception("Database transaction failed", e.constructor.name == "BusinessRuleViolationException" ? exception.ErrorCodes.RULES_VIOLATION : exception.ErrorCodes.DATA_ERROR, e);
         }
         finally {

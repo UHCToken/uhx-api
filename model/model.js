@@ -18,7 +18,7 @@
  * 
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
- const uhc = require('../uhc'),
+ const uhx = require('../uhx'),
     crypto = require('crypto'),
     security = require('../security'),
     User = require('./User'),

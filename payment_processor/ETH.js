@@ -22,7 +22,7 @@
     crypto = require("crypto"),
     exception = require("../exception"),
     model = require("../model/model"),
-    uhc = require("../uhc");
+    uhx = require("../uhx");
 
  module.exports = 
   /**
@@ -37,14 +37,14 @@
     // Step 1. We want to ensure that the buyer has sufficient XLM
     var asset = await orderInfo.loadAsset();
     var buyer = await orderInfo.loadBuyer();
-    var ethWallet = await uhc.Repositories.walletRepository.getTypeForUserByUserId(buyer.id, "ETHEREUM")
+    var ethWallet = await uhx.Repositories.walletRepository.getTypeForUserByUserId(buyer.id, "ETHEREUM")
 
-    var buyerEthWallet = await uhc.Web3Client.getBalance(ethWallet);
+    var buyerEthWallet = await uhx.Web3Client.getBalance(ethWallet);
     
-    var buyerStrWallet = await uhc.StellarClient.isActive(await buyer.loadWallet());
+    var buyerStrWallet = await uhx.StellarClient.isActive(await buyer.loadWallet());
     // Buyer's stellar wallet is empty and not active, we should activate it
     if(!buyerStrWallet)
-        await uhc.StellarClient.activateAccount(buyerStrWallet, "1.6", distributionAccount);
+        await uhx.StellarClient.activateAccount(buyerStrWallet, "1.6", distributionAccount);
 
     var sourceEthBalance = buyerEthWallet.balances.find(o=>o.code == orderInfo.invoicedAmount.code);
 
@@ -65,10 +65,10 @@
     try {
         // Does the buyer wallet trust our asset?
         if(!buyerStrWallet.balances.find(o=>o.code == asset.code))
-            await uhc.StellarClient.createTrust(buyerStrWallet, asset);
+            await uhx.StellarClient.createTrust(buyerStrWallet, asset);
         // TODO: If this needs to go to escrow this will need to be changed
-        await uhc.Web3Client.createPayment(buyerEthWallet, uhc.Config.ethereum.distribution_wallet_address, orderInfo.invoicedAmount)
-        await uhc.StellarClient.createPayment(distributionAccount, buyerStrWallet, {value: orderInfo.quantity, code: asset.code})
+        await uhx.Web3Client.createPayment(buyerEthWallet, uhx.Config.ethereum.distribution_wallet_address, orderInfo.invoicedAmount)
+        await uhx.StellarClient.createPayment(distributionAccount, buyerStrWallet, {value: orderInfo.quantity, code: asset.code})
 
         //orderInfo.ref = transaction.ref;
         //orderInfo.memo = transaction.id;
@@ -76,7 +76,7 @@
         return model.TransactionStatus.Complete;
     }
     catch(e) {
-        uhc.log.error(`Error transacting with ethereum network: ${e.message}`);
+        uhx.log.error(`Error transacting with ethereum network: ${e.message}`);
         orderInfo.ref = e.code || exception.ErrorCodes.COM_FAILURE;
         orderInfo.transactionTime = new Date();
         return model.TransactionStatus.Failed;

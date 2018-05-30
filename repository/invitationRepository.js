@@ -24,7 +24,7 @@ const pg = require('pg'),
     model = require('../model/model'),
     Invitation = require('../model/Invitation'),
     User = require("../model/User"),
-    uhc = require("../uhc");
+    uhx = require("../uhx");
 
  /**
   * @class

@@ -19,7 +19,7 @@
 
 
 const ModelBase = require('./ModelBase'),
-    uhc = require('../uhc');
+    uhx = require('../uhx');
 
 /**
  * @class

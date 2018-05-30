@@ -22,7 +22,7 @@ const pg = require('pg'),
     exception = require('../exception'),
     security = require('../security'),
     model = require('../model/model'),
-    uhc = require("../uhc");
+    uhx = require("../uhx");
 
  /**
   * @class

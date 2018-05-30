@@ -61,4 +61,4 @@ typings/
 .next
 
 config.js
-uhc-init.sql
+uhx-init.sql

@@ -19,7 +19,7 @@
 
  const assert = require('assert'),
     oauth = require('../controllers/oauth'),
-    uhc = require('../uhc'),
+    uhx = require('../uhx'),
     exception = require('../exception'),
     express = require('express');
 

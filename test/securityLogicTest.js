@@ -18,7 +18,7 @@
  */
 
  const assert = require('assert'),
-    uhc = require('../uhc'),
+    uhx = require('../uhx'),
     testRepo = require('../repository/repository'),
     exception = require('../exception'),
     model = require('../model/model');
@@ -33,7 +33,7 @@ describe("Security Logic Test Suite", function() {
 
         var user = new model.User().copy({name: 'bob@test.com'});
         try {
-            uhc.SecurityLogic.validateUser(user, null);
+            uhx.SecurityLogic.validateUser(user, null);
         }
         catch(e) {
             assert.fail("bob@test.com is a valid user name");
@@ -48,7 +48,7 @@ describe("Security Logic Test Suite", function() {
 
         var user = new model.User().copy({name: 'bob%%$*(%$#test.com'});
         try {
-            uhc.SecurityLogic.validateUser(user, null);
+            uhx.SecurityLogic.validateUser(user, null);
             assert.fail("bob%%$*(%$#test.com is an invalid username");
         }
         catch(e) {
@@ -64,7 +64,7 @@ describe("Security Logic Test Suite", function() {
 
         var user = new model.User().copy({name: 'bob@test.com'});
         try {
-            uhc.SecurityLogic.validateUser(user, "@Test123");
+            uhx.SecurityLogic.validateUser(user, "@Test123");
         }
         catch(e) {
             assert.fail("@Test123 is a valid password");
@@ -79,7 +79,7 @@ describe("Security Logic Test Suite", function() {
 
         var user = new model.User().copy({name: 'bob@test.com'}); 
         try {
-            uhc.SecurityLogic.validateUser(user, "test");
+            uhx.SecurityLogic.validateUser(user, "test");
             assert.fail("test is an invalid password");
         }
         catch(e) {

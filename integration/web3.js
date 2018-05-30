@@ -19,7 +19,7 @@
 
  const Web3 = require('web3'),
     Web3Net = require('web3-net'),
-    uhc = require("../uhc"),
+    uhx = require("../uhx"),
     model = require("../model/model"),
     Asset = require('../model/Asset'),
     Wallet = require("../model/Wallet"),

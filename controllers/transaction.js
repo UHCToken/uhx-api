@@ -18,7 +18,7 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
  
-const uhc = require('../uhc'),
+const uhx = require('../uhx'),
     exception = require('../exception'),
     Transaction = require('../model/Transaction'),
     security = require('../security');
@@ -128,12 +128,12 @@ class TransactionApiResource {
      *              schema:
      *                  $ref: "#/definitions/Exception"
      *      security:
-     *      - uhc_auth:
+     *      - uhx_auth:
      *          - "read:transaction"
      */
     async get(req, res) {
         
-        var txInfo = await uhc.TokenLogic.getTransaction(req.params.txid, req.principal);
+        var txInfo = await uhx.TokenLogic.getTransaction(req.params.txid, req.principal);
         res.status(200).json(txInfo);
         return true;
     }
@@ -182,7 +182,7 @@ class TransactionApiResource {
      *              schema:
      *                  $ref: "#/definitions/Exception"
      *      security:
-     *      - uhc_auth:
+     *      - uhx_auth:
      *          - "list:transaction"
      * /transaction:
      *  get:
@@ -237,11 +237,11 @@ class TransactionApiResource {
      *              schema:
      *                  $ref: "#/definitions/Exception"
      *      security:
-     *      - uhc_auth:
+     *      - uhx_auth:
      *          - "list:transaction"
      */
     async getAll(req, res) {
-        var transactions = await uhc.TokenLogic.getTransactionHistory(req.params.uid, req.query, req.principal);
+        var transactions = await uhx.TokenLogic.getTransactionHistory(req.params.uid, req.query, req.principal);
 
         // Minify user information
         transactions = transactions.map((t)=> {
@@ -305,7 +305,7 @@ class TransactionApiResource {
      *              schema:
      *                  $ref: "#/definitions/Exception"
      *      security:
-     *      - uhc_auth:
+     *      - uhx_auth:
      *          - "write:transaction"
      * /transaction:
      *  post:
@@ -346,7 +346,7 @@ class TransactionApiResource {
      *              schema:
      *                  $ref: "#/definitions/Exception"
      *      security:
-     *      - uhc_auth:
+     *      - uhx_auth:
      *          - "write:transaction"
      */
     async post(req, res) {
@@ -357,7 +357,7 @@ class TransactionApiResource {
         if(!Array.isArray(req.body))
             req.body = [req.body];
         
-        var transactions = await uhc.TokenLogic.createTransaction(req.body.map(o=>new Transaction().copy(o)), req.principal);
+        var transactions = await uhx.TokenLogic.createTransaction(req.body.map(o=>new Transaction().copy(o)), req.principal);
 
         var status = transactions.find(o=>o.state != 2) ? 202 : 201;
         res.status(status).json(transactions);
@@ -376,7 +376,7 @@ class TransactionApiResource {
     async acl(principal, req, res) {
 
         if(!(principal instanceof security.Principal)) {
-            uhc.log.error("ACL requires a security principal to be passed");
+            uhx.log.error("ACL requires a security principal to be passed");
             return false;
         }
 

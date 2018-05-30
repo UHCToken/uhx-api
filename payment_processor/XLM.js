@@ -23,7 +23,7 @@
     crypto = require("crypto"),
     exception = require("../exception"),
     model = require("../model/model"),
-    uhc = require("../uhc");
+    uhx = require("../uhx");
 
  module.exports = 
   /**
@@ -39,7 +39,7 @@
     // Step 1. We want to ensure that the buyer has sufficient XLM
     var asset = await orderInfo.loadAsset();
     var buyer = await orderInfo.loadBuyer();
-    var buyerWallet = await uhc.StellarClient.isActive(await buyer.loadStellarWallet());
+    var buyerWallet = await uhx.StellarClient.isActive(await buyer.loadStellarWallet());
 
     // Buyer is attempting to buy but their acct is not even active!
     if(!buyerWallet) {
@@ -58,9 +58,9 @@
     try {
         // Does the buyer wallet trust our asset?
         if(!buyerWallet.balances.find(o=>o.code == asset.code))
-            await uhc.StellarClient.createTrust(buyerWallet, asset);
+            await uhx.StellarClient.createTrust(buyerWallet, asset);
         // TODO: If this needs to go to escrow this will need to be changed
-        var transaction = await uhc.StellarClient.exchangeAsset(buyerWallet, distributionAccount, orderInfo.invoicedAmount, new MonetaryAmount(orderInfo.quantity, asset.code), orderInfo.batchId);
+        var transaction = await uhx.StellarClient.exchangeAsset(buyerWallet, distributionAccount, orderInfo.invoicedAmount, new MonetaryAmount(orderInfo.quantity, asset.code), orderInfo.batchId);
 
         orderInfo.amount = new MonetaryAmount(orderInfo.quantity, asset.code)
         orderInfo.ref = transaction.ref;
@@ -83,7 +83,7 @@
         return model.TransactionStatus.Complete;
     }
     catch(e) {
-        uhc.log.error(`Error transacting with Stellar network: ${e.message}`);
+        uhx.log.error(`Error transacting with Stellar network: ${e.message}`);
         orderInfo.ref = e.code || exception.ErrorCodes.COM_FAILURE;
         orderInfo.transactionTime = new Date();
         return model.TransactionStatus.Failed;

@@ -19,7 +19,7 @@
  */
 
 
-const uhc = require('../uhc'),
+const uhx = require('../uhx'),
     MonetaryAmount = require('./MonetaryAmount'),
     User = require('./User'),
     ModelBase = require('./ModelBase');
@@ -191,14 +191,14 @@ module.exports = class Transaction extends ModelBase {
     /**
      * @method
      * @returns {User} The payor of the transaction
-     * @summary Loads the payor from the UHC database
+     * @summary Loads the payor from the UHX database
      */
     async loadPayor(_txc) {
         if(!this._payor && this.payorId)
-            this._payor = await uhc.Repositories.userRepository.get(this.payorId, _txc);
+            this._payor = await uhx.Repositories.userRepository.get(this.payorId, _txc);
         else if(!this._payor && this._payorWalletId) {
-            this._payor = await uhc.Repositories.userRepository.getByWalletId(this._payorWalletId, _txc) ||
-                 await uhc.Repositories.assetRepository.getByWalletId(this._payorWalletId, _txc);
+            this._payor = await uhx.Repositories.userRepository.getByWalletId(this._payorWalletId, _txc) ||
+                 await uhx.Repositories.assetRepository.getByWalletId(this._payorWalletId, _txc);
         }
         return this._payor;
     }
@@ -206,14 +206,14 @@ module.exports = class Transaction extends ModelBase {
     /**
      * @method
      * @returns {User} The payee of the transaction
-     * @summary Loads the payee from the UHC database
+     * @summary Loads the payee from the UHX database
      */
     async loadPayee(_txc) {
         if(!this._payee && this.payeeId) 
-            this._payee = await uhc.Repositories.userRepository.get(this.payeeId, _txc);
+            this._payee = await uhx.Repositories.userRepository.get(this.payeeId, _txc);
         else if(!this._payee && this._payeeWalletId) {
-            this._payee = await uhc.Repositories.userRepository.getByWalletId(this._payeeWalletId, _txc) || 
-                await uhc.Repositories.assetRepository.getByWalletId(this._payeeWalletId, _txc);
+            this._payee = await uhx.Repositories.userRepository.getByWalletId(this._payeeWalletId, _txc) || 
+                await uhx.Repositories.assetRepository.getByWalletId(this._payeeWalletId, _txc);
         }
         return this._payee;
     }
@@ -227,13 +227,13 @@ module.exports = class Transaction extends ModelBase {
         if(!this._payorWallet) 
         {
             if(this._payorWalletId)
-                this._payorWallet = await uhc.Repositories.walletRepository.get(this._payorWalletId, _txc);
+                this._payorWallet = await uhx.Repositories.walletRepository.get(this._payorWalletId, _txc);
             else if(this.payorId && !uuidRegex.test(this.payorId))
-                this._payorWallet = await uhc.Repositories.walletRepository.getByPublicKey(this.payorId, _txc);
+                this._payorWallet = await uhx.Repositories.walletRepository.getByPublicKey(this.payorId, _txc);
             else if(this.payorId) {
-                try { this._payorWallet = await uhc.Repositories.walletRepository.get(this.payorId, _txc); }
+                try { this._payorWallet = await uhx.Repositories.walletRepository.get(this.payorId, _txc); }
                 catch(e) { 
-                    this._payorWallet = await uhc.Repositories.walletRepository.getByUserId(this.payorId, _txc);
+                    this._payorWallet = await uhx.Repositories.walletRepository.getByUserId(this.payorId, _txc);
                 }
             }
         }
@@ -249,13 +249,13 @@ module.exports = class Transaction extends ModelBase {
         if(!this._payeeWallet) 
         {
             if(this._payeeWalletId)
-                this._payeeWallet = await uhc.Repositories.walletRepository.get(this._payeeWalletId, _txc);
+                this._payeeWallet = await uhx.Repositories.walletRepository.get(this._payeeWalletId, _txc);
             else if(this.payeeId && !uuidRegex.test(this.payeeId))
-                this._payeeWallet = await uhc.Repositories.walletRepository.getByPublicKey(this.payeeId, _txc);
+                this._payeeWallet = await uhx.Repositories.walletRepository.getByPublicKey(this.payeeId, _txc);
             else if(this.payeeId) {
-                try { this._payeeWallet = await uhc.Repositories.walletRepository.get(this.payeeId, _txc); }
+                try { this._payeeWallet = await uhx.Repositories.walletRepository.get(this.payeeId, _txc); }
                 catch(e) { 
-                    this._payeeWallet = await uhc.Repositories.walletRepository.getByUserId(this.payeeId, _txc);
+                    this._payeeWallet = await uhx.Repositories.walletRepository.getByUserId(this.payeeId, _txc);
                 }
             }
         }

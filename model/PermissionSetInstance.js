@@ -19,7 +19,7 @@
 
 
 const PermissionSet = require('./PermissionSet'),
-    uhc = require('../uhc');
+    uhx = require('../uhx');
 
 /**
  * @class
@@ -46,13 +46,13 @@ module.exports = class PermissionSetInstance extends PermissionSet {
         if(!this._object)
             switch(this._objectType) {
                 case "Application":
-                    this._object = uhc.Repositories.applicationRepository.get(this._objectId);
+                    this._object = uhx.Repositories.applicationRepository.get(this._objectId);
                     break;
                 case "Group":
-                    //this._object = uhc.Repositories.groupRepository.get(this._objectId);
+                    //this._object = uhx.Repositories.groupRepository.get(this._objectId);
                     break;
                 case "User":
-                    this._object = uhc.Repositories.userRepository.get(this._objectId);
+                    this._object = uhx.Repositories.userRepository.get(this._objectId);
                     break;
             }
         return this._object;

@@ -18,7 +18,7 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
- const uhc = require('../uhc');
+ const uhx = require('../uhx');
 
  /**
   * @method
@@ -27,8 +27,8 @@
   */
  module.exports = async function(to, code) {
      if(to.telVerified)
-        await uhc.Mailer.sendSms({
+        await uhx.Mailer.sendSms({
             to: to.tel, 
-            template: uhc.Config.mail.templates.tfa
+            template: uhx.Config.mail.templates.tfa
         }, { user: to, token: code });
  }

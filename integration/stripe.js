@@ -18,9 +18,9 @@
  */
 
 const model = require('../model/model'),
-    uhc = require('../uhc'),
+    uhx = require('../uhx'),
     exception = require('../exception'),
-    stripe = require('stripe')(uhc.Config.stripe.key);
+    stripe = require('stripe')(uhx.Config.stripe.key);
 
 /**
  * @class 
@@ -76,7 +76,7 @@ module.exports = class StripeClient {
      * @method
      * @summary Constructs a request to the Stripe payment API for a one time charge
      * @param {string} source The source to charge (the mastercard, amex, or visa token)
-     * @param {User} user The UHC user which is being charged
+     * @param {User} user The UHX user which is being charged
      * @param {MonetaryAmount} amount The amount to be charged to the card
      * @param {MonetaryAmount} fee The additional amount to add to the charge 
      * @param {string} description The textual description of the transaction to be charged
@@ -97,7 +97,7 @@ module.exports = class StripeClient {
                     metadata: {
                         "user_id" : user.id,
                         "user_email": user.email,
-                        "uhc_fee": fee.amount
+                        "uhx_fee": fee.amount
                     }
                 }, function (err, charges) {
                     if (charges)
@@ -107,7 +107,7 @@ module.exports = class StripeClient {
                             description,
                             new Date(charges.created),
                             user, 
-                            null, // TODO: Set UHC as the payee
+                            null, // TODO: Set UHX as the payee
                             amount,
                             fee, 
                             charges.id,
@@ -118,7 +118,7 @@ module.exports = class StripeClient {
                 });
             }
             catch (e) {
-                uhc.log.error(`Stripe API charge failed: ${JSON.stringify(e)}`);
+                uhx.log.error(`Stripe API charge failed: ${JSON.stringify(e)}`);
                 reject(exception.Exception("Transaction on payment processor failed", exception.ErrorCodes.COM_FAILURE, e));
             }
         });

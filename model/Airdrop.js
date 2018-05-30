@@ -19,7 +19,7 @@
  */
 
  const Transaction = require('./Transaction'),
-    uhc = require('../uhc');
+    uhx = require('../uhx');
 
 
 /**

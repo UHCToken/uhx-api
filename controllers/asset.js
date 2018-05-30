@@ -17,7 +17,7 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
- const uhc = require('../uhc'),
+ const uhx = require('../uhx'),
     security = require('../security'),
     exception = require('../exception'),
     Asset = require('../model/Asset');
@@ -28,7 +28,7 @@
    * @swagger
    * tags:
    *    - name: asset
-   *      description: A resource to fetch user blockchain asset (token types) information from the UHC API
+   *      description: A resource to fetch user blockchain asset (token types) information from the UHX API
    */
 module.exports.AssetApiResource = class AssetApiResource {
 
@@ -141,7 +141,7 @@ module.exports.AssetApiResource = class AssetApiResource {
      *              schema:
      *                  $ref: "#/definitions/Exception"
      *      security:
-     *      - uhc_auth:
+     *      - uhx_auth:
      *          - write:asset
      */
     async post(req, res) {
@@ -153,9 +153,9 @@ module.exports.AssetApiResource = class AssetApiResource {
             throw new exception.ArgumentException("body.asset");
 
         // Create a new asset
-        var asset = await uhc.TokenLogic.createAsset(new Asset().copy(req.body.asset), req.body.supply, req.body.fixed, req.principal);
+        var asset = await uhx.TokenLogic.createAsset(new Asset().copy(req.body.asset), req.body.supply, req.body.fixed, req.principal);
         res.status(201)
-            .set("Location", `${uhc.Config.api.scheme}://${uhc.Config.api.host}:${uhc.Config.api.port}${uhc.Config.api.base}/asset/${asset.id}`)
+            .set("Location", `${uhx.Config.api.scheme}://${uhx.Config.api.host}:${uhx.Config.api.port}${uhx.Config.api.base}/asset/${asset.id}`)
             .json(asset);
         return true;
     }
@@ -196,11 +196,11 @@ module.exports.AssetApiResource = class AssetApiResource {
      *      security:
      *      - app_auth:
      *          - read:asset
-     *      - uhc_auth:
+     *      - uhx_auth:
      *          - read:asset
      */
     async getOffer(req, res) {
-        var activeOffer = await uhc.Repositories.assetRepository.getOffers(req.params.id);
+        var activeOffer = await uhx.Repositories.assetRepository.getOffers(req.params.id);
         if(!activeOffer)
             throw new exception.NotFoundException("offer", "__current");
         res.status(200).json(activeOffer);
@@ -243,14 +243,14 @@ module.exports.AssetApiResource = class AssetApiResource {
      *      security:
      *      - app_auth:
      *          - read:asset
-     *      - uhc_auth:
+     *      - uhx_auth:
      *          - read:asset
      */
     async getActiveOffer(req, res) {
-        var activeOffer = await uhc.Repositories.assetRepository.getActiveOffer(req.params.id);
+        var activeOffer = await uhx.Repositories.assetRepository.getActiveOffer(req.params.id);
         if(!activeOffer)
             throw new exception.NotFoundException("offer", "__current");
-        var offerInfo = await uhc.StellarClient.getAccount(await activeOffer.loadWallet());
+        var offerInfo = await uhx.StellarClient.getAccount(await activeOffer.loadWallet());
         var asset = await activeOffer.loadAsset();
         activeOffer.remain = offerInfo.balances.find(o=>o.code == asset.code).value;
         res.status(200).json(activeOffer);
@@ -264,7 +264,7 @@ module.exports.AssetApiResource = class AssetApiResource {
      * @param {Express.Response} res The HTTP response to the client
      */
     async lock(req, res) {
-        var asset = await uhc.Repositories.assetRepository.lock(req.params.id, req.principal);
+        var asset = await uhx.Repositories.assetRepository.lock(req.params.id, req.principal);
         res.status(201).json(asset);
         return true;
     }
@@ -276,7 +276,7 @@ module.exports.AssetApiResource = class AssetApiResource {
      * @param {Express.Response} res The HTTP response to the client
      */
     async unlock(req, res) {
-        var asset = await uhc.Repositories.assetRepository.unlock(req.params.id, req.principal);
+        var asset = await uhx.Repositories.assetRepository.unlock(req.params.id, req.principal);
         res.status(201).json(asset);
         return true;
     }
@@ -327,11 +327,11 @@ module.exports.AssetApiResource = class AssetApiResource {
      *      security:
      *      - app_auth:
      *          - read:asset
-     *      - uhc_auth:
+     *      - uhx_auth:
      *          - read:asset
      */
     async get(req, res) {
-        var asset = await uhc.Repositories.assetRepository.get(req.params.id);
+        var asset = await uhx.Repositories.assetRepository.get(req.params.id);
         await asset.loadDistributorWallet();
         res.status(200).json(asset);
         return true;
@@ -367,7 +367,7 @@ module.exports.AssetApiResource = class AssetApiResource {
      *      security:
      *      - app_auth:
      *          - list:asset
-     *      - uhc_auth:
+     *      - uhx_auth:
      *          - list:asset
      */
     async getAll(req, res) {
@@ -377,7 +377,7 @@ module.exports.AssetApiResource = class AssetApiResource {
             type: req.query.type,
             deactivationTime: req.query._all == "true" ? null : "null"
         });
-        res.status(200).json(await uhc.Repositories.assetRepository.query(assetFilter, req.query._offset, req.query._count));
+        res.status(200).json(await uhx.Repositories.assetRepository.query(assetFilter, req.query._offset, req.query._count));
         return true;
 
     }
@@ -423,7 +423,7 @@ module.exports.AssetApiResource = class AssetApiResource {
      *      security:
      *      - app_auth:
      *          - execute:asset
-     *      - uhc_auth:
+     *      - uhx_auth:
      *          - execute:asset
      */
     async quote(req, res) {
@@ -434,13 +434,13 @@ module.exports.AssetApiResource = class AssetApiResource {
             throw new exception.ArgumentException("to");
         
         // The asset
-        var quote = await uhc.TokenLogic.createAssetQuote(req.query.to || req.body.to, req.query.from || req.body.from, req.query.nostore || req.body.nostore);
+        var quote = await uhx.TokenLogic.createAssetQuote(req.query.to || req.body.to, req.query.from || req.body.from, req.query.nostore || req.body.nostore);
 
         // current offer info & remaining tokens
-        var activeOffer = await uhc.Repositories.assetRepository.getActiveOffer(quote.assetId);
+        var activeOffer = await uhx.Repositories.assetRepository.getActiveOffer(quote.assetId);
         if(activeOffer)
         {
-            var offerInfo = await uhc.StellarClient.getAccount(await activeOffer.loadWallet());
+            var offerInfo = await uhx.StellarClient.getAccount(await activeOffer.loadWallet());
             activeOffer.remain = offerInfo.balances.find(o=>o.code == quote._asset.code).value;       
             quote.currentOffer = activeOffer;
         }

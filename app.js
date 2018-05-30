@@ -20,7 +20,7 @@
  const express = require('express'),
     bodyParser = require('body-parser'),
     exception = require('./exception'),
-    uhc = require("./uhc"),
+    uhx = require("./uhx"),
     api = require('./api'),
     oauth = require('./controllers/oauth'),
     purchase = require('./controllers/purchase'),
@@ -54,13 +54,13 @@ app.use(function(req, res, next) {
 app.use(helmet());
 
 // Construct REST API
-var restApi = new api.RestApi(uhc.Config.api.base, app);
+var restApi = new api.RestApi(uhx.Config.api.base, app);
 
 // Add resources to rest API
-if(uhc.Config.security.enableCors) 
+if(uhx.Config.security.enableCors) 
     restApi.enableCors();
 
-if(uhc.Config.swagger.enabled) {
+if(uhx.Config.swagger.enabled) {
     restApi.addResource(new swagger.SwaggerMetadataResource());
     app.use('/api-docs', express.static('api-docs'));
 }
@@ -79,16 +79,16 @@ restApi.addResource(new transaction.TransactionApiResource());
 restApi.addResource(new stellarFederation.StellarFederationApiResource());
 restApi.addResource(new airdrop.AirdropApiResource());
 
-uhc.init();
+uhx.init();
 // Start REST API
 restApi.start();
 
 // Start the express instance
-if(uhc.Config.api.scheme == "http") {
-    http.createServer(app).listen(uhc.Config.api.port);
+if(uhx.Config.api.scheme == "http") {
+    http.createServer(app).listen(uhx.Config.api.port);
 }
 else {
-    https.createServer(uhc.Config.api.tls, app).listen(uhc.Config.api.port);
+    https.createServer(uhx.Config.api.tls, app).listen(uhx.Config.api.port);
 }
 
-uhc.log.info(`UHC API started on ${uhc.Config.api.scheme} port ${uhc.Config.api.port}`);
+uhx.log.info(`UHX API started on ${uhx.Config.api.scheme} port ${uhx.Config.api.port}`);

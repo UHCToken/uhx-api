@@ -20,7 +20,7 @@
 
  const request = require("request"),
     exception = require("../exception"),
-    uhc = require("../uhc");
+    uhx = require("../uhx");
 
  module.exports = class BittrexClient {
 
@@ -46,7 +46,7 @@
             request("https://bittrex.com/api/v2.0/pub/markets/GetMarketSummaries",
             function(err, res, body) {
                 if(err) {
-                    uhc.log.error(`HTTP ERR: ${err}`)
+                    uhx.log.error(`HTTP ERR: ${err}`)
                     reject(new exception.Exception("Error contacting BitTrex API", exception.ErrorCodes.COM_FAILURE, err));
                 }
                 else if(res.statusCode == 200) {
@@ -81,7 +81,7 @@
                             else 
                             {
                                 quote *= tradePair.Summary.Bid;
-                                uhc.log.verbose(`${currency}>${base} = ${base.bid} ===> ${quote.from}>${base} = ${quote}`)
+                                uhx.log.verbose(`${currency}>${base} = ${base.bid} ===> ${quote.from}>${base} = ${quote}`)
                             }
                             currency = base;
                         }

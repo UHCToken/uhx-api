@@ -17,7 +17,7 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
  
-const uhc = require('../uhc'),
+const uhx = require('../uhx'),
     exception = require('../exception'),
     security = require('../security'),
     Invitation = require('../model/Invitation');
@@ -90,8 +90,8 @@ class InvitationApiResource {
      *  post:
      *      tags:
      *      - "invitation"
-     *      summary: "Creates a new invite on the UHC server"
-     *      description: "This method will insert the specified invitation to the UHC server and will issue a temporary claim token to the person specified"
+     *      summary: "Creates a new invite on the UHX server"
+     *      description: "This method will insert the specified invitation to the UHX server and will issue a temporary claim token to the person specified"
      *      consumes:
      *      - "application/json"
      *      produces:
@@ -121,7 +121,7 @@ class InvitationApiResource {
      *              schema:
      *                  $ref: "#/definitions/Exception"
      *      security:
-     *      - uhc_auth:
+     *      - uhx_auth:
      *          - "write:invitation"
      *      - app_auth:
      *          - "write:invitation"
@@ -131,9 +131,9 @@ class InvitationApiResource {
         if(!req.body)
             throw new exception.Exception("Missing payload", exception.ErrorCodes.MISSING_PAYLOAD);
         
-        var invite = await uhc.SecurityLogic.createInvitation(new Invitation().copy(req.body), req.principal);
+        var invite = await uhx.SecurityLogic.createInvitation(new Invitation().copy(req.body), req.principal);
         res.status(201)
-            .set("Location", `${uhc.Config.api.scheme}://${uhc.Config.api.host}:${uhc.Config.api.port}${uhc.Config.api.base}/invitation/${invite.id}`)
+            .set("Location", `${uhx.Config.api.scheme}://${uhx.Config.api.host}:${uhx.Config.api.port}${uhx.Config.api.base}/invitation/${invite.id}`)
             .json(invite);
         return true;
     }
@@ -163,7 +163,7 @@ class InvitationApiResource {
      *              schema:
      *                  $ref: "#/definitions/Exception"
      *      security:
-     *      - uhc_auth:
+     *      - uhx_auth:
      *          - "list:invitation"
       *      - app_auth:
      *          - "list:invitation"
@@ -182,8 +182,8 @@ class InvitationApiResource {
      *  get:
      *      tags:
      *      - "invitation"
-     *      summary: "Gets a specific invitation from the UHC server"
-     *      description: "This method will retrieve the specific invitation from the UHC server"
+     *      summary: "Gets a specific invitation from the UHX server"
+     *      description: "This method will retrieve the specific invitation from the UHX server"
      *      produces:
      *      - "application/json"
      *      parameters:
@@ -206,13 +206,13 @@ class InvitationApiResource {
      *              schema:
      *                  $ref: "#/definitions/Exception"
      *      security:
-     *      - uhc_auth:
+     *      - uhx_auth:
      *          - "read:invitation"
      *      - app_auth:
      *          - "read:invitation"
      */
     async get(req, res) {
-        res.status(200).json(await uhc.Repositories.invitationRepository.get(req.params.id));
+        res.status(200).json(await uhx.Repositories.invitationRepository.get(req.params.id));
         return true;
     }
 
@@ -227,7 +227,7 @@ class InvitationApiResource {
      *      tags:
      *      - "invitation"
      *      summary: "Rescind an active invitation"
-     *      description: "This method will rescind (deactivate) the specific invitation on the UHC server"
+     *      description: "This method will rescind (deactivate) the specific invitation on the UHX server"
      *      produces:
      *      - "application/json"
      *      parameters:
@@ -250,13 +250,13 @@ class InvitationApiResource {
      *              schema:
      *                  $ref: "#/definitions/Exception"
      *      security:
-     *      - uhc_auth:
+     *      - uhx_auth:
      *          - "write:invitation"
      *      - app_auth:
      *          - "write:invitation"
      */
     async delete(req, res) {
-        res.status(201).json(await uhc.Repositories.invitationRepository.delete(req.params.id));
+        res.status(201).json(await uhx.Repositories.invitationRepository.delete(req.params.id));
         return true;
     }
     
@@ -309,9 +309,9 @@ class InvitationApiResource {
         if(!req.body.code) // The password to set on the created user instance
             throw new exception.ArgumentException("password");
         
-        var user = await uhc.SecurityLogic.claimInvitation(req.body.code, req.body.password, req.principal);
+        var user = await uhx.SecurityLogic.claimInvitation(req.body.code, req.body.password, req.principal);
         res.status(201)
-            .set("Location", `${uhc.Config.api.scheme}://${uhc.Config.api.host}:${uhc.Config.api.port}${uhc.Config.api.base}/user/${user.id}`)
+            .set("Location", `${uhx.Config.api.scheme}://${uhx.Config.api.host}:${uhx.Config.api.port}${uhx.Config.api.base}/user/${user.id}`)
             .json(user);
         return true;
     }

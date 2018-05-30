@@ -19,7 +19,7 @@
  */
 
  const ModelBase = require('./ModelBase'),
-    uhc = require('../uhc');
+    uhx = require('../uhx');
 
 /**
  * @class Application
@@ -79,7 +79,7 @@ module.exports = class Application extends ModelBase {
     async loadGrants() {
         if(!this._grants) {
             this._grants = {};
-            var perms = await uhc.Repositories.permissionRepository.getApplicationPermission(this.id);
+            var perms = await uhx.Repositories.permissionRepository.getApplicationPermission(this.id);
             for(var p in perms)
                 this._grants[perms[p].name] = perms[p].grant;
         }

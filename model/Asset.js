@@ -19,7 +19,7 @@
  */
 
  const ModelBase = require('./ModelBase'),
-    uhc = require('../uhc'),
+    uhx = require('../uhx'),
     Offer = require('./Offer');
 
  /**
@@ -153,7 +153,7 @@
      */
     async loadDistributorWallet(_txc) {
         if(!this._distWallet)
-            this._distWallet = await uhc.Repositories.walletRepository.get(this._distWalletId, _txc);
+            this._distWallet = await uhx.Repositories.walletRepository.get(this._distWalletId, _txc);
         return this._distWallet;
     }
 
@@ -163,7 +163,7 @@
      */
     async loadOffers(_txc) {
         if(!this._offerInfo)
-            this._offerInfo = await uhc.Repositories.assetRepository.getOffers(this.id, _txc);
+            this._offerInfo = await uhx.Repositories.assetRepository.getOffers(this.id, _txc);
         return this._offerInfo;
     }
 

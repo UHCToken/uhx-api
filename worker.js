@@ -1,7 +1,7 @@
 'use strict';
 
 const exception = require("./exception"),
-    uhc = require("./uhc"),
+    uhx = require("./uhx"),
     model = require("./model/model"),
     security = require("./security");
 
@@ -12,9 +12,9 @@ const actions = {
      * @param {*} workData Parameters for the transaction processing
      */
     backlogTransactions : async () => {
-        uhc.log.info("Pickup up transactions");
-        var txns = (await uhc.Repositories.transactionRepository.query(new model.Transaction().copy({ state: 3})))
-            .concat(await uhc.Repositories.transactionRepository.query(new model.Transaction().copy({ state: 1})));
+        uhx.log.info("Pickup up transactions");
+        var txns = (await uhx.Repositories.transactionRepository.query(new model.Transaction().copy({ state: 3})))
+            .concat(await uhx.Repositories.transactionRepository.query(new model.Transaction().copy({ state: 1})));
         await actions.processTransactions({ transactions: txns });
     },
     /**
@@ -31,37 +31,37 @@ const actions = {
         // Execute as session
         var session = null;
         if(workData.sessionId) 
-            session = await uhc.Repositories.sessionRepository.get(workData.sessionId);
+            session = await uhx.Repositories.sessionRepository.get(workData.sessionId);
         else 
-            session = new model.Session(await uhc.Repositories.userRepository.get("00000000-0000-0000-0000-000000000000"), new model.Application(), '*', null, null);
+            session = new model.Session(await uhx.Repositories.userRepository.get("00000000-0000-0000-0000-000000000000"), new model.Application(), '*', null, null);
         
         await session.loadUser();
         var principal = new security.Principal(session);
 
         var transactions = workData.transactions;
         if(workData.batchId && !transactions)
-            transactions = await uhc.Repositories.transactionRepository.getByBatch(workData.batchId);
-        uhc.log.info(`Worker process will transact ${transactions.length} for batch ${workData.batchId}`);
+            transactions = await uhx.Repositories.transactionRepository.getByBatch(workData.batchId);
+        uhx.log.info(`Worker process will transact ${transactions.length} for batch ${workData.batchId}`);
         for(var i in transactions) {
             if(transactions[i].state == model.TransactionStatus.Pending ||
                 transactions[i].state == model.TransactionStatus.Active) {
                 try {
-                    uhc.log.info(`Setting status of ${transactions[i].id} to ACTIVE`);
+                    uhx.log.info(`Setting status of ${transactions[i].id} to ACTIVE`);
                     transactions[i].state = model.TransactionStatus.Active;
-                    await uhc.Repositories.transactionRepository.update(transactions[i], principal);
-                    transactions[i] = await uhc.StellarClient.execute(transactions[i]);
-                    uhc.log.info(`Setting status of ${transactions[i].id} to COMPLETE`);
-                    await uhc.Repositories.transactionRepository.update(transactions[i], principal);
+                    await uhx.Repositories.transactionRepository.update(transactions[i], principal);
+                    transactions[i] = await uhx.StellarClient.execute(transactions[i]);
+                    uhx.log.info(`Setting status of ${transactions[i].id} to COMPLETE`);
+                    await uhx.Repositories.transactionRepository.update(transactions[i], principal);
                 }
                 catch(e) {
                     transactions[i].state = model.TransactionStatus.Failed;
                     transactions[i].postingDate = new Date();
-                    uhc.log.info(`Setting status of ${transactions[i].id} to FAILED`);
-                    await uhc.Repositories.transactionRepository.update(transactions[i], principal);
+                    uhx.log.info(`Setting status of ${transactions[i].id} to FAILED`);
+                    await uhx.Repositories.transactionRepository.update(transactions[i], principal);
                 }
             }
             else 
-                uhc.log.info(`Transaction ${transactions[i].id} has state of ${transactions[i].state}, will not retry`);
+                uhx.log.info(`Transaction ${transactions[i].id} has state of ${transactions[i].state}, will not retry`);
         }
         return workData.batchId;
     }
@@ -86,7 +86,7 @@ process.on('message', (data) => {
                 })
             ).catch(
                 (e) => { 
-                    uhc.log.error(`Worker process error: ${e.message} @ ${e.stack}`);
+                    uhx.log.error(`Worker process error: ${e.message} @ ${e.stack}`);
                     process.send({
                         msg: 'error',
                         error: e.message,
@@ -100,7 +100,7 @@ process.on('message', (data) => {
             throw new exception.Exception(`${data.msg.action} is not valid task for this worker`);
     }
     catch(e) {
-        uhc.log.error(`Worker process error: ${e.message} @ ${e.stack}`);
+        uhx.log.error(`Worker process error: ${e.message} @ ${e.stack}`);
         process.send({
             msg: 'error',
             error: e.message,

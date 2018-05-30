@@ -19,7 +19,7 @@
 
 
 const Transaction = require('./Transaction'),
-    uhc = require("../uhc"),
+    uhx = require("../uhx"),
     MonetaryAmount = require("./MonetaryAmount"),
     AssetQuote = require("./AssetQuote"),
     Asset = require("./Asset"),
@@ -173,7 +173,7 @@ module.exports = class Purchase extends Transaction {
      */
     async loadDistributionWallet(_txc) {
         if(!this._distributorWallet)
-            this._distributorWallet = await uhc.Repositories.walletRepository.get(this.distributorWalletId, _txc);
+            this._distributorWallet = await uhx.Repositories.walletRepository.get(this.distributorWalletId, _txc);
         return this._distributorWallet;
     }
     
@@ -184,7 +184,7 @@ module.exports = class Purchase extends Transaction {
      */
     async loadBuyer(_txc) {
         if(!this._buyer) {
-            this._buyer = await uhc.Repositories.userRepository.get(this.buyerId, _txc);
+            this._buyer = await uhx.Repositories.userRepository.get(this.buyerId, _txc);
             if(this.buyerId == this.createdBy)
                 this._createdBy = this._buyer;
         }
@@ -206,7 +206,7 @@ module.exports = class Purchase extends Transaction {
      */
     async loadQuote(_txc) {
         if(!this._quote)
-            this._quote = await uhc.Repositories.assetRepository.getQuote(this.quoteId, _txc);
+            this._quote = await uhx.Repositories.assetRepository.getQuote(this.quoteId, _txc);
         return this._quote;
     }
 
@@ -225,7 +225,7 @@ module.exports = class Purchase extends Transaction {
      */
     async loadAsset(_txc) {
         if(!this._asset)
-            this._asset = await uhc.Repositories.assetRepository.get(this.assetId, _txc);
+            this._asset = await uhx.Repositories.assetRepository.get(this.assetId, _txc);
         return this._asset;
     }
 
@@ -244,7 +244,7 @@ module.exports = class Purchase extends Transaction {
      */
     async loadCreatedBy(_txc) {
         if(!this._createdBy) {
-            this._createdBy = await uhc.Repositories.userRepository.get(this.createdBy, _txc);
+            this._createdBy = await uhx.Repositories.userRepository.get(this.createdBy, _txc);
             if(this.buyerId == this.createdBy)
                 this._buyer = this._createdBy;
         }

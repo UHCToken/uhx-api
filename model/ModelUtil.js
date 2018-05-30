@@ -17,7 +17,7 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
-const uhc = require('../uhc');
+const uhx = require('../uhx');
 
 /**
   * @class
@@ -61,7 +61,7 @@ module.exports = class ModelUtil {
             sql: `UPDATE ${tableName} SET ${updateSet} WHERE ${whereClause} RETURNING *`,
             args : parameters
         };
-        uhc.log.debug(`Generated update : ${retVal.sql}`);
+        uhx.log.debug(`Generated update : ${retVal.sql}`);
         return retVal;
     }
 
@@ -133,7 +133,7 @@ module.exports = class ModelUtil {
             sql: `SELECT DISTINCT ${columns ? columns.join(",") : "*"} FROM ${tableName} ${whereClause} ${control}`,
             args : parameters
         };
-        uhc.log.debug(`Generated select : ${retVal.sql}`);
+        uhx.log.debug(`Generated select : ${retVal.sql}`);
         return retVal;
 
     }
@@ -169,7 +169,7 @@ module.exports = class ModelUtil {
             sql: `INSERT INTO ${tableName} (${colNames.substring(0, colNames.length - 1)}) VALUES (${values.substring(0, values.length - 1)}) RETURNING *`,
             args: parameters
         };
-        uhc.log.debug(`Generated insert : ${retVal.sql}`);
+        uhx.log.debug(`Generated insert : ${retVal.sql}`);
         return retVal;
 
     }
