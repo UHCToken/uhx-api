@@ -419,7 +419,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                 strWallet.userId = retVal.id;
                 strWallet = await uhx.Repositories.walletRepository.insert(strWallet, principal, _txc);
 
-                // Etherium 
+                // Ethereum 
                 if(uhx.Config.ethereum.enabled){
                     var web3Client = uhx.Web3Client;
                     var ethWallet = await web3Client.generateAccount()

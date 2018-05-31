@@ -63,6 +63,8 @@ module.exports = class StellarClient {
         // "private" members
         if (useTestNetwork) {
             Stellar.Network.useTestNetwork()
+        } else {
+            Stellar.Network.usePublicNetwork()
         }
 
         this._feeAccount = feeTarget;

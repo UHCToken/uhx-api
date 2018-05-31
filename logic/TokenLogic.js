@@ -88,7 +88,7 @@ module.exports = class TokenLogic {
             if (stellarClient.getAssetByCode(asset.code))
                 throw new exception.Exception("Asset code is already declared & registered", exception.ErrorCodes.DUPLICATE_NAME);
             else if (!/[A-Z0-9]{3,12}/g.test(asset.code))
-                throw new exception.Exception("Asset code is is invalid", exception.ErrorCodes.INVALID_NAME)
+                throw new exception.Exception("Asset code is invalid", exception.ErrorCodes.INVALID_NAME)
             else if(asset.offers) {
                 var total = 0;
                 asset.offers.forEach((o)=> { total += o.amount || 0 });
@@ -103,13 +103,13 @@ module.exports = class TokenLogic {
             }
 
             // User's wallet
-            var userWallet = await uhx.Repositories.walletRepository.get(uhx.Config.stellar.initiator_wallet_id)//("29adebb5-3ab5-4ea3-b564-ac617b57c55c");
+            var userWallet = await uhx.Repositories.walletRepository.get(uhx.Config.stellar.initiator_wallet_id);
 
             // Verify that the user wallet is valid and has sufficient balance to continue
-            if (!(await stellarClient.isActive(userWallet)) || userWallet.getBalanceOf("XLM").value < 6)
+            if (!(await stellarClient.isActive(userWallet)) || userWallet.getBalanceOf("XLM").value < 15)
                 throw new exception.BusinessRuleViolationException(
                     new exception.RuleViolation(
-                        "User has insufficient balance to issue new Asset (minimum balance to issue asset is 6 XLM",
+                        "User has insufficient balance to issue new Asset (minimum balance to issue asset is 15 XLM",
                         exception.ErrorCodes.INSUFFICIENT_FUNDS,
                         exception.RuleViolationSeverity.ERROR
                     )
