@@ -306,7 +306,7 @@ class InvitationApiResource {
 
         if(!req.body.code) // The claim code
             throw new exception.ArgumentException("code");
-        if(!req.body.code) // The password to set on the created user instance
+        if(!req.body.password) // The password to set on the created user instance
             throw new exception.ArgumentException("password");
         
         var user = await uhx.SecurityLogic.claimInvitation(req.body.code, req.body.password, req.principal);
