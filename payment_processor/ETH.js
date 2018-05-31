@@ -41,7 +41,7 @@
 
     var buyerEthWallet = await uhx.Web3Client.getBalance(ethWallet);
     
-    var buyerStrWallet = await uhx.StellarClient.isActive(await buyer.loadWallet());
+    var buyerStrWallet = await uhx.StellarClient.isActive(await buyer.loadStellarWallet());
     // Buyer's stellar wallet is empty and not active, we should activate it
     if(!buyerStrWallet)
         await uhx.StellarClient.activateAccount(buyerStrWallet, "1.6", distributionAccount);

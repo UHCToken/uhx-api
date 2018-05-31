@@ -338,7 +338,7 @@ module.exports = class TokenLogic {
             // Is this a user purchase or an admin purchase? Clean inputs based on permission level
             if(principal.grant["purchase"] & security.PermissionType.OWNER) // Principal is only allowed to buy for themselves 
             {
-                if(purchaseInfo.amount || purchaseInfo.buyer || purchaseInfo.buyerId)
+                if(purchaseInfo.amount || purchaseInfo.buyer)
                     throw new exception.ArgumentException("prohibited field supplied");
 
                 purchase = new Purchase().copy({
