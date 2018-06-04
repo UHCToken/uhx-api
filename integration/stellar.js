@@ -671,6 +671,7 @@ module.exports = class StellarClient {
         var type = null;
         switch (opRecord.type) {
             case "change_trust":
+                memo = "Trustline created";
             case "allow_trust":
                 type = model.TransactionType.Trust;
                 break;

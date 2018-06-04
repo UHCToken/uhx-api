@@ -247,10 +247,14 @@ class TransactionApiResource {
         transactions = transactions.map((t)=> {
             if(t._payor)
                 t._payor = t._payor.summary();
+                if(req.params.uid === t.payorId)
+                t.fee = 100;
             if(t._payee) 
                 t._payee = t._payee.summary();
             if(t._buyer)
                 t._buyer = t._buyer.summary();
+                if(req.params.uid === t.buyerId)
+                t.fee = 200;
             if(t._asset)
                 t._asset = t._asset.summary();
             return t;
