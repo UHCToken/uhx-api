@@ -91,10 +91,6 @@ module.exports = {
          */
         refreshValidity: 30000000,
         /**
-         * @summary Specifies the amount of time a validation method is given
-         */
-        confirmationValidity: 400000000,
-        /**
          * @summary The validity period for password resets
          */
         resetValidity: 30000000,

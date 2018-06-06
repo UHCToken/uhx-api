@@ -649,7 +649,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
             await uhx.Repositories.userRepository.addClaim(user.id, {
                 type: SMS_CONFIRM_CLAIM,
                 value: confirmToken,
-                expiry: new Date(new Date().getTime() + uhx.Config.security.confirmationValidaty)
+                expiry: new Date(new Date().getTime() + uhx.Config.security.confirmationValidity)
             }, _txc);
 
             // We want to send an sms address to verify
