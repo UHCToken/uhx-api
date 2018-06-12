@@ -300,10 +300,10 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
         try {
             // Verify the code against signature
             this.validateSignedClaimToken(code);
-
             // Get the user by claim
             await uhx.Repositories.transaction(async (_txc) => {
                 var user = await uhx.Repositories.userRepository.getByClaim(PASSWORD_RESET_CLAIM, code, _txc);
+                this.validateUser(user, newPassword);
                 if(user.length == 0)
                     throw new exception.Exception("Invalid reset token", exception.ErrorCodes.SECURITY_ERROR);
                 else  {
@@ -649,7 +649,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
             await uhx.Repositories.userRepository.addClaim(user.id, {
                 type: SMS_CONFIRM_CLAIM,
                 value: confirmToken,
-                expiry: new Date(new Date().getTime() + uhx.Config.security.confirmationValidaty)
+                expiry: new Date(new Date().getTime() + uhx.Config.security.confirmationValidity)
             }, _txc);
 
             // We want to send an sms address to verify

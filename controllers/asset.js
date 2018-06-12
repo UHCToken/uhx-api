@@ -65,11 +65,11 @@ module.exports.AssetApiResource = class AssetApiResource {
                         method: this.get
                     },
                     "lock": {
-                        demand: security.PermissionType.EXECUTE | security.PermissionType.WRITE,
+                        demand: security.PermissionType.WRITE,
                         method: this.lock
                     },
                     "unlock": {
-                        demand: security.PermissionType.EXECUTE | security.PermissionType.WRITE,
+                        demand: security.PermissionType.WRITE,
                         method: this.unlock
                     },
                     "put": {
