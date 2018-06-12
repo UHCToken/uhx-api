@@ -28,6 +28,8 @@ const Stellar = require('stellar-sdk'),
     Offer = require('../model/Offer'),
     crypto = require("crypto");
 
+const uuidRegex = /[A-F0-9]{8}-(?:[A-F0-9]{4}\-){3}[A-F0-9]{12}/i;
+
 /**
  * @class
  * @summary Represents a stellar exception
@@ -438,7 +440,12 @@ module.exports = class StellarClient {
 
             // Memo field if memo is present
             if (ref) {
-                var memoObject = Stellar.Memo.hash(crypto.createHash('sha256').update(ref).digest('hex'));
+                var memoObject = null;
+                if(uuidRegex.test(ref)) // uuid
+                    memoObject = Stellar.Memo.hash(crypto.createHash('sha256').update(ref).digest('hex'));
+                else
+                    memoObject = Stellar.Memo.text(ref);
+                    
                 paymentTx.addMemo(memoObject);
             }
 

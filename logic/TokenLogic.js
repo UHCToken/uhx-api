@@ -169,12 +169,12 @@ module.exports = class TokenLogic {
                 stellarClient.assets.push(asset);
                 try {
                     // Pay the distributing account all the tokens in the supply!
-                    await stellarClient.createPayment(issuingAccount, distributingAccount, new MonetaryAmount(supply, asset.code), "Initial Distribution");
+                    await stellarClient.createPayment(issuingAccount, distributingAccount, new MonetaryAmount(supply, asset.code), asset.description || "Initial Distribution");
 
                     // If there is an active sale, then we want to distribute to the supply account
                     var firstOffer = await uhx.Repositories.assetRepository.getActiveOffer(asset.id, _txc);
                     if (firstOffer && (!firstOffer.public || asset.kycRequirement) && supplyAccount) // We want to initialize the supplier account
-                        await stellarClient.createPayment(distributingAccount, supplyAccount, new MonetaryAmount(firstOffer.amount, asset.code), crypto.createHash('sha256').update(asset.id).digest('hex'), 'hash');
+                        await stellarClient.createPayment(distributingAccount, supplyAccount, new MonetaryAmount(firstOffer.amount, asset.code), asset.id, 'hash');
 
                     var options = {
                         homeDomain: uhx.Config.stellar.home_domain
