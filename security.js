@@ -147,7 +147,7 @@
             
         var grantedAccess = claimPrincipal.grant[this._object];
 
-        if(!(grantedAccess & this._permissionType))
+        if((grantedAccess & this._permissionType) != this._permissionType)
             throw new SecurityException(this);
 
         return true;
