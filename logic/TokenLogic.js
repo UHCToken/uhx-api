@@ -119,7 +119,7 @@ module.exports = class TokenLogic {
             // Step 1: Validate that the asset doesn't already exist
             if (stellarClient.getAssetByCode(asset.code))
                 throw new exception.Exception("Asset code is already declared & registered", exception.ErrorCodes.DUPLICATE_NAME);
-            else if (!/[A-Z0-9]{3,12}/g.test(asset.code))
+            else if (!/[a-zA-Z0-9]{3,12}/g.test(asset.code))
                 throw new exception.Exception("Asset code is invalid", exception.ErrorCodes.INVALID_NAME)
             else if(asset.offers) {
                 var total = 0;
