@@ -36,7 +36,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
     TFA_CLAIM = "$tfa.secret";
 /**
   * @class
-  * @summary Represents the core business logic of the UHX application
+  * @summary Represents the core business logic of the UhX application
   */
  module.exports = class SecurityLogic {
 
@@ -319,7 +319,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                         template: uhx.Config.mail.templates.passwordChange,
                         to: user[0].email,
                         from: uhx.Config.mail.from,
-                        subject: "Your UHX password has been reset!"
+                        subject: "Your UhX password has been reset!"
                     }, { user: user[0] });
                 }
                 else if(user[0].telVerified && user[0].tel)
@@ -370,7 +370,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                     var options = {
                         to: email,
                         from: uhx.Config.mail.from,
-                        subject: "Reset your UHX password",
+                        subject: "Reset your UhX password",
                         template: uhx.Config.mail.templates.resetPassword
                     };
                     await uhx.Mailer.sendEmail(options, { user: user, token: claimToken, ui_base: uhx.Config.api.ui_base });
@@ -534,7 +534,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                             to: existingUser.tel,
                             from: uhx.Config.mail.from,
                             template: uhx.Config.mail.templates.passwordChange,
-                            subject: "Did you change your UHX password?"
+                            subject: "Did you change your UhX password?"
                         }, { user: existingUser });
                 }
                 else if(user.tel && existingUser.telVerified && existingUser.tel != user.tel) {
@@ -591,7 +591,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                         await uhx.Mailer.sendEmail({
                             to: existingUser.email,
                             from: uhx.Config.mail.from,
-                            subject: "UHX Two-factor authentication setup successful",
+                            subject: "UhX Two-factor authentication setup successful",
                             template: uhx.Config.mail.templates.tfaChange
                         }, { old: existingUser, new: user, token: undoToken, ui_base: uhx.Config.api.ui_base });
                     }
@@ -626,7 +626,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
             await uhx.Mailer.sendEmail({
                 to: user.email,
                 from: uhx.Config.mail.from,
-                subject: "Confirm your e-mail address on UHX",
+                subject: "Confirm your e-mail address on UhX",
                 template: uhx.Config.mail.templates.confirmation
             }, { user: user, token: confirmToken, ui_base: uhx.Config.api.ui_base });
 
@@ -731,7 +731,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                 var sendOptions = {
                     to: newUser.email,
                     from: uhx.Config.mail.from,
-                    subject: "Welcome to the UHX community!",
+                    subject: "Welcome to the UhX community!",
                     template: uhx.Config.mail.templates.welcome
                 };
                 
@@ -833,7 +833,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                 var sendOptions = {
                     to: invitation.email,
                     from: uhx.Config.mail.from,
-                    subject: "Your wallet is waiting for you on UHX!",
+                    subject: "Your wallet is waiting for you on UhX!",
                     template: uhx.Config.mail.templates.invitation
                 };
 

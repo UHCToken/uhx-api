@@ -191,7 +191,7 @@ module.exports = class Transaction extends ModelBase {
     /**
      * @method
      * @returns {User} The payor of the transaction
-     * @summary Loads the payor from the UHX database
+     * @summary Loads the payor from the UhX database
      */
     async loadPayor(_txc) {
         if(!this._payor && this.payorId)
@@ -206,7 +206,7 @@ module.exports = class Transaction extends ModelBase {
     /**
      * @method
      * @returns {User} The payee of the transaction
-     * @summary Loads the payee from the UHX database
+     * @summary Loads the payee from the UhX database
      */
     async loadPayee(_txc) {
         if(!this._payee && this.payeeId) 

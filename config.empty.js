@@ -20,12 +20,12 @@
 const winston = require('winston');
 
 /**
- * @class UHX API Configuration
+ * @class UhX API Configuration
  * @description Configuration parameters for the stellar API
  */
 module.exports = {
     /**
-     * @summary Groups configuration flags related to UHX database API
+     * @summary Groups configuration flags related to UhX database API
      */
     db: {
         /**

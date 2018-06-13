@@ -28,7 +28,7 @@
  * @namespace Security
  */
  /**
-  * @enum UHX Permissions
+  * @enum UhX Permissions
   * @description Permissions
   */
  const PermissionType = {

@@ -33,7 +33,7 @@ const UserRepository = require('./userRepository'),
 
 /**
  * @class
- * @summary Represents UHX's database repositories
+ * @summary Represents UhX's database repositories
  */
 class UhcRepositories {
 

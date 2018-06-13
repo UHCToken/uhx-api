@@ -28,7 +28,7 @@ const uhx = require('../uhx'),
  * @swagger
  * tags:
  *    - name: asset
- *      description: A resource to fetch user blockchain asset (token types) information from the UHX API
+ *      description: A resource to fetch user blockchain asset (token types) information from the UhX API
  */
 module.exports.AssetApiResource = class AssetApiResource {
 

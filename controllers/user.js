@@ -28,7 +28,7 @@ const uhx = require('../uhx'),
  * @swagger
  * tags:
  *  - name: "user"
- *    description: "The user resource represents a single user (client, provider, etc.) which is a member of UHX"
+ *    description: "The user resource represents a single user (client, provider, etc.) which is a member of UhX"
  */
 class UserApiResource {
 
@@ -121,8 +121,8 @@ class UserApiResource {
      *  post:
      *      tags:
      *      - "user"
-     *      summary: "Registers a new user in the UHX API"
-     *      description: "This method will register a new user in the UHX API and create the necessary accounts and trust transactions"
+     *      summary: "Registers a new user in the UhX API"
+     *      description: "This method will register a new user in the UhX API and create the necessary accounts and trust transactions"
      *      consumes: 
      *      - "application/json"
      *      produces:
@@ -183,8 +183,8 @@ class UserApiResource {
      *  put:
      *      tags:
      *      - "user"
-     *      summary: "Updates an existing user in the UHX API"
-     *      description: "This method will update an existing  user in the UHX API"
+     *      summary: "Updates an existing user in the UhX API"
+     *      description: "This method will update an existing  user in the UhX API"
      *      consumes: 
      *      - "application/json"
      *      produces:
@@ -240,8 +240,8 @@ class UserApiResource {
      *  get:
      *      tags:
      *      - "user"
-     *      summary: "Gets an existing user from the UHX member database"
-     *      description: "This method will fetch an existing user from the UHX member database"
+     *      summary: "Gets an existing user from the UhX member database"
+     *      description: "This method will fetch an existing user from the UhX member database"
      *      produces:
      *      - "application/json"
      *      parameters:
@@ -284,7 +284,7 @@ class UserApiResource {
     }
     /**
      * @method
-     * @summary Get all users from the UHX database (optional search parameters)
+     * @summary Get all users from the UhX database (optional search parameters)
      * @param {Express.Reqeust} req The request from the client 
      * @param {Express.Response} res The response from the client
      * @swagger
@@ -292,8 +292,8 @@ class UserApiResource {
      *  get:
      *      tags:
      *      - "user"
-     *      summary: "Queries the UHX member database for users matching the specified parameters"
-     *      description: "This method performs a query against the UHX user's database. This method will return additional information about the specified user including any external identities and wallet"
+     *      summary: "Queries the UhX member database for users matching the specified parameters"
+     *      description: "This method performs a query against the UhX user's database. This method will return additional information about the specified user including any external identities and wallet"
      *      produces:
      *      - "application/json"
      *      parameters:
@@ -362,7 +362,7 @@ class UserApiResource {
     }
     /**
      * @method
-     * @summary Deactivate a user account from the UHX database
+     * @summary Deactivate a user account from the UhX database
      * @param {Express.Reqeust} req The request from the client 
      * @param {Express.Response} res The response from the client
      * @swagger
@@ -370,7 +370,7 @@ class UserApiResource {
      *  delete:
      *      tags:
      *      - "user"
-     *      summary: "Deactivates a user in the UHX member database"
+     *      summary: "Deactivates a user in the UhX member database"
      *      description: "This method will set the deactivation time of the specified user account so they no longer can login or appear in searches."
      *      produces:
      *      - "application/json"

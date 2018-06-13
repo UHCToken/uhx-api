@@ -22,7 +22,7 @@ const ModelBase = require('./ModelBase'),
 
 /**
 * @class
-* @summary Represents a single invitation from a user to join UHX
+* @summary Represents a single invitation from a user to join UhX
 * @swagger
 * definitions:
 *  Invitation:

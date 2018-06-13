@@ -91,4 +91,4 @@ else {
     https.createServer(uhx.Config.api.tls, app).listen(uhx.Config.api.port);
 }
 
-uhx.log.info(`UHX API started on ${uhx.Config.api.scheme} port ${uhx.Config.api.port}`);
+uhx.log.info(`UhX API started on ${uhx.Config.api.scheme} port ${uhx.Config.api.port}`);

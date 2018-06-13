@@ -28,7 +28,7 @@ const uhx = require('../uhx'),
  * @swagger
  * tags:
  *  - name: "invitation"
- *    description: "The invitation resource represents an invitation to join the UHX network"
+ *    description: "The invitation resource represents an invitation to join the UhX network"
  */
 class InvitationApiResource {
 
@@ -90,8 +90,8 @@ class InvitationApiResource {
      *  post:
      *      tags:
      *      - "invitation"
-     *      summary: "Creates a new invite on the UHX server"
-     *      description: "This method will insert the specified invitation to the UHX server and will issue a temporary claim token to the person specified"
+     *      summary: "Creates a new invite on the UhX server"
+     *      description: "This method will insert the specified invitation to the UhX server and will issue a temporary claim token to the person specified"
      *      consumes:
      *      - "application/json"
      *      produces:
@@ -182,8 +182,8 @@ class InvitationApiResource {
      *  get:
      *      tags:
      *      - "invitation"
-     *      summary: "Gets a specific invitation from the UHX server"
-     *      description: "This method will retrieve the specific invitation from the UHX server"
+     *      summary: "Gets a specific invitation from the UhX server"
+     *      description: "This method will retrieve the specific invitation from the UhX server"
      *      produces:
      *      - "application/json"
      *      parameters:
@@ -227,7 +227,7 @@ class InvitationApiResource {
      *      tags:
      *      - "invitation"
      *      summary: "Rescind an active invitation"
-     *      description: "This method will rescind (deactivate) the specific invitation on the UHX server"
+     *      description: "This method will rescind (deactivate) the specific invitation on the UhX server"
      *      produces:
      *      - "application/json"
      *      parameters:

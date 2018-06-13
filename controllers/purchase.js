@@ -297,7 +297,7 @@ class PurchaseApiResource {
                 "name": "Stellar Lumens",
                 "network": "Stellar",
                 "description": "Pay with Lumens",
-                "note": "Your UHX account must contain 2 XLM for transaction processing, if you use this option you should transfer an extra 2 XLM to your account",
+                "note": "Your UhX account must contain 2 XLM for transaction processing, if you use this option you should transfer an extra 2 XLM to your account",
                 "currency": "XLM"
             },
             {

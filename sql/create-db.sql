@@ -17,7 +17,7 @@
  * Original Authors: Justin Fyfe (justin-fyfe), Rory Yendt (RoryYendt)
  * Original Date: 2018-04-20
  * 
- * This file contains the primary schema for the UHX API
+ * This file contains the primary schema for the UhX API
  * 
  */
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS wallets(
     CONSTRAINT pk_wallets PRIMARY KEY (id)
 );
 
--- REPRESENTS AN INDIVIDUAL WHO USES THE UHX SERVICE
+-- REPRESENTS AN INDIVIDUAL WHO USES THE UhX SERVICE
 -- TODO: DETERMINE WHICH OF THESE FIELDS ARE MANDATORY
 CREATE TABLE IF NOT EXISTS users(
 	id uuid NOT NULL DEFAULT uuid_generate_v4(),
