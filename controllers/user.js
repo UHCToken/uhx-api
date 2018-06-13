@@ -102,7 +102,7 @@ class UserApiResource {
                 {
                     "path": "user/:uid/confirm",
                     "post":{
-                        "demand": security.PermissionType.EXECUTE | security.PermissionType.WRITE,
+                        "demand": security.PermissionType.WRITE,
                         "method": this.confirm
                     }
                 }
