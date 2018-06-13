@@ -50,6 +50,7 @@ module.exports = class AsssetRepository {
         this.getActiveOffer = this.getActiveOffer.bind(this);
         this.updateOffer = this.updateOffer.bind(this);
         this.insertQuote = this.insertQuote.bind(this);
+        this.update = this.update.bind(this);
         this.getQuote = this.getQuote.bind(this);
         this.getByPublicAddress = this.getByPublicAddress.bind(this);
         this.getByWalletId = this.getByWalletId.bind(this);
@@ -213,7 +214,38 @@ module.exports = class AsssetRepository {
         }
     }
 
-        /**
+    /**
+     * @method
+     * @summary Updates an asset offer 
+     * @param {Asset} asset The  asset to be updated
+     * @param {SecurityPrincipal} runAs The principal to run as
+     * @param {Client} _txc The transactional client
+     * @returns {Asset} The updated asset offer
+     */
+    async update(asset, runAs, _txc) {
+        if (!runAs || !(runAs instanceof security.Principal))
+            throw new exception.ArgumentException("runAs");
+
+        var dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+
+            // Delete the asset offer
+            var dbAsset = asset.toData();
+            dbAsset.updated_by = runAs.session.userId;
+            var updateCmd = model.Utils.generateUpdate(dbAsset, "assets", "updated_time");
+            var rdr = await dbc.query(updateCmd.sql, updateCmd.args);
+            if (rdr.rows.length == 0)
+                throw new exception.Exception("Could not update asset", exception.ErrorCodes.DATA_ERROR);
+            else
+                return asset.fromData(rdr.rows[0]); 
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
+    }
+
+    /**
      * @method
      * @summary Updates an asset offer 
      * @param {Offer} offer The offering of the asset to be updated

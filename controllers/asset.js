@@ -17,19 +17,19 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
- const uhx = require('../uhx'),
+const uhx = require('../uhx'),
     security = require('../security'),
     exception = require('../exception'),
     Asset = require('../model/Asset');
 
-  /**
-   * @class
-   * @summary Represents a resource to fetch assets
-   * @swagger
-   * tags:
-   *    - name: asset
-   *      description: A resource to fetch user blockchain asset (token types) information from the UHX API
-   */
+/**
+ * @class
+ * @summary Represents a resource to fetch assets
+ * @swagger
+ * tags:
+ *    - name: asset
+ *      description: A resource to fetch user blockchain asset (token types) information from the UHX API
+ */
 module.exports.AssetApiResource = class AssetApiResource {
 
     /**
@@ -45,23 +45,23 @@ module.exports.AssetApiResource = class AssetApiResource {
                     "get": {
                         demand: security.PermissionType.LIST,
                         method: this.getAll
-                    }, 
-                    "post" : {
+                    },
+                    "post": {
                         demand: security.PermissionType.WRITE,
                         method: this.post
                     }
                 },
                 {
-                    "path":"asset/quote",
+                    "path": "asset/quote",
                     "post": {
-                        demand: security.PermissionType.EXECUTE, 
+                        demand: security.PermissionType.EXECUTE,
                         method: this.quote
                     }
                 },
                 {
-                    "path":"asset/:id",
+                    "path": "asset/:id",
                     "get": {
-                        demand: security.PermissionType.READ, 
+                        demand: security.PermissionType.READ,
                         method: this.get
                     },
                     "lock": {
@@ -78,16 +78,16 @@ module.exports.AssetApiResource = class AssetApiResource {
                     }
                 },
                 {
-                    "path":"asset/:id/offer",
+                    "path": "asset/:id/offer",
                     "get": {
-                        demand: security.PermissionType.READ, 
+                        demand: security.PermissionType.READ,
                         method: this.getOffer
                     }
                 },
                 {
-                    "path":"asset/:id/offer/current",
+                    "path": "asset/:id/offer/current",
                     "get": {
-                        demand: security.PermissionType.READ, 
+                        demand: security.PermissionType.READ,
                         method: this.getActiveOffer
                     }
                 }
@@ -147,9 +147,9 @@ module.exports.AssetApiResource = class AssetApiResource {
     async post(req, res) {
 
         // verify body 
-        if(!req.body)
+        if (!req.body)
             throw new exception.ArgumentException("body");
-        if(!req.body.asset)
+        if (!req.body.asset)
             throw new exception.ArgumentException("body.asset");
 
         // Create a new asset
@@ -201,58 +201,58 @@ module.exports.AssetApiResource = class AssetApiResource {
      */
     async getOffer(req, res) {
         var activeOffer = await uhx.Repositories.assetRepository.getOffers(req.params.id);
-        if(!activeOffer)
+        if (!activeOffer)
             throw new exception.NotFoundException("offer", "__current");
         res.status(200).json(activeOffer);
         return true;
     }
 
-        /**
-     * @method
-     * @summary Gets the active offer for purchasing the coin
-     * @param {Express.Request} req The HTTP request from the client
-     * @param {Express.Response} res The HTTP response to the client
-     * @swagger
-     * /asset/{assetId}/offer/current:
-     *  get:
-     *      tags:
-     *      - "asset"
-     *      summary: "Gets the current active offer for the specified asset (this is the current supply for sale)"
-     *      description: "This method will retrieve the current offers for the specified asset type (past and future)"
-     *      produces:
-     *      - "application/json"
-     *      parameters:
-     *      - in: "path"
-     *        name: "assetId"
-     *        description: "The identity of the asset"
-     *        required: true
-     *        type: string
-     *      responses:
-     *          200: 
-     *             description: "The requested resource was retrieved successfully"
-     *             schema: 
-     *                  $ref: "#/definitions/AssetOffer"
-     *          404:
-     *              description: "The specified asset does not exist"
-     *              schema: 
-     *                  $ref: "#/definitions/Exception"
-     *          500:
-     *              description: "An internal server error occurred"
-     *              schema:
-     *                  $ref: "#/definitions/Exception"
-     *      security:
-     *      - app_auth:
-     *          - read:asset
-     *      - uhx_auth:
-     *          - read:asset
-     */
+    /**
+ * @method
+ * @summary Gets the active offer for purchasing the coin
+ * @param {Express.Request} req The HTTP request from the client
+ * @param {Express.Response} res The HTTP response to the client
+ * @swagger
+ * /asset/{assetId}/offer/current:
+ *  get:
+ *      tags:
+ *      - "asset"
+ *      summary: "Gets the current active offer for the specified asset (this is the current supply for sale)"
+ *      description: "This method will retrieve the current offers for the specified asset type (past and future)"
+ *      produces:
+ *      - "application/json"
+ *      parameters:
+ *      - in: "path"
+ *        name: "assetId"
+ *        description: "The identity of the asset"
+ *        required: true
+ *        type: string
+ *      responses:
+ *          200: 
+ *             description: "The requested resource was retrieved successfully"
+ *             schema: 
+ *                  $ref: "#/definitions/AssetOffer"
+ *          404:
+ *              description: "The specified asset does not exist"
+ *              schema: 
+ *                  $ref: "#/definitions/Exception"
+ *          500:
+ *              description: "An internal server error occurred"
+ *              schema:
+ *                  $ref: "#/definitions/Exception"
+ *      security:
+ *      - app_auth:
+ *          - read:asset
+ *      - uhx_auth:
+ *          - read:asset
+ */
     async getActiveOffer(req, res) {
         var activeOffer = await uhx.Repositories.assetRepository.getActiveOffer(req.params.id);
-        if(!activeOffer)
+        if (!activeOffer)
             throw new exception.NotFoundException("offer", "__current");
         var offerInfo = await uhx.StellarClient.getAccount(await activeOffer.loadWallet());
         var asset = await activeOffer.loadAsset();
-        activeOffer.remain = offerInfo.balances.find(o=>o.code == asset.code).value;
+        activeOffer.remain = offerInfo.balances.find(o => o.code == asset.code).value;
         res.status(200).json(activeOffer);
         return true;
     }
@@ -288,9 +288,18 @@ module.exports.AssetApiResource = class AssetApiResource {
      * @param {Express.Response} res The HTTP response to the client
      */
     async put(req, res) {
-        throw new exception.NotImplementedException();
+        // verify body 
+        if (!req.body)
+            throw new exception.ArgumentException("body");
+
+        // Create a new asset
+        var asset = await uhx.TokenLogic.updateAsset(new Asset().copy(req.body), req.principal);
+        res.status(201)
+            .set("Location", `${uhx.Config.api.scheme}://${uhx.Config.api.host}:${uhx.Config.api.port}${uhx.Config.api.base}/asset/${asset.id}`)
+            .json(asset);
+        return true;
     }
-    
+
     /**
      * @method
      * @summary Gets a single asset type from the database
@@ -381,7 +390,7 @@ module.exports.AssetApiResource = class AssetApiResource {
         return true;
 
     }
-    
+
     /**
      * @method
      * @summary Retrieves a quote for the specified asset
@@ -428,20 +437,19 @@ module.exports.AssetApiResource = class AssetApiResource {
      */
     async quote(req, res) {
 
-        if(!req.query.from && !req.body.from)
+        if (!req.query.from && !req.body.from)
             throw new exception.ArgumentException("from");
-        if(!req.query.to && !req.body.from)
+        if (!req.query.to && !req.body.from)
             throw new exception.ArgumentException("to");
-        
+
         // The asset
         var quote = await uhx.TokenLogic.createAssetQuote(req.query.to || req.body.to, req.query.from || req.body.from, req.query.nostore || req.body.nostore);
 
         // current offer info & remaining tokens
         var activeOffer = await uhx.Repositories.assetRepository.getActiveOffer(quote.assetId);
-        if(activeOffer)
-        {
+        if (activeOffer) {
             var offerInfo = await uhx.StellarClient.getAccount(await activeOffer.loadWallet());
-            activeOffer.remain = offerInfo.balances.find(o=>o.code == quote._asset.code).value;       
+            activeOffer.remain = offerInfo.balances.find(o => o.code == quote._asset.code).value;
             quote.currentOffer = activeOffer;
         }
         res.status(201).json(quote);

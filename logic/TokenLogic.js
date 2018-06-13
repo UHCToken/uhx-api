@@ -58,6 +58,7 @@ module.exports = class TokenLogic {
         this.planAirdrop = this.planAirdrop.bind(this);
         this.getAllBalancesForWallets = this.getAllBalancesForWallets.bind(this);
         this.getTransaction = this.getTransaction.bind(this);
+        this.updateAsset = this.updateAsset.bind(this);
     }
 
     /**
@@ -69,6 +70,37 @@ module.exports = class TokenLogic {
         if (!this._stellarClient)
             this._stellarClient = new StellarClient(uhx.Config.stellar.horizon_server, await uhx.Repositories.assetRepository.query(), uhx.Config.stellar.testnet_use);
         return this._stellarClient;
+    }
+
+    /**
+     * 
+     * @param {Asset} asset The asset being updated
+     * @param {SecurityPrincipal} principal The principal being update
+     */
+    async updateAsset(asset, principal) {
+
+        try {
+
+            // Update core asset properties
+            return await uhx.Repositories.transaction(async (_txc) => {
+                // First we will update the core properties of the asset
+                var retVal = await uhx.Repositories.assetRepository.update(asset, principal, _txc);
+
+                // Next we will ensure that the asset offers are update
+                if(asset.offers) {
+                    for(var o in asset.offers) {
+                        await uhx.Repositories.assetRepository.updateOffer(asset.offers[o], principal, _txc);
+                        // TODO: Top-up account
+                    }
+                }
+                
+                return retVal;
+            });
+        }
+        catch(e) {
+            uhx.log.error(`Error updating asset: ${e.message}`);
+            throw new exception.Exception("Error updating asset", e.code || exception.ErrorCodes.UNKNOWN, e);
+        }
     }
 
     /**
@@ -166,7 +198,7 @@ module.exports = class TokenLogic {
                 if (supplyAccount) supplyAccount = await stellarClient.createTrust(supplyAccount, asset);
 
                 // Add the asset to the client (push)
-                stellarClient.assets.push(asset);
+                stellarClient._asset.push(asset);
                 try {
                     // Pay the distributing account all the tokens in the supply!
                     await stellarClient.createPayment(issuingAccount, distributingAccount, new MonetaryAmount(supply, asset.code), asset.description || "Initial Distribution");
