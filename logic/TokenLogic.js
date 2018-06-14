@@ -824,7 +824,7 @@ module.exports = class TokenLogic {
                 case "min":
                     break;
                 case "user":
-                    promises.concat(dropSpec.payeeId.map(o=> (async (u) => { promises.push(distributeFn(await uhx.Repositories.userRepository.get(u))); })(o)));
+                    promises.push(distributeFn(await uhx.Repositories.userRepository.get(dropSpec.payeeId)));
                     break;
             }
 
