@@ -105,6 +105,7 @@ module.exports = class Purchase extends Transaction {
         this.loadBuyer = this.loadBuyer.bind(this);
         this.loadCreatedBy = this.loadCreatedBy.bind(this);
         this.loadQuote = this.loadQuote.bind(this);
+        this.autoActivate = false;
     }
 
     /**
@@ -124,7 +125,6 @@ module.exports = class Purchase extends Transaction {
         this.updatedBy = dbPurchase.updated_by;
         this.distributorWalletId = dbPurchase.dist_wallet_id;
         this.invoicedAmount = new MonetaryAmount(dbPurchase.charge_amount, dbPurchase.charge_currency);
-        this.autoActivate = dbPurchase.autoActivate;
         return this;
     }
 
