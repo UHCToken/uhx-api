@@ -537,7 +537,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                             subject: "Did you change your UhX password?"
                         }, { user: existingUser });
                 }
-                else if(user.tel && existingUser.telVerified && existingUser.tel != user.tel) {
+                if(user.tel && existingUser.telVerified && existingUser.tel != user.tel) {
 
                     await uhx.Mailer.sendSms({
                         to: existingUser.tel,
@@ -548,12 +548,12 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
 
                     user.telVerified = false;
                 }
-                else if(user.tel && !user.telVerified) {
+                if(user.tel && !user.telVerified) {
                     user.givenName = user.givenName || existingUser.givenName;
                     user.familyName = user.familyName || existingUser.familyName;
                     await this.sendConfirmationSms(user);
                 }
-                else if(user.email && existingUser.emailVerified && existingUser.email != user.email) {
+                if(user.email && existingUser.emailVerified && existingUser.email != user.email) {
 
                     var undoToken = this.generateSignedClaimToken();
                     await uhx.Repositories.userRepository.addClaim(user.id, {
@@ -574,7 +574,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                     await this.sendConfirmationEmail(user);
                     user.emailVerified = false;
                 }
-                else if(user.tfaMethod && user.tfaMethod != existingUser.tfaMethod) {
+                if(user.tfaMethod && user.tfaMethod != existingUser.tfaMethod) {
                     // Confirm to user that TFA was set
                     if(user.tfaMethod == 1)
                     {
