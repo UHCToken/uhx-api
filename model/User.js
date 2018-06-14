@@ -335,9 +335,11 @@ const uhx = require('../uhx'),
         retVal.externalIds = this._externIds;
         retVal.wallets = this._wallets;
         retVal.claims = {};
-        for(var k in this._claims)
+        for(var k in this._claims){
             if(!k.startsWith("$"))
                 retVal.claims[k] = this._claims[k];
+            retVal.claims.activeClaims = true;
+        }
         retVal.groups = this._groups;
         return retVal;
     }
