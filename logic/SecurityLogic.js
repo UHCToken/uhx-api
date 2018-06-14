@@ -678,6 +678,8 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
         var ruleViolations = [];
         if(user.name && !new RegExp(uhx.Config.security.username_regex).test(user.name))
             ruleViolations.push(new exception.RuleViolation("Username format invalid", exception.ErrorCodes.INVALID_NAME, exception.RuleViolationSeverity.ERROR));
+        if(user.email && !new RegExp(uhx.Config.security.email_regex).test(user.email))
+            ruleViolations.push(new exception.RuleViolation("Email format invalid", exception.ErrorCodes.INVALID_NAME, exception.RuleViolationSeverity.ERROR));
         if(password && !new RegExp(uhx.Config.security.password_regex).test(password))
             ruleViolations.push(new exception.RuleViolation("Password does not meet complexity requirements", exception.ErrorCodes.PASSWORD_COMPLEXITY, exception.RuleViolationSeverity.ERROR));
         if(user.givenName && !new RegExp(uhx.Config.security.name_regex).test(user.givenName))

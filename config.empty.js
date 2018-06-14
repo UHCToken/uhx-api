@@ -117,11 +117,11 @@ module.exports = {
         /**
          * @summary The validation regex for usernames following RFC2822 regex for e-mails
          */
-        username_regex: /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/g,
+        username_regex: /(^[^<>%{}]+[a-z0-9!#$&'*+/=?^_`|~-])+(?:\.[a-z0-9!#$&'*+/=?^_`|~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?([^0-9<>(){}%;"]$)/,
         /**
          * @summary The validation regex for usernames following RFC2822 regex for e-mails
          */
-        email_regex: /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/g,
+        email_regex: /(^[^<>%{}]+[a-z0-9!#$&'*+/=?^_`|~-])+(?:\.[a-z0-9!#$&'*+/=?^_`|~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?([^0-9<>(){}%;"]$)/,
         /**
          * @summary The validation regex for names, stripping exploitable characters
          */
