@@ -124,6 +124,7 @@ module.exports = class Purchase extends Transaction {
         this.updatedBy = dbPurchase.updated_by;
         this.distributorWalletId = dbPurchase.dist_wallet_id;
         this.invoicedAmount = new MonetaryAmount(dbPurchase.charge_amount, dbPurchase.charge_currency);
+        this.autoActivate = dbPurchase.autoActivate;
         return this;
     }
 

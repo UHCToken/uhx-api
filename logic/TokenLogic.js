@@ -512,7 +512,7 @@ module.exports = class TokenLogic {
                         if(!await uhx.StellarClient.isActive(buyerWallet)) 
                         {
                             if(purchaseInfo.autoActivate)
-                                buyerWallet = await uhx.StellarClient.activateAccount(userWallet, "1.6", sourceWallet);
+                                buyerWallet = await uhx.StellarClient.activateAccount(buyerWallet, "1.6", sourceWallet);
                             else
                                 throw new exception.BusinessRuleViolationException(new exception.RuleViolation("Buyer's Stellar account is not active", exception.ErrorCodes.INVALID_ACCOUNT, exception.RuleViolationSeverity.ERROR));
                         }
