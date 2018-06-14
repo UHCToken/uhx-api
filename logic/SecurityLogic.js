@@ -680,7 +680,10 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
             ruleViolations.push(new exception.RuleViolation("Username format invalid", exception.ErrorCodes.INVALID_NAME, exception.RuleViolationSeverity.ERROR));
         if(password && !new RegExp(uhx.Config.security.password_regex).test(password))
             ruleViolations.push(new exception.RuleViolation("Password does not meet complexity requirements", exception.ErrorCodes.PASSWORD_COMPLEXITY, exception.RuleViolationSeverity.ERROR));
-
+        if(user.givenName && !new RegExp(uhx.Config.security.name_regex).test(user.givenName))
+            ruleViolations.push(new exception.RuleViolation("Given name format is invalid", exception.ErrorCodes.INVALID_NAME, exception.RuleViolationSeverity.ERROR));
+        if(user.familyName && !new RegExp(uhx.Config.security.name_regex).test(user.familyName))
+            ruleViolations.push(new exception.RuleViolation("Family name format is invalid", exception.ErrorCodes.INVALID_NAME, exception.RuleViolationSeverity.ERROR));
         if(ruleViolations.length > 0)
             throw new exception.BusinessRuleViolationException(ruleViolations);
         

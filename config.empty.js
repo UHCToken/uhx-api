@@ -123,6 +123,10 @@ module.exports = {
          */
         email_regex: /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/g,
         /**
+         * @summary The validation regex for names, stripping exploitable characters
+         */
+        name_regex: /^[^0-9<>(){}%;"]+$/,
+        /**
          * @summary When true, enables cross-origin scripting
          */
         enable_cors: true,
