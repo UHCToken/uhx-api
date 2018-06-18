@@ -768,7 +768,10 @@ module.exports = class StellarClient {
                 case model.TransactionType.Deposit:
                 case model.TransactionType.Payment:
                 case model.TransactionType.Airdrop:
-                    stlrTx = await this.createPayment(transaction._payorWallet, transaction._payeeWallet, transaction.amount, transaction.id);
+                    if (transaction.memo.length <= 28)
+                        stlrTx = await this.createPayment(transaction._payorWallet, transaction._payeeWallet, transaction.amount, transaction.memo);
+                    else
+                        stlrTx = await this.createPayment(transaction._payorWallet, transaction._payeeWallet, transaction.amount, transaction.id);
                     break;
                 default:
                     throw new exception.Exception(`Cannot understand ${transaction.type}`);
