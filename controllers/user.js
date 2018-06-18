@@ -91,11 +91,11 @@ class UserApiResource {
                         "method": this.delete
                     },
                     "lock" : {
-                        "demand": security.PermissionType.WRITE,
+                        "demand": security.PermissionType.WRITE | security.PermissionType.READ,
                         "method": this.lock
                     },
                     "unlock": {
-                        "demand": security.PermissionType.WRITE,
+                        "demand": security.PermissionType.WRITE | security.PermissionType.READ,
                         "method": this.unlock
                     }
                 },
