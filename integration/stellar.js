@@ -420,6 +420,12 @@ module.exports = class StellarClient {
             // Load payor stellar account
             var payorStellarAcct = await this.server.loadAccount(payorWallet.address);
 
+            // Check for minimum balance
+            var payorBalance = payorStellarAcct.balances.find(o=>o.asset_type == "native").balance;
+            var minBalance = payorStellarAcct.balances.length * 0.5 + 0.50001
+            if ((payorBalance - amount.value) < minBalance)
+                throw new exception.BusinessRuleViolationException("INSUFFICIENT_FUNDS", minBalance);
+
             // New tx
             var paymentTx = new Stellar.TransactionBuilder(payorStellarAcct);
 
@@ -768,7 +774,7 @@ module.exports = class StellarClient {
                 case model.TransactionType.Deposit:
                 case model.TransactionType.Payment:
                 case model.TransactionType.Airdrop:
-                    if (transaction.memo.length <= 28)
+                    if (transaction.memo && transaction.memo.length <= 28)
                         stlrTx = await this.createPayment(transaction._payorWallet, transaction._payeeWallet, transaction.amount, transaction.memo);
                     else
                         stlrTx = await this.createPayment(transaction._payorWallet, transaction._payeeWallet, transaction.amount, transaction.id);
