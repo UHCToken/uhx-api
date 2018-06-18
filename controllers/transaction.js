@@ -247,7 +247,7 @@ class TransactionApiResource {
         transactions = transactions.map((t)=> {
             if(t._payor)
                 t._payor = t._payor.summary();
-                if(req.params.uid === t.payorId)
+                if(req.params.uid === t.payor.id)
                     t.fee = 100;
                 else if(req.params.uid === t.buyerId && t._payor.id === t.buyerId)
                     t.fee = 200;
@@ -363,7 +363,7 @@ class TransactionApiResource {
         
         var transactions = await uhx.TokenLogic.createTransaction(req.body.map(o=>new Transaction().copy(o)), req.principal);
 
-        var status = transactions.find(o=>o.state != 2) ? 202 : 201;
+        var status = transactions.find(o=>o.state != 2) ? 400 : 201;
         res.status(status).json(transactions);
 
         return true;

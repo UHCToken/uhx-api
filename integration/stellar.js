@@ -766,6 +766,7 @@ module.exports = class StellarClient {
                     break;
                 case model.TransactionType.Purchase:
                 case model.TransactionType.Deposit:
+                case model.TransactionType.Payment:
                 case model.TransactionType.Airdrop:
                     stlrTx = await this.createPayment(transaction._payorWallet, transaction._payeeWallet, transaction.amount, transaction.id);
                     break;

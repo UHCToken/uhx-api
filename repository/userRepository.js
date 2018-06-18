@@ -38,6 +38,7 @@ const pg = require('pg'),
         this._connectionString = connectionString;
         this.get = this.get.bind(this);
         this.getByNameSecret = this.getByNameSecret.bind(this);
+        this.getByName= this.getByName.bind(this);
         this.incrementLoginFailure = this.incrementLoginFailure.bind(this);
         this.getExternalIds = this.getExternalIds.bind(this);
         this.insert = this.insert.bind(this);
@@ -205,6 +206,30 @@ const pg = require('pg'),
             if(!_txc) await dbc.connect();
 
             const rdr = await dbc.query("SELECT * FROM users WHERE name = $1 AND password = crypt($2, password)", [ username, password ]);
+            if(rdr.rows.length == 0)
+                throw new exception.NotFoundException("users", username);
+            else
+                return new User().fromData(rdr.rows[0]);
+        }
+        finally {
+            if(!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Get the user information by using the username
+     * @param {string} username The identifier of the user 
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {User} The fetched user
+     */
+    async getByName(username, _txc) {
+        
+        const dbc =  _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+
+            const rdr = await dbc.query("SELECT * FROM users WHERE name = $1", [username]);
             if(rdr.rows.length == 0)
                 throw new exception.NotFoundException("users", username);
             else
