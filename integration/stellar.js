@@ -423,7 +423,7 @@ module.exports = class StellarClient {
             // Check for minimum balance
             var payorBalance = payorStellarAcct.balances.find(o=>o.asset_type == "native").balance;
             var minBalance = payorStellarAcct.balances.length * 0.5 + 0.50001
-            if ((payorBalance - amount.value) < minBalance)
+            if (((payorBalance - amount.value) < minBalance) && amount.code == "XLM")
                 throw new exception.BusinessRuleViolationException("INSUFFICIENT_FUNDS", minBalance);
 
             // New tx
