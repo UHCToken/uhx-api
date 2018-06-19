@@ -361,15 +361,24 @@ class TransactionApiResource {
         
         if(!req.body)
             throw new exception.ArgumentException("body missing");
-
-        if(!Array.isArray(req.body))
-            req.body = [req.body];
         
-        var transactions = await uhx.TokenLogic.createTransaction(req.body.map(o=>new Transaction().copy(o)), req.principal);
+        if(!req.body.network)
+            throw new exception.ArgumentException("network id missing");       
 
-        var status = transactions.find(o=>o.state != 2) ? 400 : 201;
-        res.status(status).json(transactions);
+        if(req.body.network == 1){
+            if(!Array.isArray(req.body))
+                req.body = [req.body];
+            
+            if(req.body.find(o=>o.network == 1))
+                var transactions = await uhx.TokenLogic.createTransaction(req.body.map(o=>new Transaction().copy(o)), req.principal);
 
+            var status = transactions.find(o=>o.state != 2) ? 400 : 201;
+            res.status(status).json(transactions);
+
+        }
+        else if (req.body.network == 2){
+            res.status(201).json(await uhx.TokenLogic.transferEther(req.body, req.principal));
+        }
         return true;
     }
 

@@ -123,6 +123,31 @@ const pg = require('pg'),
 
     /**
      * @method
+     * @summary Retrieve a specific wallet from the database by name and network
+     * @param {string} userId Gets the specified wallet
+     * @param {string} networkId The network of the wallet
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {Wallet} The fetched wallet
+     */
+    async getByNameAndNetwork(userId, networkId, _txc) {
+
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+            const rdr = await dbc.query("SELECT wallets.*, wallet_network.name AS network, wallet_network.symbol AS symbol FROM wallets INNER JOIN wallet_network ON (wallets.network_id = wallet_network.id) INNER JOIN users ON (users.id = wallets.user_id) WHERE users.name = $1 AND wallets.network_id = $2", [userId, networkId]);
+            if(rdr.rows.length == 0)
+                throw new exception.NotFoundException('wallet', userId);
+            else
+                return new model.Wallet().fromData(rdr.rows[0]);
+        }
+        finally {
+            if(!_txc) dbc.end();
+        }
+
+    }
+
+    /**
+     * @method
      * @summary Retrieve a specific wallet from the database
      * @param {uuid} userId The identity of the user to retrieve
      * @param {Client} _txc The postgresql connection with an active transaction to run in
@@ -134,6 +159,31 @@ const pg = require('pg'),
         try {
             if(!_txc) await dbc.connect();
             const rdr = await dbc.query("SELECT wallets.*, wallet_network.name AS network, wallet_network.symbol AS symbol FROM wallets INNER JOIN wallet_network ON (wallets.network_id = wallet_network.id) INNER JOIN users ON (users.id = wallets.user_id) WHERE users.id = $1 AND wallets.network_id = 1", [userId]);
+            if(rdr.rows.length == 0)
+                return null;
+            else
+                return new model.Wallet().fromData(rdr.rows[0]);
+        }
+        finally {
+            if(!_txc) dbc.end();
+        }
+
+    }
+
+    /**
+     * @method
+     * @summary Retrieve a specific wallet from the database
+     * @param {uuid} userId The identity of the user to retrieve
+     * @param {string} networkId The network of the wallet
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {Wallet} The fetched wallet
+     */
+    async getByUserAndNetworkId(userId, networkId, _txc) {
+
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+            const rdr = await dbc.query("SELECT wallets.*, wallet_network.name AS network, wallet_network.symbol AS symbol FROM wallets INNER JOIN wallet_network ON (wallets.network_id = wallet_network.id) INNER JOIN users ON (users.id = wallets.user_id) WHERE users.id = $1 AND wallets.network_id = $2", [userId, networkId]);
             if(rdr.rows.length == 0)
                 return null;
             else
