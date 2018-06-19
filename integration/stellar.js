@@ -417,6 +417,10 @@ module.exports = class StellarClient {
         try {
 
             uhx.log.info(`createPayment() : ${payorWallet.address} > ${payeeWallet.address} [${amount.value} ${amount.code}]`);
+            
+            if (payorWallet.address == payeeWallet.address)
+                throw new exception.BusinessRuleViolationException("Cannot send to self");
+
             // Load payor stellar account
             var payorStellarAcct = await this.server.loadAccount(payorWallet.address);
 
@@ -424,7 +428,7 @@ module.exports = class StellarClient {
             var payorBalance = payorStellarAcct.balances.find(o=>o.asset_type == "native").balance;
             var minBalance = payorStellarAcct.balances.length * 0.5 + 0.50001
             if (((payorBalance - amount.value) < minBalance) && amount.code == "XLM")
-                throw new exception.BusinessRuleViolationException("INSUFFICIENT_FUNDS", minBalance);
+                throw new exception.BusinessRuleViolationException("Payment would exceed the minimum required balance");
 
             // New tx
             var paymentTx = new Stellar.TransactionBuilder(payorStellarAcct);
