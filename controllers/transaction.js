@@ -245,15 +245,17 @@ class TransactionApiResource {
 
         // Minify user information
         transactions = transactions.map((t)=> {
-            if(t._payor)
+            if(t._payor){
                 t._payor = t._payor.summary();
                 if(req.params.uid === t.payor.id)
                     t.fee = 100;
                 else if(req.params.uid === t.buyerId && t._payor.id === t.buyerId)
                     t.fee = 200;
-            if(t._payee) 
+            }
+            if(t._payee) {
                 try { t._payee = t._payee.summary(); }
                 catch(e){}
+            }
             if(t._buyer)
                 t._buyer = t._buyer.summary();
             if(t._asset)
