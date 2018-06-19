@@ -80,8 +80,13 @@ const pg = require('pg'),
         try {
             if(!_txc) await dbc.connect();
             const rdr = await dbc.query("SELECT * FROM wallets WHERE address = $1", [publicId]);
-            if(rdr.rows.length == 0)
-                throw new exception.NotFoundException('wallet', publicId);
+            if(rdr.rows.length == 0){
+                var wallet = {};
+                wallet.address = publicId;
+                wallet.id = "00000000-0000-0000-0000-000000000001"
+                return new model.Wallet().fromData(wallet);
+            }
+                //throw new exception.NotFoundException('wallet', publicId);
             else
                 return new model.Wallet().fromData(rdr.rows[0]);
         }

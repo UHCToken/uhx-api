@@ -252,7 +252,8 @@ class TransactionApiResource {
                 else if(req.params.uid === t.buyerId && t._payor.id === t.buyerId)
                     t.fee = 200;
             if(t._payee) 
-                t._payee = t._payee.summary();
+                try { t._payee = t._payee.summary(); }
+                catch(e){}
             if(t._buyer)
                 t._buyer = t._buyer.summary();
             if(t._asset)
@@ -263,6 +264,7 @@ class TransactionApiResource {
         return true;
     }
 
+    
     /**
      * @method
      * @summary Posts a new transaction to the user's wallet
