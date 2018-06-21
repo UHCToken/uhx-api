@@ -199,6 +199,8 @@ module.exports = class TokenLogic {
 
                 // Add the asset to the client (push)
                 stellarClient._asset.push(asset);
+                uhx.StellarClient._asset.push(asset);
+
                 try {
                     // Pay the distributing account all the tokens in the supply!
                     await stellarClient.createPayment(issuingAccount, distributingAccount, new MonetaryAmount(supply, asset.code), asset.description || "Initial Distribution");
