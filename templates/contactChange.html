@@ -3,9 +3,9 @@
 
 <body>
     <p>
-        <strong>Hello {{old.givenName}} {{old.familyName}}</strong>
+        <strong>Hello {{old.givenName}} {{old.familyName}},</strong>
     </p>
-    <p>This is just a friendly e-mail to let you know that someone has changed your account details. Here are the relevant bits:</p>
+    <p>This is just a friendly e-mail to let you know that someone has changed your account details. Here are the relevant details:</p>
     <table border="1">
         <tr>
             <th></th>
@@ -21,7 +21,7 @@
 
     <ul>
         <li>If you were the one who made these changes, please disregard this e-mail</li>
-        <li>if you did not make these changes we suggest you do the following:
+        <li>If you did not make these changes we suggest that you login to your account and update your password:
             <ol>
                 <li>Click
                     <a href="{{ui_base}}:4001/user/recover?code={{token}}">this link to change your password</a></li>
@@ -29,6 +29,7 @@
                 <li>Verify the information on your account and update your profile</li>
             </ol>
         </li>
+        <li>If you need further assistance, please email us: help@uhx.io</li>
     </ul>
 </body>
 

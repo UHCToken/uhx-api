@@ -740,12 +740,15 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                     template: uhx.Config.mail.templates.welcome
                 };
                 
+
                 // Replacements
                 const replacements = {
                     user: newUser,
                     ui_base: uhx.Config.api.ui_base
                 }
-                await uhx.Mailer.sendEmail(sendOptions, replacements);
+                
+                // TODO: Add welcome package to welcome template
+                //await uhx.Mailer.sendEmail(sendOptions, replacements);
 
                 // Return the user
                 return newUser;
