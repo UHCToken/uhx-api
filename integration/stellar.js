@@ -396,7 +396,7 @@ module.exports = class StellarClient {
         }
         catch (e) {
 
-            if (e.data && e.data.status == 404)
+            if ((e.response && e.response.status == 404) || (e.data && e.data.status == 404))
                 throw new exception.NotFoundException("wallet", userWallet.id); // soft fail
             uhx.log.error(`Account getAccount has failed: ${JSON.stringify(e)}`);
             throw new StellarException(e);
