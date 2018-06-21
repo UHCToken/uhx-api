@@ -747,8 +747,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                     ui_base: uhx.Config.api.ui_base
                 }
                 
-                // TODO: Add welcome package to welcome template
-                //await uhx.Mailer.sendEmail(sendOptions, replacements);
+                await uhx.Mailer.sendEmail(sendOptions, replacements);
 
                 // Return the user
                 return newUser;

@@ -1,10 +1,10 @@
 Hello {{invitation.givenName}}! 
 
-{{sender}} has invited you to join the UhX community. Your wallet is ready, all you have to do is claim it by clicking the link below:
+You have been invited to join the Universal Healthcoin community. Your wallet is ready, all you have to do is claim it by clicking the link below:
 
     {{ui_base}}/user/invite?code={{claimToken}}
 
-Once you click on this link you'll be asked to finish setting up your wallet! You have to hurry though, this link expires in 7 days!
+Once you click on this link you'll be asked to finish setting up your wallet. You have to hurry though, this link expires in 7 days.
 
 Sincerely,
 The UhX Team

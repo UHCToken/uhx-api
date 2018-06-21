@@ -1,5 +1,8 @@
-Hi {{user.givenName}}!
+Hello {{user.givenName}},
 
-We're excited to have you join the Universal Healthcoin community! To assist you in becoming familiar with the UhX wallet, we have
-prepared a short welcome package below:
+Thanks for setting up your UhX wallet. We're excited to have you join the Universal Healthcoin community! 
+Here are some resources to help you stay connected:
 
+Visit our blog: https://www.universalhealthcoin.com/blog/
+
+Follow our Telegram feed: https://t.me/universalhealthcoinx
