@@ -50,6 +50,7 @@ module.exports = class TokenLogic {
      */
     constructor() {
         this.getStellarClient = this.getStellarClient.bind(this);
+        this.refreshStellarClient = this.refreshStellarClient.bind(this);
         this.createAsset = this.createAsset.bind(this);
         this.createAssetQuote = this.createAssetQuote.bind(this);
         this.createPurchase = this.createPurchase.bind(this);
@@ -69,6 +70,16 @@ module.exports = class TokenLogic {
     async getStellarClient() {
         if (!this._stellarClient)
             this._stellarClient = new StellarClient(uhx.Config.stellar.horizon_server, await uhx.Repositories.assetRepository.query(), uhx.Config.stellar.testnet_use);
+        return this._stellarClient;
+    }
+
+        /**
+    * @method
+    * @summary Refreshes the stellar client
+    * @returns {StellarClient} The stellar client
+    */
+   async refreshStellarClient() {
+        this._stellarClient = new StellarClient(uhx.Config.stellar.horizon_server, await uhx.Repositories.assetRepository.query(), uhx.Config.stellar.testnet_use);
         return this._stellarClient;
     }
 
