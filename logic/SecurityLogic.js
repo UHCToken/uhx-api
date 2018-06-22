@@ -547,6 +547,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                     await this.sendConfirmationSms(user);
 
                     user.telVerified = false;
+                    user.tfaMethod = '0';
                 }
                 if(user.tel && !user.telVerified) {
                     user.givenName = user.givenName || existingUser.givenName;
