@@ -22,7 +22,8 @@ const uhx = require('../uhx'),
     security = require('../security'),
     invoiceRepository = require('../repository/invoiceRepository'),
     Invoice = require('../model/Invoice'),
-    model = require('../model/model');
+    model = require('../model/model'),
+    GreenMoney = require("../integration/greenmoney");
 
 /**
  * @class
@@ -38,7 +39,6 @@ class InvoiceApiResource {
      * @constructor
      */
     constructor() {
-
     }
     /**
      * @method
@@ -153,32 +153,19 @@ class InvoiceApiResource {
      */
     async getAll(req, res) {
         var invoices = await uhx.Repositories.invoiceRepository.getAllForUser(req.params.uid);
+        for (var i = 0; i < invoices.length; i++){
+            invoices[i].payment_status = await new GreenMoney().checkInvoice(invoices[i].invoiceId);
+            if (invoices[i].payment_status[0].paymentResult == "1"){
+                invoices[i].status = 'COMPLETE';
+                await uhx.Repositories.invoiceRepository.update(invoices[i], req.principal);
+                // TODO: Credit User USD wallet
+            }
+        }
         res.status(200).json(invoices);
         return true
     }
 
 
-    async checkStatus(invoiceId){
-        var greenMoneyBaseUrl = 'https://www.greenbyphone.com/eCheck.asmx/InvoiceStatus';
-
-        // Promise 
-        return new Promise((fulfill, reject) => {
-            request(greenMoneyBaseUrl,
-                function (err, res, body) {
-                    var retVal = [];
-                    if (err) {
-                        uhx.log.error(`HTTP ERR: ${err}`)
-                        retVal.push("fail");
-                        reject(new exception.Exception("Error contacting GreenMoney API", exception.ErrorCodes.COM_FAILURE, err));
-                    }
-                    else if (res.statusCode == 200) {
-                        retVal.push("success");
-                        fulfill(retVal);
-                    }
-                })
-        });
-        return retVal;
-    }
 }
 
 // Module exports

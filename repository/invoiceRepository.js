@@ -80,7 +80,10 @@ const pg = require('pg'),
             if(rdr.rows.length == 0)
                 throw new exception.NotFoundException('invoices', userId);
             else
-                return new model.Invoice().fromData(rdr.rows[0]);
+                var retVal = [];
+                for (var r in rdr.rows)
+                    retVal.push(new Invoice().fromData(rdr.rows[r]));
+                return retVal;
         }
         finally {
             if(!_txc) dbc.end();
@@ -105,7 +108,7 @@ const pg = require('pg'),
         try {
             if(!_txc) await dbc.connect();
 
-            var updateCmd = model.Utils.generateUpdate(invoice, 'invoices', 'updated_time');
+            var updateCmd = model.Utils.generateUpdate(invoice, 'invoices');
             const rdr = await dbc.query(updateCmd.sql, updateCmd.args);
             if(rdr.rows.length == 0)
                 throw new exception.Exception("Could not update invoice in data store", exception.ErrorCodes.DATA_ERROR);
