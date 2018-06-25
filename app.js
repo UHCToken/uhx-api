@@ -27,6 +27,7 @@
     user = require('./controllers/user'),
     wallet = require('./controllers/wallet'),
     group = require('./controllers/group'),
+    invoice = require('./controllers/invoice'),
     permission = require('./controllers/permission'),
     asset = require('./controllers/asset'),
     invitation = require('./controllers/invitation'),
@@ -69,6 +70,7 @@ if(uhx.Config.swagger.enabled) {
 restApi.addResource(new oauth.OAuthTokenService());
 restApi.addResource(new user.UserApiResource());
 restApi.addResource(new purchase.PurchaseApiResource());
+restApi.addResource(new invoice.InvoiceApiResource());
 restApi.addResource(new wallet.WalletApiResource());
 restApi.addResource(new group.GroupApiResource());
 restApi.addResource(new permission.PermissionApiResource());

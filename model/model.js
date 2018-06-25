@@ -29,7 +29,8 @@
     PermissionSetInstance = require('./PermissionSetInstance'),
     MonetaryAmount = require('./MonetaryAmount'),
     Transaction = require('./Transaction'),
-    Wallet = require('./Wallet');
+    Wallet = require('./Wallet'),
+    Invoice = require('./Invoice');
 
 /**
  * @enum
@@ -69,6 +70,7 @@ module.exports.PermissionSetInstance = PermissionSetInstance;
 module.exports.Wallet = Wallet
 module.exports.Utils = new ModelUtil();
 module.exports.Wallet = Wallet;
+module.exports.Invoice = Invoice;
 module.exports.MonetaryAmount = MonetaryAmount;
 module.exports.Transaction = Transaction;
 module.exports.TransactionType = TransactionType;
