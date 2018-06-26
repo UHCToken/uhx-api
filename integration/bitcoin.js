@@ -83,7 +83,7 @@ module.exports = class BitcoinClient {
                 userId: id 
             });
         try{
-            var newWallet = await axios.post(uhx.Config.bitcoin.server + '/address/:' + id);
+            var newWallet = await axios.post(uhx.Config.bitcoin.server + '/address/' + id);
             wallet.address = newWallet.data;
             wallet.seed = newWallet.data;
             return(wallet);
@@ -104,7 +104,7 @@ module.exports = class BitcoinClient {
     async getBalance(wallet) {
         
         try {
-            var balance = await axios.get(uhx.Config.bitcoin.server + '/:' + wallet.userId +'/balance');
+            var balance = await axios.get(uhx.Config.bitcoin.server + '/' + wallet.userId +'/balance');
             wallet.balances = [];
             wallet.balances.push(new model.MonetaryAmount(
                 balance.data,
@@ -119,34 +119,16 @@ module.exports = class BitcoinClient {
         }
     }
 
-    async createPayment(buyerEthWallet, ethDistributionAccount, amount) {
+    async createPayment(payorWallet, payeeWallet, amount) {
         
         try {
-            var gasPrice = await this.server.eth.getGasPrice();
-            var gasLimit = await this.server.eth.getBlock("latest").gasLimit;
-            var nonce = await this.server.eth.getTransactionCount(buyerEthWallet.address)
-            var rawTx = {
-                nonce: this.server.utils.toHex(nonce),
-                gasPrice: this.server.utils.toHex(gasPrice), 
-                gasLimit:  this.server.utils.toHex('21000'),
-                from: buyerEthWallet.address, 
-                to: ethDistributionAccount, 
-                value: this.server.utils.toHex(this.server.utils.toWei(amount.value, "ether"))
-            }
+            var transaction = await axios.get(uhx.Config.bitcoin.server + '/transaction/' + payorWallet.userId +'/' + payeeWallet + '/' + amount.value);
 
-            var tx = new EthereumTx(rawTx)
-            var pk = Buffer.from(buyerEthWallet.seed.substring(2), 'hex')
-            tx.sign(pk)
-
-            var serializedTx = tx.serialize();
-
-            var hash = await this.server.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'))
-
-            return(hash)
+            return(transaction.data)
         }
         catch(e) {
-            console.error(`Failed to send ether payment : ${JSON.stringify(e)}`);
-            throw new EthereumException(e);
+            console.error(`Failed to send transaction: ${JSON.stringify(e)}`);
+            throw new BitcoinException(e);
         }
     }
 

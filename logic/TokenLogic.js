@@ -739,6 +739,44 @@ module.exports = class TokenLogic {
         }
     }
 
+        /**
+     * @method
+     * @summary Transfers bitcoin balance
+     * @param {Object} transferInfo The transfer information
+     * @param {SecurityPrincipal} principal The user that is creating the transaction
+     * @returns {Object} The transaction results
+     */
+    async transferBitcoin(transferInfo, principal) {
+
+        if (transferInfo.amount.code != "BTC")
+            throw new exception.ArgumentException("currency code");
+
+        try {
+            // Only owner of bitcoin can transfer bitcoin
+            if (principal.grant["transaction"] & security.PermissionType.OWNER) // Principal is only allowed to create where they are the payor for themselves 
+            {
+                // Set the payor
+                var payor = await uhx.Repositories.walletRepository.getByUserAndNetworkId(principal.session.userId, 3);
+
+                // Get the payee
+                if (transferInfo.payeeId)
+                    var payee = {address: transferInfo.payeeId};
+                else if (uhx.Config.security.username_regex.test(transferInfo.payeeId))
+                    var payee = await uhx.Repositories.walletRepository.getByNameAndNetwork(transferInfo.payeeId, 3);
+
+                // Transfer ether
+                var txResult = await uhx.BitcoinClient.createPayment(payor, payee.address, transferInfo.amount);
+            }
+            return txResult;
+        }
+        catch (e) {
+            uhx.log.error(`Error creating transfer: ${e.message}`);
+            while (e.code == exception.ErrorCodes.DATA_ERROR && e.cause)
+                e = e.cause[0];
+            throw new exception.Exception("Error creating transfer", e.code || exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
+
     /**
      * @method
      * @summary Plans an airdrop
