@@ -153,14 +153,15 @@ class InvoiceApiResource {
      */
     async getAll(req, res) {
         var invoices = await uhx.Repositories.invoiceRepository.getAllForUser(req.params.uid);
-        for (var i = 0; i < invoices.length; i++){
+
+        // Check and update invoice statuses
+        for (var i = 0; i < invoices.length; i++) {
             invoices[i].payment_status = await new GreenMoney().checkInvoice(invoices[i].invoiceId);
-            if (invoices[i].payment_status[0].paymentResult == "1"){
-                invoices[i].status = 'COMPLETE';
-                await uhx.Repositories.invoiceRepository.update(invoices[i], req.principal);
-                // TODO: Credit User USD wallet
+            if (invoices[i].payment_status[0].paymentResult != invoices[i].status_code) {
+                await new GreenMoney().updateInvoice(invoices[i], req.principal);
             }
         }
+        
         res.status(200).json(invoices);
         return true
     }

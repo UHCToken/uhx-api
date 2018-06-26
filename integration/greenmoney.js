@@ -65,4 +65,25 @@ module.exports = class GreenMoney {
         return retVal;
     }
 
+    async updateInvoice(invoice, principal){
+        switch (invoice.payment_status[0].paymentResult) {
+            case "0":
+                invoice.status_desc = 'COMPLETE';
+                break;
+            case "1":
+                invoice.status_desc = 'PROCESSING';
+                break;
+            case "2":
+                invoice.status_desc = 'DELETED';
+                break;
+            case "3":
+                invoice.status_desc = 'NOT STARTED';
+                break;
+            default:
+                res.status(500).json("An error occured.");
+                break;
+        }
+        invoice.status_code = invoice.payment_status[0].paymentResult;
+        await uhx.Repositories.invoiceRepository.update(invoice, principal);
+    }
 }

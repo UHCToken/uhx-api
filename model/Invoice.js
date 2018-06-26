@@ -53,10 +53,11 @@ module.exports = class Invoice extends ModelBase {
      * @param {User} payor The user or userId of the user of the invoice
      * @param {Number} invoice_id The invoice id
      * @param {MonetaryAmount} amount The amount of the invoice
-     * @param {Number} status The status of the invoice
+     * @param {Number} status_code The status of the invoice
+     * @param {String} status_desc The status description
      * @summary Creates a new invoice
      */
-    constructor(payor, invoice_id, amount, status) {
+    constructor(payor, invoice_id, amount, status_code, status_desc) {
         super();
         this.fromData = this.fromData.bind(this);
         this.toData = this.toData.bind(this);
@@ -66,7 +67,8 @@ module.exports = class Invoice extends ModelBase {
 
         this.invoiceId = invoice_id;
         this.amount = amount;
-        this.status = status || "Pending";
+        this.status_code = status_code || "3";
+        this.status_desc = status_desc || "NOT STARTED";
     }
 
 
@@ -81,7 +83,8 @@ module.exports = class Invoice extends ModelBase {
         this.amount = new MonetaryAmount(dbInvoice.amount, dbInvoice.code || 'USD');
         this.creationTime = dbInvoice.creation_time;
         this.expiry = dbInvoice.expiry;
-        this.status = dbInvoice.status;
+        this.status_code = dbInvoice.status_code;
+        this.status_desc = dbInvoice.status_desc;
         this.payorId = dbInvoice.payor_id;
         return this;
     }
@@ -98,7 +101,8 @@ module.exports = class Invoice extends ModelBase {
             amount: this.amount.value,
             creation_time: this.creationTime,
             expiry: this.expiry,
-            status: this.status,
+            status_code: this.status_code,
+            status_desc: this.status_desc,
             payorId: this.payor_id
         };
     }
