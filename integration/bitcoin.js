@@ -25,6 +25,7 @@
     Wallet = require("../model/Wallet"),
     exception = require('../exception'),
     Transaction = require('../model/Transaction'),
+    crypto = require('crypto'),
     MonetaryAmount = require('../model/MonetaryAmount');
 /**
  * @class
@@ -83,9 +84,13 @@ module.exports = class BitcoinClient {
                 userId: id 
             });
         try{
-            var newWallet = await axios.post(uhx.Config.bitcoin.server + '/address/' + id);
+            var token = crypto.randomBytes(48).toString('hex');
+            var newWallet = await axios.post(uhx.Config.bitcoin.server + '/address',{
+                passphrase: token,
+                id: id
+            });
             wallet.address = newWallet.data;
-            wallet.seed = newWallet.data;
+            wallet.seed = token;
             return(wallet);
         }
         catch(e) {
@@ -122,8 +127,12 @@ module.exports = class BitcoinClient {
     async createPayment(payorWallet, payeeWallet, amount) {
         
         try {
-            var transaction = await axios.get(uhx.Config.bitcoin.server + '/transaction/' + payorWallet.userId +'/' + payeeWallet + '/' + amount.value);
-
+            var transaction = await axios.post(uhx.Config.bitcoin.server + '/transaction/', {
+                user: payorWallet.userId,
+                address: payeeWallet,
+                amount: amount.value,
+                passphrase: payorWallet.seed
+            });
             return(transaction.data)
         }
         catch(e) {
