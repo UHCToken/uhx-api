@@ -20,6 +20,7 @@
 const uhx = require('../uhx'),
     exception = require('../exception'),
     security = require('../security'),
+    GreenMoney = require("../integration/greenmoney"),
     model = require('../model/model');
 
 /**
@@ -46,7 +47,7 @@ class UserApiResource {
     get routes() {
         return {
             "permission_group": "user",
-            "routes" : [
+            "routes": [
                 {
                     "path": "user/reset",
                     "post": {
@@ -66,31 +67,31 @@ class UserApiResource {
                     }
                 },
                 {
-                    "path" : "user",
+                    "path": "user",
                     "post": {
-                        "demand" : security.PermissionType.WRITE,
-                        "method" : this.post
+                        "demand": security.PermissionType.WRITE,
+                        "method": this.post
                     },
                     "get": {
-                        "demand" : security.PermissionType.LIST,
-                        "method" : this.getAll
+                        "demand": security.PermissionType.LIST,
+                        "method": this.getAll
                     }
                 },
                 {
-                    "path":"user/:uid",
-                    "get" :{
+                    "path": "user/:uid",
+                    "get": {
                         "demand": security.PermissionType.READ,
                         "method": this.get
                     },
-                    "put" : {
+                    "put": {
                         "demand": security.PermissionType.WRITE | security.PermissionType.READ,
                         "method": this.put
                     },
-                    "delete" : {
-                        "demand":security.PermissionType.WRITE | security.PermissionType.READ,
+                    "delete": {
+                        "demand": security.PermissionType.WRITE | security.PermissionType.READ,
                         "method": this.delete
                     },
-                    "lock" : {
+                    "lock": {
                         "demand": security.PermissionType.WRITE | security.PermissionType.READ,
                         "method": this.lock
                     },
@@ -101,12 +102,12 @@ class UserApiResource {
                 },
                 {
                     "path": "user/:uid/confirm",
-                    "post":{
+                    "post": {
                         "demand": security.PermissionType.WRITE,
                         "method": this.confirm
                     }
                 }
-                
+
             ]
         };
     }
@@ -153,20 +154,20 @@ class UserApiResource {
      *      - app_auth:
      *          - "write:user"
      */
-    async post(req, res)  {
-        
+    async post(req, res) {
+
         // Verify the request
         var ruleViolations = [];
 
-        if(!req.body)
+        if (!req.body)
             throw new exception.Exception("Missing body", exception.ErrorCodes.MISSING_PAYLOAD);
-        if(!((!req.body.name || !req.body.password) ^ (!req.body.externalIds)))
+        if (!((!req.body.name || !req.body.password) ^ (!req.body.externalIds)))
             throw new exception.Exception("Must have either username & password OR externalId", exception.ErrorCodes.MISSING_PROPERTY);
-        
+
         var user = new model.User().copy(req.body);
-        
+
         // USE CASE 1: User has passed up a username and password
-        if(req.body.password && req.body.name) 
+        if (req.body.password && req.body.name)
             res.status(201).json(await uhx.SecurityLogic.registerInternalUser(user, req.body.password, req.principal));
         else // USE CASE 2: User is attempting to sign up with an external identifier
             res.status(201).json(await uhx.SecurityLogic.registerExternalUser(req.body.externalIds, req.principal));
@@ -224,7 +225,7 @@ class UserApiResource {
      *          - "read:user"
      */
     async put(req, res) {
-        
+
         // does the request have a password if so we want to ensure that get's passed
         req.body.id = req.params.uid;
         res.status(201).json(await uhx.SecurityLogic.updateUser(new model.User().copy(req.body), req.body.password));
@@ -272,13 +273,28 @@ class UserApiResource {
         await user.loadWallets();
 
         // Load balances from blockchain
-        if(user._wallets)
+        if (user._wallets)
             user._wallets = await uhx.TokenLogic.getAllBalancesForWallets(user._wallets);
-        
+
+        // Get USD balance
+        var usd = await new GreenMoney().getBalance(req.params.uid, 'USD');
+
+        var wallet = {};
+
+        if (usd) {
+            var wallet = {};
+            wallet.id = usd.id;
+            wallet.balances = [];
+            var balance = {};
+            balance.code = 'USD';
+            balance.value = usd.amount;
+            user._wallets.push(wallet)
+        }
+
         await user.loadExternalIds();
         await user.loadClaims();
         await user.loadGroups();
-        
+
         res.status(200).json(user);
         return true;
     }
@@ -346,7 +362,7 @@ class UserApiResource {
      *          - "list:user"
      */
     async getAll(req, res) {
-        
+
         var filterUser = new model.User().copy({
             name: req.query.name,
             email: req.query.email,
@@ -354,9 +370,9 @@ class UserApiResource {
             familyName: req.query.familyName,
             deactivationTime: req.query._all ? null : "null"
         });
-        
+
         var results = await uhx.Repositories.userRepository.query(filterUser, req.query._offset, req.query._count, req.query._sort);
-        results.forEach((o)=>{ o._externalIds = null;});
+        results.forEach((o) => { o._externalIds = null; });
         res.status(200).json(results);
         return true;
     }
@@ -493,9 +509,9 @@ class UserApiResource {
     */
     async resetComplete(req, res) {
 
-        if(!req.body.code)
+        if (!req.body.code)
             throw new exception.ArgumentException("code");
-        else if(!req.body.password)
+        else if (!req.body.password)
             throw new exception.ArgumentException("password");
 
         // Reset password 
@@ -575,15 +591,15 @@ class UserApiResource {
      *          - "execute:user"
     */
     async confirm(req, res) {
-        
-        if(!req.body.code)
+
+        if (!req.body.code)
             throw new exception.ArgumentException("code");
-        
+
         await uhx.SecurityLogic.confirmContact(req.body.code, req.principal);
         res.status(204).send();
         return true;
     }
-    
+
     /**
      * @method
      * @summary Locks a user account
@@ -619,9 +635,9 @@ class UserApiResource {
      *          - "write:user"
      */
     async lock(req, res) {
-        if(req.principal.grant["user"] & security.PermissionType.OWNER)
+        if (req.principal.grant["user"] & security.PermissionType.OWNER)
             throw new security.SecurityException(new security.Permission("user", 1));
-        
+
         var usr = await uhx.Repositories.userRepository.get(req.params.uid);
         usr.lockout = new Date("9999-12-31T00:00:00Z");
         await uhx.Repositories.userRepository.update(usr, null, req.principal);
@@ -664,9 +680,9 @@ class UserApiResource {
      *          - "write:user"
      */
     async unlock(req, res) {
-        if(req.principal.grant["user"] & security.PermissionType.OWNER)
+        if (req.principal.grant["user"] & security.PermissionType.OWNER)
             throw new security.SecurityException(new security.Permission("user", 1));
-        
+
         var usr = await uhx.Repositories.userRepository.get(req.params.uid);
         usr.lockout = null;
         await uhx.Repositories.userRepository.update(usr, null, req.principal);
@@ -684,15 +700,15 @@ class UserApiResource {
      */
     async acl(principal, req, res) {
 
-        if(!(principal instanceof security.Principal)) {
+        if (!(principal instanceof security.Principal)) {
             uhx.log.error("ACL requires a security principal to be passed");
             return false;
         }
 
         // if the token has OWNER set for USER permission then this user must be SELF
         return (principal.grant.user & security.PermissionType.OWNER && req.params.uid == principal.session.userId) // the permission on the principal is for OWNER only
-                ^ !(principal.grant.user & security.PermissionType.OWNER); // XOR the owner grant flag is not set.
-                
+            ^ !(principal.grant.user & security.PermissionType.OWNER); // XOR the owner grant flag is not set.
+
     }
 }
 

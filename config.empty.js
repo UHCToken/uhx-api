@@ -243,6 +243,23 @@ module.exports = {
           */
         distribution_wallet_address: "0x55a55FaCC57F47a39777e1B9F7dbf531C53BA64A",
     },
+
+    /**
+     * @summary Configuration settings related to Green Money API
+     */
+    greenMoney: {
+        /**
+        * @summary Green money API base Url
+        */
+        baseUrl: 'https://www.greenbyphone.com/eCheck.asmx/',
+        /**
+        * @summary API password
+        */
+        apiPassword: {
+            client_id: '123456',
+            password: 'abcd1234'
+        }
+    },
     /**
      * @summary Swagger configuration
      */
