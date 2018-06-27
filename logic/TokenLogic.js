@@ -759,7 +759,7 @@ module.exports = class TokenLogic {
                 var payor = await uhx.Repositories.walletRepository.getByUserAndNetworkId(principal.session.userId, 3);
 
                 // Get the payee
-                if (transferInfo.payeeId)
+                if (/[a-km-zA-HJ-NP-Z1-9]{25,34}$/.test(transferInfo.payeeId))
                     var payee = {address: transferInfo.payeeId};
                 else if (uhx.Config.security.username_regex.test(transferInfo.payeeId))
                     var payee = await uhx.Repositories.walletRepository.getByNameAndNetwork(transferInfo.payeeId, 3);
