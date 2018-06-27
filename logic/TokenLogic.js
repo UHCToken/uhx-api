@@ -50,6 +50,7 @@ module.exports = class TokenLogic {
      */
     constructor() {
         this.getStellarClient = this.getStellarClient.bind(this);
+        this.refreshStellarClient = this.refreshStellarClient.bind(this);
         this.createAsset = this.createAsset.bind(this);
         this.createAssetQuote = this.createAssetQuote.bind(this);
         this.createPurchase = this.createPurchase.bind(this);
@@ -69,6 +70,16 @@ module.exports = class TokenLogic {
     async getStellarClient() {
         if (!this._stellarClient)
             this._stellarClient = new StellarClient(uhx.Config.stellar.horizon_server, await uhx.Repositories.assetRepository.query(), uhx.Config.stellar.testnet_use);
+        return this._stellarClient;
+    }
+
+        /**
+    * @method
+    * @summary Refreshes the stellar client
+    * @returns {StellarClient} The stellar client
+    */
+   async refreshStellarClient() {
+        this._stellarClient = new StellarClient(uhx.Config.stellar.horizon_server, await uhx.Repositories.assetRepository.query(), uhx.Config.stellar.testnet_use);
         return this._stellarClient;
     }
 
@@ -717,6 +728,44 @@ module.exports = class TokenLogic {
 
                 // Transfer ether
                 var txResult = await uhx.Web3Client.createPayment(payor, payee.address, transferInfo.amount);
+            }
+            return txResult;
+        }
+        catch (e) {
+            uhx.log.error(`Error creating transfer: ${e.message}`);
+            while (e.code == exception.ErrorCodes.DATA_ERROR && e.cause)
+                e = e.cause[0];
+            throw new exception.Exception("Error creating transfer", e.code || exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
+
+        /**
+     * @method
+     * @summary Transfers bitcoin balance
+     * @param {Object} transferInfo The transfer information
+     * @param {SecurityPrincipal} principal The user that is creating the transaction
+     * @returns {Object} The transaction results
+     */
+    async transferBitcoin(transferInfo, principal) {
+
+        if (transferInfo.amount.code != "BTC")
+            throw new exception.ArgumentException("currency code");
+
+        try {
+            // Only owner of bitcoin can transfer bitcoin
+            if (principal.grant["transaction"] & security.PermissionType.OWNER) // Principal is only allowed to create where they are the payor for themselves 
+            {
+                // Set the payor
+                var payor = await uhx.Repositories.walletRepository.getByUserAndNetworkId(principal.session.userId, 3);
+
+                // Get the payee
+                if (transferInfo.payeeId)
+                    var payee = {address: transferInfo.payeeId};
+                else if (uhx.Config.security.username_regex.test(transferInfo.payeeId))
+                    var payee = await uhx.Repositories.walletRepository.getByNameAndNetwork(transferInfo.payeeId, 3);
+
+                // Transfer ether
+                var txResult = await uhx.BitcoinClient.createPayment(payor, payee.address, transferInfo.amount);
             }
             return txResult;
         }

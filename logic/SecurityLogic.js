@@ -401,7 +401,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
      * @param {string} password The password to set on the user
      * @param {SecurityPrincipal} principal The user which is creating this user
      */
-    async registerInternalUser(user, password, principal) {
+    async registerInternalUser(user, password, principal, isInvited) {
 
         // First we register the user in our DB
         try {
@@ -420,12 +420,22 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                 strWallet = await uhx.Repositories.walletRepository.insert(strWallet, principal, _txc);
 
                 // Ethereum 
-                if(uhx.Config.ethereum.enabled){
+                if(uhx.Config.ethereum.enabled && false){
                     var web3Client = uhx.Web3Client;
                     var ethWallet = await web3Client.generateAccount()
                     ethWallet.userId = retVal.id;
                     ethWallet = await uhx.Repositories.walletRepository.insert(ethWallet, principal, _txc);
                     await web3Client.getBalance(ethWallet)
+                }
+                if(uhx.Config.bitcoin.enabled){
+                    var bitcoinClient = uhx.BitcoinClient;
+                    var btcWallet = await bitcoinClient.generateAccount(retVal.id); 
+                    btcWallet = await uhx.Repositories.walletRepository.insert(btcWallet, principal, _txc);
+                }
+
+                if(isInvited){
+                    var initiatorWallet = await uhx.Repositories.walletRepository.get(uhx.Config.stellar.initiator_wallet_id);
+                    await stellarClient.activateAccount(strWallet, "2", initiatorWallet)
                 }
 
                 // Add user
@@ -726,7 +736,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                 
 
                 // Now we want to claim the token
-                var newUser = await this.registerInternalUser(user, initialPassword, principal)
+                var newUser = await this.registerInternalUser(user, initialPassword, principal, true)
 
                 await uhx.Repositories.groupRepository.addUser(uhx.Config.security.sysgroups.users, newUser.id, principal, _txc);
 

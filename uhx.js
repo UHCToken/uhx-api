@@ -27,6 +27,7 @@
     StellarClient = require("./integration/stellar"),
     poolio = require('poolio'),
     Web3Client = require("./integration/web3"),
+    BitcoinClient = require("./integration/bitcoin"),
     worker = require('./worker');
 
 winston.level = config.logging.level;
@@ -48,6 +49,8 @@ if(config.logging.file)
      module.exports.StellarClient = new StellarClient(config.stellar.horizon_server, result, config.stellar.testnet_use);
      winston.info("Web3 Client Initialized...")
      module.exports.Web3Client = new Web3Client(config.ethereum.geth_server, config.ethereum.geth_net_server);
+     winston.info("Bitcoin Initialized...")
+     module.exports.BitcoinClient = new BitcoinClient(config.bitcoin.testnet_use, config.bitcoin.server);
  });
 
  /**

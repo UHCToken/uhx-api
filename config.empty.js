@@ -221,7 +221,28 @@ module.exports = {
           */
         distribution_wallet_address: "0x0000000000000000000000000000000000000000",
     },
-
+    bitcoin: {
+        /**
+         * @summary Etherium client name
+         */
+        client: {
+           name: 'Bitcoin',
+           balanceFn: 'getBalance',
+           network: 'testnet'
+        },
+        /**
+         * @summary Flag for using bitcoin
+         */
+        enabled: true,
+        /**
+          * @summary The geth server ip
+          */
+        server: "http://169.55.182.185:8333",
+        /**
+          * @summary The wallet id to which bitcoin is accepted
+          */
+        distribution_wallet_address: "0x55a55FaCC57F47a39777e1B9F7dbf531C53BA64A",
+    },
     /**
      * @summary Swagger configuration
      */

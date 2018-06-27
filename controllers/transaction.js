@@ -375,6 +375,9 @@ class TransactionApiResource {
         else if (req.body.network == 2){
             res.status(201).json(await uhx.TokenLogic.transferEther(req.body, req.principal));
         }
+        else if (req.body.network == 3){
+            res.status(201).json(await uhx.TokenLogic.transferBitcoin(req.body, req.principal));
+        }
         return true;
     }
 
