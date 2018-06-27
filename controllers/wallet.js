@@ -16,11 +16,12 @@
  * 
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
- 
+
 const uhx = require('../uhx'),
     exception = require('../exception'),
     security = require('../security'),
     walletRepository = require('../repository/walletRepository'),
+    GreenMoney = require("../integration/greenmoney"),
     Wallet = require('../model/Wallet'),
     model = require('../model/model');
 
@@ -47,19 +48,19 @@ class WalletApiResource {
     get routes() {
         return {
             "permission_group": "wallet",
-            "routes" : [
+            "routes": [
                 {
-                    "path" : "user/:uid/wallet",
+                    "path": "user/:uid/wallet",
                     "put": {
-                        "demand" : security.PermissionType.WRITE,
-                        "method" : this.put
+                        "demand": security.PermissionType.WRITE,
+                        "method": this.put
                     },
-                    "get" : {
-                        "demand":security.PermissionType.LIST,
+                    "get": {
+                        "demand": security.PermissionType.LIST,
                         "method": this.get
                     },
-                    "delete" : {
-                        "demand":security.PermissionType.WRITE,
+                    "delete": {
+                        "demand": security.PermissionType.WRITE,
                         "method": this.delete
                     }
                 },
@@ -126,7 +127,7 @@ class WalletApiResource {
      *      - uhx_auth:
      *          - "write:wallet"
      */
-    async put(req, res)  {
+    async put(req, res) {
         res.status(201).json(await uhx.TokenLogic.activateStellarWalletForUser(req.params.uid));
         return true;
     }
@@ -173,8 +174,24 @@ class WalletApiResource {
         wallets = await uhx.TokenLogic.getAllBalancesForWallets(wallets);
 
         var retVal = {};
-        wallets.forEach(o=> retVal[o._symbol] = o);
-        
+        wallets.forEach(o => retVal[o._symbol] = o);
+
+        // Get USD balance
+        var usd = await new GreenMoney().getBalance(req.params.uid, 'USD');
+
+        if (usd) {
+            retVal.usd = {};
+            retVal.usd.id = usd.id;
+            retVal.usd.balances = [];
+            var balance = {};
+            balance.code = 'USD';
+            balance.value = usd.amount;
+            retVal.usd.balances.push(balance)
+        }
+        else
+            retVal.usd = null;
+
+
         res.status(200).json(retVal);
         return true
     }
@@ -260,24 +277,24 @@ class WalletApiResource {
      *          - "read:asset"
      */
     async getAssetWallet(req, res) {
-        
+
         var assetWalletStat = await uhx.Repositories.transaction(async (_txc) => {
             var asset = await uhx.Repositories.assetRepository.get(req.params.assetId, _txc);
             await asset.loadDistributorWallet(_txc);
 
-            var stellarPromises = [ 
+            var stellarPromises = [
                 (async () => { asset.distWallet = await uhx.StellarClient.getAccount(asset._distWallet) })(),
-                (async () => { asset.issuerWallet = await uhx.StellarClient.getAccount(new Wallet().copy({ address: asset.issuer }))})()
+                (async () => { asset.issuerWallet = await uhx.StellarClient.getAccount(new Wallet().copy({ address: asset.issuer })) })()
             ];
             // Load from stellar network but don't want ... haha
             var offers = await asset.loadOffers(_txc);
 
             offers.forEach((o) => {
-                stellarPromises.push((async () => { 
+                stellarPromises.push((async () => {
                     await o.loadWallet(_txc)
                     o.wallet = await uhx.StellarClient.getAccount(o._wallet);
-                    o.remain = new Date() > o.startDate && new Date() < o.stopDate ? o.wallet.balances.find(b=>b.code == asset.code).value : o.stopDate < new Date() ? 0 : o.amount;
-                    
+                    o.remain = new Date() > o.startDate && new Date() < o.stopDate ? o.wallet.balances.find(b => b.code == asset.code).value : o.stopDate < new Date() ? 0 : o.amount;
+
                 })());
             });
 
@@ -315,17 +332,17 @@ class WalletApiResource {
      */
     async acl(principal, req, res) {
 
-        if(!(principal instanceof security.Principal)) {
+        if (!(principal instanceof security.Principal)) {
             uhx.log.error("ACL requires a security principal to be passed");
             return false;
         }
 
         // if the token has OWNER set for USER permission then this user must be SELF
         return (principal.grant.wallet & security.PermissionType.OWNER && req.params.uid == principal.session.userId) // the permission on the principal is for OWNER only
-                ^ !(principal.grant.wallet & security.PermissionType.OWNER); // XOR the owner grant flag is not set.
-                
+            ^ !(principal.grant.wallet & security.PermissionType.OWNER); // XOR the owner grant flag is not set.
+
     }
-    
+
 }
 
 // Module exports

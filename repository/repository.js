@@ -28,6 +28,7 @@ const UserRepository = require('./userRepository'),
     TransactionRepository = require('./transactionRepository'),
     ReportRepository = require('./reportRepository'),
     InvoiceRepository = require('./invoiceRepository'),
+    BalanceRepository = require('./balanceRepository'),
     pg = require('pg'),
     uhx = require('../uhx'),
     exception = require('../exception');
@@ -201,6 +202,17 @@ class UhcRepositories {
         if(!this._invoiceRepository)
             this._invoiceRepository = new InvoiceRepository(this.connectionString);
         return this._invoiceRepository;
+    }
+
+    /**
+     * @property 
+     * @summary Get the balance repository
+     * @type {BalanceRepository}
+     */
+    get balanceRepository() {
+        if(!this._balanceRepository)
+            this._balanceRepository = new BalanceRepository(this.connectionString);
+        return this._balanceRepository;
     }
 }
 

@@ -20,10 +20,11 @@
 const uhx = require('../uhx'),
     exception = require('../exception'),
     security = require('../security'),
-    invoiceRepository = require('../repository/invoiceRepository'),
     Invoice = require('../model/Invoice'),
     model = require('../model/model'),
     GreenMoney = require("../integration/greenmoney");
+
+const dollar_regex = /(^[0-9]{0,}).([0-9]{0,2}$)/;
 
 /**
  * @class
@@ -109,9 +110,23 @@ class InvoiceApiResource {
      *          - "write:wallet"
      */
     async put(req, res) {
-        var not_implemented = {};
-        not_implemented.status = "0"
-        res.status(200).json(not_implemented);
+
+        if (!req.body)
+            throw new exception.ArgumentException("body missing");
+
+        if (!req.body.amount)
+            throw new exception.ArgumentException("amount missing");
+
+        if (!dollar_regex.test(req.body.amount))
+            throw new exception.ArgumentException("amount");
+
+        var result = await new GreenMoney().createInvoice(req.params.uid, req.body.amount, req.principal);
+
+        if(result)
+            var status = result instanceof exception.Exception ? 500 : 200;
+
+        res.status(status).json(result);
+
         return true;
     }
     /**
@@ -152,20 +167,14 @@ class InvoiceApiResource {
      *          - "read:wallet"
      */
     async getAll(req, res) {
-        var invoices = await uhx.Repositories.invoiceRepository.getAllForUser(req.params.uid);
+        var invoices = await new GreenMoney().getInvoicesForUser(req.params.uid, req.principal);
 
-        // Check and update invoice statuses
-        for (var i = 0; i < invoices.length; i++) {
-            invoices[i].payment_status = await new GreenMoney().checkInvoice(invoices[i].invoiceId);
-            if (invoices[i].payment_status[0].paymentResult != invoices[i].status_code) {
-                await new GreenMoney().updateInvoice(invoices[i], req.principal);
-            }
-        }
-        
-        res.status(200).json(invoices);
+        if (invoices)
+            res.status(200).json(invoices);
+        else
+            res.status(500).json(new exception.Exception("Error getting invoices.", exception.ErrorCodes.UNKNOWN));
         return true
     }
-
 
 }
 

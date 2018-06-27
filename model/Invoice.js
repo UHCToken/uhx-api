@@ -19,45 +19,54 @@
 
 const ModelBase = require('./ModelBase'),
     uhx = require('../uhx'),
-    User = require('./User'),
-    MonetaryAmount = require("./MonetaryAmount");
+    User = require('./User');
 
 /**
- * @class
- * @summary Represents an invoice for a USD echeck purchase
- * @swagger
- * definitions:
- *     Invoice:
- *         description: "Represents an invoice for a USD echeck purchase"
- *         properties:
- *             id: 
- *                 type: string
- *                 description: The unique identifier for the invoice
- *             invoiceId:
- *                 type: string
- *                 description: The invoice id representing the external invoice
- *             amount:
- *                 $ref: "#/definitions/MonetaryAmount"
- *                 description: The monetary amount of the invoice
- *             creationTime:
- *                 type: date
- *                 description: The time the invoice was created
- *             expiry:
- *                 type: date
- *                 description: The time the invoice will expire
- */
+* @class
+* @summary Represents an invoice for a USD echeck purchase
+* @swagger
+* definitions:
+*     Invoice:
+*         description: "Represents an invoice for a USD echeck purchase"
+*         properties:
+*             id: 
+*                 type: string
+*                 description: The unique identifier for the invoice
+*             invoiceId:
+*                 type: string
+*                 description: The invoice id representing the external invoice
+*             amount:
+*                 type: number
+*                 description: The amount of the invoice
+*             code:
+*                 type: string
+*                 description: The type of currency
+*             creationTime:
+*                 type: date
+*                 description: The time the invoice was created
+*             expiry:
+*                 type: date
+*                 description: The time the invoice will expire
+*             status_code:
+*                 type: number
+*                 description: The number code for the invoice status
+*             status_desc:
+*                 type: string
+*                 description: The string description for the invoice status
+*/
 module.exports = class Invoice extends ModelBase {
 
     /**
      * @constructor
      * @param {User} payor The user or userId of the user of the invoice
      * @param {Number} invoice_id The invoice id
-     * @param {MonetaryAmount} amount The amount of the invoice
+     * @param {Number} amount The amount of the invoice
+     * @param {string} code The currency type
      * @param {Number} status_code The status of the invoice
-     * @param {String} status_desc The status description
+     * @param {string} status_desc The status description
      * @summary Creates a new invoice
      */
-    constructor(payor, invoice_id, amount, status_code, status_desc) {
+    constructor(payor, invoice_id, amount, code, status_code, status_desc) {
         super();
         this.fromData = this.fromData.bind(this);
         this.toData = this.toData.bind(this);
@@ -67,6 +76,7 @@ module.exports = class Invoice extends ModelBase {
 
         this.invoiceId = invoice_id;
         this.amount = amount;
+        this.code = code || 'USD';
         this.status_code = status_code || "3";
         this.status_desc = status_desc || "NOT STARTED";
     }
@@ -80,9 +90,10 @@ module.exports = class Invoice extends ModelBase {
     fromData(dbInvoice) {
         this.id = dbInvoice.id;
         this.invoiceId = dbInvoice.invoice_id;
-        this.amount = new MonetaryAmount(dbInvoice.amount, dbInvoice.code || 'USD');
+        this.amount = dbInvoice.amount;
+        this.code = dbInvoice.code || 'USD';
         this.creationTime = dbInvoice.creation_time;
-        this.expiry = dbInvoice.expiry;
+        this.expiry = dbInvoice.expiry || null;
         this.status_code = dbInvoice.status_code;
         this.status_desc = dbInvoice.status_desc;
         this.payorId = dbInvoice.payor_id;
@@ -97,13 +108,13 @@ module.exports = class Invoice extends ModelBase {
         return {
             id: this.id,
             invoice_id: this.invoiceId,
-            code: this.amount.code || 'USD',
-            amount: this.amount.value,
+            amount: this.amount,
+            code: this.code || 'USD',
             creation_time: this.creationTime,
-            expiry: this.expiry,
+            expiry: this.expiry || null,
             status_code: this.status_code,
             status_desc: this.status_desc,
-            payorId: this.payor_id
+            payor_id: this.payor_id
         };
     }
 
@@ -136,7 +147,6 @@ module.exports = class Invoice extends ModelBase {
     toJSON() {
         var retVal = this.stripHiddenFields(this);
         retVal.payor = this.payor;
-        retVal.payee = this.payee;
         return retVal;
     }
 
