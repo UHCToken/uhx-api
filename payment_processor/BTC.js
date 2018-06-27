@@ -39,13 +39,14 @@
     var buyer = await orderInfo.loadBuyer();
     var btcWallet = await uhx.Repositories.walletRepository.getTypeForUserByUserId(buyer.id, "BITCOIN")
 
-    var buyerBtcWallet = await uhx.btcWallet.getBalance(btcWallet);
+    var buyerBtcWallet = await uhx.BitcoinClient.getBalance(btcWallet);
     
     var buyerStrWallet = await uhx.StellarClient.isActive(await buyer.loadStellarWallet());
     // Buyer's stellar wallet is empty and not active, we should activate it
-    if(!buyerStrWallet)
+    if(!buyerStrWallet){
+        buyerStrWallet = await uhx.Repositories.walletRepository.getByUserId(buyer.id);
         await uhx.StellarClient.activateAccount(buyerStrWallet, "1.6", distributionAccount);
-
+    }
     var sourceBtcBalance = buyerBtcWallet.balances.find(o=>o.code == orderInfo.invoicedAmount.code);
 
     var sourceStrBalance = buyerStrWallet.balances.find(o=>o.code == "XLM");
@@ -67,7 +68,7 @@
         if(!buyerStrWallet.balances.find(o=>o.code == asset.code))
             await uhx.StellarClient.createTrust(buyerStrWallet, asset);
         // TODO: If this needs to go to escrow this will need to be changed
-        await uhx.btcWallet.createPayment(buyerBtcWallet, uhx.Config.bitcoin.distribution_wallet_address, orderInfo.invoicedAmount)
+        await uhx.BitcoinClient.createPayment(buyerBtcWallet, uhx.Config.bitcoin.distribution_wallet_address, orderInfo.invoicedAmount)
         await uhx.StellarClient.createPayment(distributionAccount, buyerStrWallet, {value: orderInfo.quantity, code: asset.code})
 
         //orderInfo.ref = transaction.ref;
