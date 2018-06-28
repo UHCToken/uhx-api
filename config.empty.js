@@ -113,7 +113,7 @@ module.exports = {
         /**
          * @summary The validation regex for user passwords
          */
-        password_regex: /^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$/,
+        password_regex: /^(?=[A-Za-z])(?=.*[0-9])(?=.*[~`!@#$%^&*()-_=+{}[\];:'"|\\/.><,])[A-Za-z0-9$~`!@#$%^&*()-_=+{}[\];:'"|\\/.><,]{8,}$/,
         /**
          * @summary The validation regex for usernames following RFC2822 regex for e-mails
          */
@@ -223,7 +223,7 @@ module.exports = {
     },
     bitcoin: {
         /**
-         * @summary Bicoin client name
+         * @summary Bitcoin client name
          */
         client: {
            name: 'Bitcoin',
@@ -235,15 +235,14 @@ module.exports = {
          */
         enabled: true,
         /**
-          * @summary The geth server ip
+          * @summary The bitcoin server ip
           */
-        server: "http://169.55.182.185:8333",
+        server: "http://bitcoin:8333",
         /**
           * @summary The wallet id to which bitcoin is accepted
           */
-        distribution_wallet_address: "0x55a55FaCC57F47a39777e1B9F7dbf531C53BA64A",
+        distribution_wallet_address: "0x0000000000000000000000000000000",
     },
-
     /**
      * @summary Configuration settings related to Green Money API
      */

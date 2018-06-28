@@ -9,11 +9,11 @@ CREATE TABLE IF NOT EXISTS invoices (
     code VARCHAR(6) NOT NULL,
     creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     expiry TIMESTAMPTZ, 
-    status_code NUMBER(2) NOT NULL,
+    status_code NUMERIC(2) NOT NULL,
     status_desc VARCHAR(32) NOT NULL,
     payor_id UUID NOT NULL,
     CONSTRAINT pk_invoice PRIMARY KEY (id),
-    CONSTRAINT fk_user FOREIGN KEY (payor_id) REFERENCES users(id),
+    CONSTRAINT fk_user FOREIGN KEY (payor_id) REFERENCES users(id)
 );
 
 CREATE TABLE IF NOT EXISTS balances (
