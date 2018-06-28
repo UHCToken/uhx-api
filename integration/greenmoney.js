@@ -37,9 +37,12 @@ module.exports = class GreenMoney {
 
         var user = await uhx.Repositories.userRepository.get(userId);
 
-        if(user.address.country != 'US')
-            return new exception.Exception("Not available in this country", exception.ErrorCodes.NOT_SUPPORTED, "NOT_SUPPORTED")
+        if (user.address.country != 'US')
+            return new exception.Exception("Not available in your country", exception.ErrorCodes.NOT_SUPPORTED, "NOT_SUPPORTED");
 
+        if (await uhx.GreenMoney.getUserLimit(userId) >= uhx.Config.greenMoney.invoiceLimit.creationLimit)
+            return new exception.Exception("Too many recent invoices created", exception.ErrorCodes.RULES_VIOLATION, "RULES_VIOLATION");
+            
         // Request to Green Money
         var url = uhx.Config.greenMoney.baseUrl
             + 'OneTimeInvoice?Client_ID=' + uhx.Config.greenMoney.apiPassword.client_id
@@ -75,7 +78,7 @@ module.exports = class GreenMoney {
                         response.checkId = raw_data[5];
                         retVal.response = response;
 
-                        if(response.result != "0")
+                        if (response.result != "0")
                             return new exception.Exception("Error creating invoice.", exception.ErrorCodes.Exception);
 
                         // Preparing invoice
@@ -206,6 +209,33 @@ module.exports = class GreenMoney {
 
     /**
     * @method
+    * @summary Gets the count of invoices created today
+    * @param {Number} userId The userId to lookup
+    * @returns {Number} The count of invoices created today
+    */
+    async getUserLimit(userId) {
+        try{
+                // Gets all invoices from database
+                var invoices = await uhx.Repositories.invoiceRepository.getAllForUser(userId);
+
+                var invoiceCount = 0;
+                // Check for invoices created recently
+                for (var i = 0; i < invoices.length; i++) {
+                    var limitDate = new Date (new Date(invoices[i].creationTime).getTime() + uhx.Config.greenMoney.invoiceLimit.delayTime);
+                    if(limitDate > new Date()){
+                        invoiceCount++;
+                    }
+                }
+                return invoiceCount;
+
+        }
+        catch (ex) {
+            return new exception.Exception("Error getting invoice daily limit count.", exception.ErrorCodes.UNKNOWN, ex);
+        }
+    }
+
+    /**
+    * @method
     * @summary Gets the currency balance for the user
     * @param {Number} userId The userId to lookup
     * @param {string} currency The currency type to look up
@@ -231,7 +261,7 @@ module.exports = class GreenMoney {
         try {
             // Checks for an existing entry
             var userBalance = await uhx.GreenMoney.getBalance(userId, currency);
-            if (userBalance){
+            if (userBalance) {
                 var newAmount = parseFloat(balance.amount) + parseFloat(userBalance.amount);
                 if (newAmount < 0)
                     return new exception.Exception("Negative balance", exception.ErrorCodes.ArgumentException);

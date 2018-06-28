@@ -226,9 +226,9 @@ module.exports = {
          * @summary Bitcoin client name
          */
         client: {
-           name: 'Bitcoin',
-           balanceFn: 'getBalance',
-           network: 'testnet'
+            name: 'Bitcoin',
+            balanceFn: 'getBalance',
+            network: 'testnet'
         },
         /**
          * @summary Flag for using bitcoin
@@ -257,6 +257,19 @@ module.exports = {
         apiPassword: {
             client_id: '123456',
             password: 'abcd1234'
+        },
+        /**
+        * @summary Setting maximum count per delay period and total count of invoices for that period
+        */
+        invoiceLimit: {
+            /**
+            * @summary The time that must pass to allow for another invoice creation
+            */
+            delayTime: 604800000,
+            /**
+            * @summary The total count of invoices to limit the creation of a new invoice before a delay timer expires
+            */
+            creationLimit: 3
         }
     },
     /**
