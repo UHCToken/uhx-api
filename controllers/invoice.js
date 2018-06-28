@@ -120,7 +120,7 @@ class InvoiceApiResource {
         if (!dollar_regex.test(req.body.amount))
             throw new exception.ArgumentException("amount");
 
-        var result = await new GreenMoney().createInvoice(req.params.uid, req.body.amount, req.principal);
+        var result = await uhx.GreenMoney.createInvoice(req.params.uid, req.body.amount, req.principal);
 
         if(result)
             var status = result instanceof exception.Exception ? 500 : 200;
@@ -167,7 +167,7 @@ class InvoiceApiResource {
      *          - "read:wallet"
      */
     async getAll(req, res) {
-        var invoices = await new GreenMoney().getInvoicesForUser(req.params.uid, req.principal);
+        var invoices = await uhx.GreenMoney.getInvoicesForUser(req.params.uid, req.principal);
 
         if (invoices)
             res.status(200).json(invoices);

@@ -48,7 +48,7 @@
     }
 
     var sourceBalance = buyerWallet.balances.find(o=>o.code == orderInfo.invoicedAmount.code);
-    if(!sourceBalance || sourceBalance.value < Number(orderInfo.invoicedAmount.value) + (1 + (buyerWallet.balances.length) * 0.5)) // Must carry min balance
+    if(!sourceBalance || sourceBalance.value < Number(orderInfo.invoicedAmount.value) + (1 + (buyerWallet.balances.length - 1) * 0.5) + 0.00001) // Must carry min balance
     {
         orderInfo.memo = exception.ErrorCodes.INSUFFICIENT_FUNDS;
         return model.TransactionStatus.Failed;

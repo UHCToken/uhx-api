@@ -177,7 +177,7 @@ class WalletApiResource {
         wallets.forEach(o => retVal[o._symbol] = o);
 
         // Get USD balance
-        var usd = await new GreenMoney().getBalance(req.params.uid, 'USD');
+        var usd = await uhx.GreenMoney.getBalance(req.params.uid, 'USD');
 
         if (usd) {
             retVal.usd = {};

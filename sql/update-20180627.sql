@@ -26,4 +26,4 @@ CREATE TABLE IF NOT EXISTS balances (
     CONSTRAINT pk_balances PRIMARY KEY (id),
     CONSTRAINT fk_user FOREIGN KEY (id) REFERENCES users(id)
 );
-INSERT INTO wallet_network VALUES (1, 'BITCOIN', 'btc');
+INSERT INTO wallet_network VALUES (3, 'BITCOIN', 'btc');

@@ -41,12 +41,14 @@
     var buyer = await orderInfo.loadBuyer();
 
     // GET USD
-    var buyerUsdBalance = await new GreenMoney().getBalance(buyer.id, 'USD');
+    var buyerUsdBalance = await uhx.GreenMoney.getBalance(buyer.id, 'USD');
     
     var buyerStrWallet = await uhx.StellarClient.isActive(await buyer.loadStellarWallet());
     // Buyer's stellar wallet is empty and not active, we should activate it
-    if(!buyerStrWallet)
-        await uhx.StellarClient.activateAccount(buyerStrWallet, "1.6", distributionAccount);
+    if(!buyerStrWallet){
+        buyerStrWallet = await uhx.Repositories.walletRepository.getByUserId(buyer.id);
+        await uhx.StellarClient.activateAccount(buyerStrWallet, "1.6", distributionAccount);    
+    }
 
     var sourceUsdBalance = buyerUsdBalance.amount;
 
@@ -69,7 +71,7 @@
         if(!buyerStrWallet.balances.find(o=>o.code == asset.code))
             await uhx.StellarClient.createTrust(buyerStrWallet, asset);
         // TODO: If this needs to go to escrow this will need to be changed
-        await new GreenMoney().updateBalance(buyer.id, (orderInfo.invoicedAmount.value * -1), 'USD');
+        await uhx.GreenMoney.updateBalance(buyer.id, (orderInfo.invoicedAmount.value * -1), 'USD');
         await uhx.StellarClient.createPayment(distributionAccount, buyerStrWallet, {value: orderInfo.quantity, code: asset.code})
 
         //orderInfo.ref = transaction.ref;

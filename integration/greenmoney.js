@@ -49,7 +49,7 @@ module.exports = class GreenMoney {
             + '&ItemName=' + amount + ' USD Credit'
             + '&ItemDescription=USD credit for UhX wallet (' + user.name + ')'
             + '&Amount=' + amount
-            + '&PaymentDate=' + await new GreenMoney().formatDate(new Date())
+            + '&PaymentDate=' + await uhx.GreenMoney.formatDate(new Date())
             + '&x_delim_data=true&x_delim_char=,';
 
         var retVal = {};
@@ -155,7 +155,7 @@ module.exports = class GreenMoney {
         switch (invoice.payment_status[0].paymentResult) {
             case "0":
                 invoice.status_desc = 'COMPLETE';
-                new GreenMoney().updateBalance(invoice.payorId, invoice.amount, invoice.code, principal)
+                uhx.GreenMoney.updateBalance(invoice.payorId, invoice.amount, invoice.code, principal)
                 break;
             case "1":
                 invoice.status_desc = 'PROCESSING';
@@ -188,9 +188,9 @@ module.exports = class GreenMoney {
 
                 // Check and update invoice statuses
                 for (var i = 0; i < invoices.length; i++) {
-                    invoices[i].payment_status = await new GreenMoney().checkInvoice(invoices[i].invoiceId);
+                    invoices[i].payment_status = await uhx.GreenMoney.checkInvoice(invoices[i].invoiceId);
                     if (invoices[i].payment_status[0].paymentResult != invoices[i].status_code && invoices[i].status_code != "3") {
-                        await new GreenMoney().updateInvoice(invoices[i], principal);
+                        await uhx.GreenMoney.updateInvoice(invoices[i], principal);
                     }
                 }
                 return invoices;
@@ -229,7 +229,7 @@ module.exports = class GreenMoney {
 
         try {
             // Checks for an existing entry
-            var userBalance = await new GreenMoney().getBalance(userId, currency);
+            var userBalance = await uhx.GreenMoney.getBalance(userId, currency);
             if (userBalance){
                 var newAmount = parseFloat(balance.amount) + parseFloat(userBalance.amount);
                 if (newAmount < 0)

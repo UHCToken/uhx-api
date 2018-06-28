@@ -223,7 +223,7 @@ module.exports = {
     },
     bitcoin: {
         /**
-         * @summary Etherium client name
+         * @summary Bicoin client name
          */
         client: {
            name: 'Bitcoin',

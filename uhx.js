@@ -25,6 +25,7 @@
     winston = require('winston'),
     Mailer = require('./integration/mail'),
     StellarClient = require("./integration/stellar"),
+    GreenMoney = require("./integration/greenmoney"),
     poolio = require('poolio'),
     Web3Client = require("./integration/web3"),
     BitcoinClient = require("./integration/bitcoin"),
@@ -51,6 +52,8 @@ if(config.logging.file)
      module.exports.Web3Client = new Web3Client(config.ethereum.geth_server, config.ethereum.geth_net_server);
      winston.info("Bitcoin Initialized...")
      module.exports.BitcoinClient = new BitcoinClient(config.bitcoin.testnet_use, config.bitcoin.server);
+     winston.info("GreenMoney Initialized...")
+     module.exports.GreenMoney = new GreenMoney();
  });
 
  /**
