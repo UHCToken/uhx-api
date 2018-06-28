@@ -259,6 +259,10 @@ module.exports = {
             password: 'abcd1234'
         },
         /**
+        * @summary Auto update timer
+        */
+        updateTimer: 14400000,
+        /**
         * @summary Setting maximum count per delay period and total count of invoices for that period
         */
         invoiceLimit: {

@@ -46,13 +46,13 @@ if(config.logging.file)
  module.exports.log = winston;
  module.exports.Mailer = new Mailer(config.mail);
  repository.assetRepository.query().then(function(result) {
-     winston.info("Stellar Client Initialized...")
+     winston.info("Stellar Client Initialized...");
      module.exports.StellarClient = new StellarClient(config.stellar.horizon_server, result, config.stellar.testnet_use);
-     winston.info("Web3 Client Initialized...")
+     winston.info("Web3 Client Initialized...");
      module.exports.Web3Client = new Web3Client(config.ethereum.geth_server, config.ethereum.geth_net_server);
-     winston.info("Bitcoin Initialized...")
+     winston.info("Bitcoin Initialized...");
      module.exports.BitcoinClient = new BitcoinClient(config.bitcoin.testnet_use, config.bitcoin.server);
-     winston.info("GreenMoney Initialized...")
+     winston.info("GreenMoney Initialized...");
      module.exports.GreenMoney = new GreenMoney();
  });
 

@@ -16,18 +16,18 @@
  * 
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
- 
+
 const pg = require('pg'),
     exception = require('../exception'),
     model = require('../model/model'),
     Invoice = require("../model/Invoice"),
     security = require('../security');
 
- /**
-  * @class InvoiceRepository
-  * @summary Represents the invoice repository logic
-  */
- module.exports = class InvoiceRepository {
+/**
+ * @class InvoiceRepository
+ * @summary Represents the invoice repository logic
+ */
+module.exports = class InvoiceRepository {
 
     /**
      * @constructor
@@ -45,23 +45,48 @@ const pg = require('pg'),
      * @summary Retrieve a specific invoice from the database
      * @param {uuid} id Gets the specified invoice
      * @param {Client} _txc The postgresql connection with an active transaction to run in
-     * @returns {Invoice} The fetched invoice
+     * @returns {Invoices} The fetched invoices
+     */
+    async getAll(_txc) {
+
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+            const rdr = await dbc.query("SELECT * FROM invoices");
+            if (rdr.rows.length == 0)
+                throw new exception.NotFoundException('invoice');
+            else {
+                var retVal = [];
+                for (var r in rdr.rows)
+                    retVal.push(new Invoice().fromData(rdr.rows[r]));
+                return retVal;
+            }
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Retrieves all invoices
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {Invoices} The fetched invoice
      */
     async get(id, _txc) {
 
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
-            if(!_txc) await dbc.connect();
+            if (!_txc) await dbc.connect();
             const rdr = await dbc.query("SELECT * FROM invoices WHERE invoices.id = $1", [id]);
-            if(rdr.rows.length == 0)
+            if (rdr.rows.length == 0)
                 throw new exception.NotFoundException('invoice', id);
             else
                 return new model.Invoice().fromData(rdr.rows[0]);
         }
         finally {
-            if(!_txc) dbc.end();
+            if (!_txc) dbc.end();
         }
-
     }
 
     /**
@@ -75,18 +100,18 @@ const pg = require('pg'),
 
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
-            if(!_txc) await dbc.connect();
+            if (!_txc) await dbc.connect();
             const rdr = await dbc.query("SELECT * FROM invoices WHERE payor_id = $1", [userId]);
-            if(rdr.rows.length == 0)
+            if (rdr.rows.length == 0)
                 throw new exception.NotFoundException('invoices', userId);
             else
                 var retVal = [];
-                for (var r in rdr.rows)
-                    retVal.push(new Invoice().fromData(rdr.rows[r]));
-                return retVal;
+            for (var r in rdr.rows)
+                retVal.push(new Invoice().fromData(rdr.rows[r]));
+            return retVal;
         }
         finally {
-            if(!_txc) dbc.end();
+            if (!_txc) dbc.end();
         }
 
     }
@@ -95,55 +120,53 @@ const pg = require('pg'),
      * @method
      * @summary Update the specified invoice
      * @param {Invoice} invoice The instance of the invoice that is to be updated
-     * @param {Principal} runAs The principal that is updating this invoice 
      * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {Invoice} The updated invoice data from the database
      */
-    async update(invoice, runAs, _txc) {
+    async update(invoice, _txc) {
 
-        if(!invoice.id)
+        if (!invoice.id)
             throw new exception.Exception("Target object must carry an identifier", exception.ErrorCodes.ARGUMENT_EXCEPTION);
 
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
-            if(!_txc) await dbc.connect();
+            if (!_txc) await dbc.connect();
 
             var updateCmd = model.Utils.generateUpdate(invoice, 'invoices');
             const rdr = await dbc.query(updateCmd.sql, updateCmd.args);
-            if(rdr.rows.length == 0)
+            if (rdr.rows.length == 0)
                 throw new exception.Exception("Could not update invoice in data store", exception.ErrorCodes.DATA_ERROR);
             else
                 return invoice.fromData(rdr.rows[0]);
         }
         finally {
-            if(!_txc) dbc.end();
+            if (!_txc) dbc.end();
         }
     }
 
-    
+
     /**
      * @method
      * @summary Insert  the specified invoice
      * @param {Invoice} invoice The instance of the invoice that is to be inserted
-     * @param {Principal} runAs The principal that is inserting this invoice 
      * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {Invoice} The inserted invoice
      */
-    async insert(invoice, runAs, _txc) {
+    async insert(invoice, _txc) {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
-            if(!_txc) await dbc.connect();
+            if (!_txc) await dbc.connect();
             var dbInvoice = invoice.toData();
-            delete(dbInvoice.id);
+            delete (dbInvoice.id);
             var updateCmd = model.Utils.generateInsert(dbInvoice, 'invoices');
             const rdr = await dbc.query(updateCmd.sql, updateCmd.args);
-            if(rdr.rows.length == 0)
+            if (rdr.rows.length == 0)
                 throw new exception.Exception("Could not register invoice in data store", exception.ErrorCodes.DATA_ERROR);
             else
                 return invoice.fromData(rdr.rows[0]);
         }
         finally {
-            if(!_txc) dbc.end();
+            if (!_txc) dbc.end();
         }
     }
 
@@ -157,21 +180,21 @@ const pg = require('pg'),
      */
     async delete(invoiceId, runAs, _txc) {
 
-        if(!invoiceId)
+        if (!invoiceId)
             throw new exception.Exception("Target object must carry an identifier", exception.ErrorCodes.ARGUMENT_EXCEPTION);
 
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
-            if(!_txc) await dbc.connect();
+            if (!_txc) await dbc.connect();
 
             const rdr = await dbc.query("UPDATE invoices SET deactivation_time = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *", [invoiceId]);
-            if(rdr.rows.length == 0)
+            if (rdr.rows.length == 0)
                 throw new exception.Exception("Could not deactivate invoice in data store", exception.ErrorCodes.DATA_ERROR);
             else
                 return new model.Invoice().fromData(rdr.rows[0]);
         }
         finally {
-            if(!_txc)  dbc.end();
+            if (!_txc) dbc.end();
         }
 
     }

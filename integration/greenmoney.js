@@ -27,6 +27,15 @@ const request = require("request"),
 module.exports = class GreenMoney {
 
     /**
+     * @constructor
+     * @summary Runs the update balance timer
+     */
+    constructor() {
+        function autoupdate() { uhx.GreenMoney.updateAllInvoices(); }
+        setInterval(autoupdate, uhx.Config.greenMoney.updateTimer);
+    }
+
+    /**
     * @method
     * @summary Checks the status of an invoice with the Green Money API
     * @param {Number} userId The userId creating the invoice
@@ -42,7 +51,7 @@ module.exports = class GreenMoney {
 
         if (await uhx.GreenMoney.getUserLimit(userId) >= uhx.Config.greenMoney.invoiceLimit.creationLimit)
             return new exception.Exception("Too many recent invoices created", exception.ErrorCodes.RULES_VIOLATION, "RULES_VIOLATION");
-            
+
         // Request to Green Money
         var url = uhx.Config.greenMoney.baseUrl
             + 'OneTimeInvoice?Client_ID=' + uhx.Config.greenMoney.apiPassword.client_id
@@ -152,13 +161,12 @@ module.exports = class GreenMoney {
     * @method
     * @summary Updates the status of an invoice
     * @param {Invoice} invoice The invoice
-    * @param {SecurityPrincipal} principal The security principal
     */
-    async updateInvoice(invoice, principal) {
+    async updateInvoice(invoice) {
         switch (invoice.payment_status[0].paymentResult) {
             case "0":
                 invoice.status_desc = 'COMPLETE';
-                uhx.GreenMoney.updateBalance(invoice.payorId, invoice.amount, invoice.code, principal);
+                uhx.GreenMoney.updateBalance(invoice.payorId, invoice.amount, invoice.code);
                 console.log(`Invoice ${invoice.id} is now complete, adding ${invoice.amount} to ${invoice.payorId} USD balance.`);
                 break;
             case "1":
@@ -175,7 +183,7 @@ module.exports = class GreenMoney {
                 break;
         }
         invoice.status_code = invoice.payment_status[0].paymentResult;
-        await uhx.Repositories.invoiceRepository.update(invoice, principal);
+        await uhx.Repositories.invoiceRepository.update(invoice);
     }
 
     /**
@@ -193,7 +201,7 @@ module.exports = class GreenMoney {
                 // Check and update invoice statuses
                 for (var i = 0; i < invoices.length; i++) {
                     invoices[i].payment_status = await uhx.GreenMoney.checkInvoice(invoices[i].invoiceId);
-                    if (invoices[i].payment_status[0].paymentResult != invoices[i].status_code && invoices[i].status_code != "3") {
+                    if (invoices[i].payment_status[0].paymentResult != invoices[i].status_code && invoices[i].status_code != "0") {
                         await uhx.GreenMoney.updateInvoice(invoices[i], principal);
                     }
                 }
@@ -209,28 +217,65 @@ module.exports = class GreenMoney {
 
     /**
     * @method
+    * @summary Gets all invoices
+    * @returns All invoices
+    */
+    async getAllInvoices() {
+        return await uhx.Repositories.invoiceRepository.getAll();
+    }
+
+    /**
+    * @method
+    * @summary Check for updates
+    * @returns Updated invoices count
+    */
+    async updateAllInvoices() {
+
+        console.log("Updating invoices with Green Money");
+        try {
+            var invoices = await uhx.GreenMoney.getAllInvoices();
+            var updated = 0;
+            for (var i = 0; i < invoices.length; i++) {
+                invoices[i].payment_status = await uhx.GreenMoney.checkInvoice(invoices[i].invoiceId);
+                if (invoices[i].payment_status[0].paymentResult != invoices[i].status_code && invoices[i].status_code != "0") {
+                    await uhx.GreenMoney.updateInvoice(invoices[i]);
+                    updated = updated + 1;
+                }
+            }
+            console.log(`${updated} invoice(s) updated.`)
+            return updated;
+        }
+        catch (ex) {
+            return new exception.Exception("Error updating invoices.", exception.ErrorCodes.UNKNOWN, ex);
+            console.log("An error occurred while updating all invoices: " + ex);
+        }
+    }
+
+
+    /**
+    * @method
     * @summary Gets the count of invoices created today
     * @param {Number} userId The userId to lookup
     * @returns {Number} The count of invoices created today
     */
     async getUserLimit(userId) {
-        try{
-                // Gets all invoices from database
-                var invoices = await uhx.Repositories.invoiceRepository.getAllForUser(userId);
+        try {
+            // Gets all invoices from database
+            var invoices = await uhx.Repositories.invoiceRepository.getAllForUser(userId);
 
-                var invoiceCount = 0;
-                // Check for invoices created recently
-                for (var i = 0; i < invoices.length; i++) {
-                    var limitDate = new Date (new Date(invoices[i].creationTime).getTime() + uhx.Config.greenMoney.invoiceLimit.delayTime);
-                    if(limitDate > new Date()){
-                        invoiceCount++;
-                    }
+            var invoiceCount = 0;
+            // Check for invoices created recently
+            for (var i = 0; i < invoices.length; i++) {
+                var limitDate = new Date(new Date(invoices[i].creationTime).getTime() + uhx.Config.greenMoney.invoiceLimit.delayTime);
+                if (limitDate > new Date()) {
+                    invoiceCount++;
                 }
-                return invoiceCount;
+            }
+            return invoiceCount;
 
         }
         catch (ex) {
-            return new exception.Exception("Error getting invoice daily limit count.", exception.ErrorCodes.UNKNOWN, ex);
+            return new exception.Exception("Error getting invoice limit count.", exception.ErrorCodes.UNKNOWN, ex);
         }
     }
 
