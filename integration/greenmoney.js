@@ -94,7 +94,7 @@ module.exports = class GreenMoney {
 
                         // Inserting the invoice into the database
                         uhx.Repositories.invoiceRepository.insert(invoice, principal);
-
+                        console.log(`Invoice for ${userId} created successfully.`)
                         fulfill(retVal);
                     }
                 })
@@ -155,7 +155,8 @@ module.exports = class GreenMoney {
         switch (invoice.payment_status[0].paymentResult) {
             case "0":
                 invoice.status_desc = 'COMPLETE';
-                uhx.GreenMoney.updateBalance(invoice.payorId, invoice.amount, invoice.code, principal)
+                uhx.GreenMoney.updateBalance(invoice.payorId, invoice.amount, invoice.code, principal);
+                console.log(`Invoice ${invoice.id} is now complete, adding ${invoice.amount} to ${invoice.payorId} USD balance.`);
                 break;
             case "1":
                 invoice.status_desc = 'PROCESSING';
@@ -195,11 +196,11 @@ module.exports = class GreenMoney {
                 }
                 return invoices;
             } else {
-                return new exception.Exception("Error getting invoices.", exception.ErrorCodes.SECURITY_ERROR);
+                return new exception.Exception("Invalid security permissions.", exception.ErrorCodes.SECURITY_ERROR);
             }
         }
         catch (ex) {
-            return new exception.Exception("Error getting invoices: " + ex, exception.ErrorCodes.UNKNOWN);
+            return new exception.Exception("Error getting invoices.", exception.ErrorCodes.UNKNOWN, ex);
         }
     }
 

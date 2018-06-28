@@ -122,7 +122,7 @@ class InvoiceApiResource {
 
         var result = await uhx.GreenMoney.createInvoice(req.params.uid, req.body.amount, req.principal);
 
-        if(result)
+        if (result)
             var status = result instanceof exception.Exception ? 500 : 200;
 
         res.status(status).json(result);
@@ -170,9 +170,10 @@ class InvoiceApiResource {
         var invoices = await uhx.GreenMoney.getInvoicesForUser(req.params.uid, req.principal);
 
         if (invoices)
-            res.status(200).json(invoices);
-        else
-            res.status(500).json(new exception.Exception("Error getting invoices.", exception.ErrorCodes.UNKNOWN));
+            var status = invoices instanceof exception.Exception ? 500 : 200;
+
+        res.status(status).json(invoices);
+
         return true
     }
 
