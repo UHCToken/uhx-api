@@ -105,7 +105,7 @@ module.exports = class GreenMoney {
                         retVal.invoice = invoice;
 
                         // Inserting the invoice into the database
-                        uhx.Repositories.invoiceRepository.insert(invoice, principal);
+                        uhx.Repositories.invoiceRepository.insert(invoice);
                         console.log(`Invoice for ${userId} created successfully.`)
                         fulfill(retVal);
                     }
