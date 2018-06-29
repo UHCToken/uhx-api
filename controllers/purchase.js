@@ -147,6 +147,8 @@ class PurchaseApiResource {
         else if(!req.body.quantity)
             throw new exception.ArgumentException("quantity missing");
 
+        var status;
+
         req.body.buyerId = req.params.uid;
         var purchase = await uhx.TokenLogic.createPurchase(new Purchase().copy(req.body), req.principal);
         purchase.forEach(o=>{
@@ -156,8 +158,14 @@ class PurchaseApiResource {
                 o._payee = o.payee.summary();
             if(o.buyer)
                 o._buyer = o.buyer.summary();
+            if(o.memo == "ERR_NSF")
+                status = 500;
         })
-        res.status(201)
+
+        if (!status)
+            status = 201;
+
+        res.status(status)
             .set("Location", `${uhx.Config.api.scheme}://${uhx.Config.api.host}:${uhx.Config.api.port}${uhx.Config.api.base}/user/${req.params.uid}/purchase/${purchase.id}`)
             .json(purchase);
         return true;

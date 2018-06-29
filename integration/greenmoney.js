@@ -171,12 +171,15 @@ module.exports = class GreenMoney {
                 break;
             case "1":
                 invoice.status_desc = 'PROCESSING';
+                console.log(`Invoice ${invoice.id} is now proccessing.`);
                 break;
             case "2":
                 invoice.status_desc = 'DELETED';
+                console.log(`Invoice ${invoice.id} was deleted.`);
                 break;
             case "3":
                 invoice.status_desc = 'NOT STARTED';
+                console.log(`Invoice ${invoice.id} has not been started.`);
                 break;
             default:
                 res.status(500).json(new exception.Exception("Error updating invoice.", exception.ErrorCodes.UNKNOWN));
@@ -201,8 +204,8 @@ module.exports = class GreenMoney {
                 // Check and update invoice statuses
                 for (var i = 0; i < invoices.length; i++) {
                     invoices[i].payment_status = await uhx.GreenMoney.checkInvoice(invoices[i].invoiceId);
-                    if (invoices[i].payment_status[0].paymentResult != invoices[i].status_code && invoices[i].status_code != "0") {
-                        await uhx.GreenMoney.updateInvoice(invoices[i], principal);
+                    if (invoices[i].payment_status[0].paymentResult != invoices[i].status_code && invoices[i].status_code != "0" && invoices[i].status_code != "2") {
+                        await uhx.GreenMoney.updateInvoice(invoices[i]);
                     }
                 }
                 return invoices;
@@ -237,7 +240,7 @@ module.exports = class GreenMoney {
             var updated = 0;
             for (var i = 0; i < invoices.length; i++) {
                 invoices[i].payment_status = await uhx.GreenMoney.checkInvoice(invoices[i].invoiceId);
-                if (invoices[i].payment_status[0].paymentResult != invoices[i].status_code && invoices[i].status_code != "0") {
+                if (invoices[i].payment_status[0].paymentResult != invoices[i].status_code && invoices[i].status_code != "0" && invoices[i].status_code != "2") {
                     await uhx.GreenMoney.updateInvoice(invoices[i]);
                     updated = updated + 1;
                 }
@@ -298,7 +301,7 @@ module.exports = class GreenMoney {
     */
     async updateBalance(userId, amount, currency) {
         var balance = new Balance();
-        balance.id = userId;
+        balance.userId = userId;
         balance.amount = amount;
         balance.currency = currency;
         balance.creation_time = new Date();
@@ -307,12 +310,14 @@ module.exports = class GreenMoney {
             // Checks for an existing entry
             var userBalance = await uhx.GreenMoney.getBalance(userId, currency);
             if (userBalance) {
+                balance.id = userBalance.id;
                 var newAmount = parseFloat(balance.amount) + parseFloat(userBalance.amount);
                 if (newAmount < 0)
                     return new exception.Exception("Negative balance", exception.ErrorCodes.ArgumentException);
-                else
-                    balance.amount = newAmount;
-                var results = await uhx.Repositories.balanceRepository.update(balance);
+                else {
+                    balance.amount = newAmount.toString();
+                    var results = await uhx.Repositories.balanceRepository.update(balance);
+                }
             }
             else // Insert a new entry
                 var results = await uhx.Repositories.balanceRepository.insert(balance);

@@ -52,7 +52,7 @@ module.exports = class BalanceRepository {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if (!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM balances WHERE id = $1 AND currency = $2", [userId, currency]);
+            const rdr = await dbc.query("SELECT * FROM balances WHERE user_id = $1 AND currency = $2", [userId, currency]);
             if (rdr.rows.length == 0)
                 return null;
             else
@@ -76,7 +76,7 @@ module.exports = class BalanceRepository {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if (!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM balances WHERE id = $1", [userId]);
+            const rdr = await dbc.query("SELECT * FROM balances WHERE user_id = $1", [userId]);
             var retVal = rdr.rows.map(r => new model.Balance().fromData(r));
             return retVal;
         }
@@ -127,6 +127,7 @@ module.exports = class BalanceRepository {
         try {
             if (!_txc) await dbc.connect();
             var dbBalance = balance.toData();
+            delete (dbBalance.id);
             var updateCmd = model.Utils.generateInsert(dbBalance, 'balances');
             const rdr = await dbc.query(updateCmd.sql, updateCmd.args);
             if (rdr.rows.length == 0)
@@ -155,7 +156,7 @@ module.exports = class BalanceRepository {
         try {
             if (!_txc) await dbc.connect();
 
-            const rdr = await dbc.query("UPDATE balances SET deactivation_time = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *", [userId]);
+            const rdr = await dbc.query("UPDATE balances SET deactivation_time = CURRENT_TIMESTAMP WHERE user_id = $1 RETURNING *", [userId]);
             if (rdr.rows.length == 0)
                 throw new exception.Exception("Could not deactivate balance in data store", exception.ErrorCodes.DATA_ERROR);
             else

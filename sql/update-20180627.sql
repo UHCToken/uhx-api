@@ -17,13 +17,15 @@ CREATE TABLE IF NOT EXISTS invoices (
 );
 
 CREATE TABLE IF NOT EXISTS balances (
-    id uuid UNIQUE NOT NULL,
+    id uuid NOT NULL DEFAULT uuid_generate_v4(),
+    user_id uuid UNIQUE NOT NULL,
     amount NUMERIC(20, 2) NOT NULL,
     currency VARCHAR(6) NOT NULL,
     creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     deactivation_time TIMESTAMPTZ, 
     CONSTRAINT pk_balances PRIMARY KEY (id),
-    CONSTRAINT fk_user FOREIGN KEY (id) REFERENCES users(id)
+    CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(id)
 );
+
 INSERT INTO wallet_network VALUES (3, 'BITCOIN', 'btc');

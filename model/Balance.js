@@ -27,9 +27,12 @@ const ModelBase = require('./ModelBase'),
  * definitions:
  *  Balance:
  *      properties:
+ *          id:
+ *              type: string
+ *              description: The unique identifier for the balance
  *          user_id:
  *              type: string
- *              description: The unique identifier for the wallet in the UhX user database
+ *              description: The user the balance belongs to
  *          balance:
  *              type: number
  *              description: The balance of the currency type
@@ -56,6 +59,7 @@ module.exports = class Balance extends ModelBase {
      */
     fromData(dbBalance) {
         this.id = dbBalance.id;
+        this.userId = dbBalance.user_id;
         this.amount = dbBalance.amount;
         this.currency = dbBalance.currency;
         this.creationTime = dbBalance.creation_time;
@@ -71,6 +75,7 @@ module.exports = class Balance extends ModelBase {
     toData() {
         return {
             id : this.id,
+            user_id : this.userId,
             amount : this.amount,
             currency : this.currency
         };
@@ -83,6 +88,7 @@ module.exports = class Balance extends ModelBase {
     toJSON() {
         return {
             id : this.id,
+            userId : this.user_id,
             amount : this.amount,
             currency : this.currency
         }
