@@ -43,78 +43,86 @@ module.exports = class GreenMoney {
     * @param {SecurityPrincipal} principal The security principal
     */
     async createInvoice(userId, amount, principal) {
+        try {
+            if (principal._session.userId == userId && principal.grant["wallet"] && security.PermissionType.OWNER) {
 
-        var user = await uhx.Repositories.userRepository.get(userId);
+                var user = await uhx.Repositories.userRepository.get(userId);
 
-        if (user.address.country != 'US')
-            return new exception.Exception("Not available in your country", exception.ErrorCodes.NOT_SUPPORTED, "NOT_SUPPORTED");
+                if (user.address.country != 'US')
+                    return new exception.Exception("Not available in your country", exception.ErrorCodes.NOT_SUPPORTED, "NOT_SUPPORTED");
 
-        if (await uhx.GreenMoney.getUserLimit(userId) >= uhx.Config.greenMoney.invoiceLimit.creationLimit)
-            return new exception.Exception("Too many recent invoices created", exception.ErrorCodes.RULES_VIOLATION, "RULES_VIOLATION");
+                if (await uhx.GreenMoney.getUserLimit(userId) >= uhx.Config.greenMoney.invoiceLimit.creationLimit)
+                    return new exception.Exception("Too many recent invoices created", exception.ErrorCodes.RULES_VIOLATION, "RULES_VIOLATION");
 
-        // Request to Green Money
-        var url = uhx.Config.greenMoney.baseUrl
-            + 'OneTimeInvoice?Client_ID=' + uhx.Config.greenMoney.apiPassword.client_id
-            + '&ApiPassword=' + uhx.Config.greenMoney.apiPassword.password
-            + '&PayorName=' + encodeURI(user.givenName) + ' ' + encodeURI(user.familyName)
-            + '&EmailAddress=' + user.name
-            + '&ItemName=' + amount + ' USD Credit'
-            + '&ItemDescription=USD credit for UhX wallet (' + user.name + ')'
-            + '&Amount=' + amount
-            + '&PaymentDate=' + await uhx.GreenMoney.formatDate(new Date())
-            + '&x_delim_data=true&x_delim_char=,';
+                // Request to Green Money
+                var url = uhx.Config.greenMoney.baseUrl
+                    + 'OneTimeInvoice?Client_ID=' + uhx.Config.greenMoney.apiPassword.client_id
+                    + '&ApiPassword=' + uhx.Config.greenMoney.apiPassword.password
+                    + '&PayorName=' + encodeURI(user.givenName) + ' ' + encodeURI(user.familyName)
+                    + '&EmailAddress=' + user.name
+                    + '&ItemName=' + amount + ' USD Credit'
+                    + '&ItemDescription=USD credit for UhX wallet (' + user.name + ')'
+                    + '&Amount=' + amount
+                    + '&PaymentDate=' + await uhx.GreenMoney.formatDate(new Date())
+                    + '&x_delim_data=true&x_delim_char=,';
 
-        var retVal = {};
-        retVal.payor = user;
-        retVal.amount = amount;
+                var retVal = {};
+                retVal.payor = user;
+                retVal.amount = amount;
 
-        return new Promise((fulfill, reject) => {
-            request(url,
-                function (err, res, body) {
-                    if (err) {
-                        uhx.log.error(`HTTP ERR: ${err}`)
-                        reject(new exception.Exception("Error contacting GreenMoney API", exception.ErrorCodes.COM_FAILURE, err));
-                    }
-                    else if (res.statusCode == 200) {
-                        // Parsing the response
-                        var raw_data = res.body.split(',');
-                        var response = {};
-                        response.result = raw_data[0];
-                        response.resultDesc = raw_data[1];
-                        response.paymentResult = raw_data[2];
-                        response.paymentDesc = raw_data[3];
-                        response.invoiceId = raw_data[4];
-                        response.checkId = raw_data[5];
-                        retVal.response = response;
+                return new Promise((fulfill, reject) => {
+                    request(url,
+                        function (err, res, body) {
+                            if (err) {
+                                uhx.log.error(`HTTP ERR: ${err}`)
+                                reject(new exception.Exception("Error contacting GreenMoney API", exception.ErrorCodes.COM_FAILURE, err));
+                            }
+                            else if (res.statusCode == 200) {
+                                // Parsing the response
+                                var raw_data = res.body.split(',');
+                                var response = {};
+                                response.result = raw_data[0];
+                                response.resultDesc = raw_data[1];
+                                response.paymentResult = raw_data[2];
+                                response.paymentDesc = raw_data[3];
+                                response.invoiceId = raw_data[4];
+                                response.checkId = raw_data[5];
+                                retVal.response = response;
 
-                        if (response.result != "0")
-                            return new exception.Exception("Error creating invoice.", exception.ErrorCodes.Exception);
+                                if (response.result != "0")
+                                    return new exception.Exception("Error creating invoice.", exception.ErrorCodes.Exception);
 
-                        // Preparing invoice
-                        var invoice = new Invoice();
-                        invoice.amount = {};
-                        invoice.invoiceId = response.invoiceId;
-                        invoice.code = 'USD';
-                        invoice.amount = amount;
-                        invoice.creation_time = new Date();
-                        invoice.expiry = null;
-                        invoice.status_code = '3';
-                        invoice.status_desc = 'NOT STARTED';
-                        invoice.payor_id = userId;
+                                // Preparing invoice
+                                var invoice = new Invoice();
+                                invoice.amount = {};
+                                invoice.invoiceId = response.invoiceId;
+                                invoice.code = 'USD';
+                                invoice.amount = amount;
+                                invoice.creation_time = new Date();
+                                invoice.expiry = null;
+                                invoice.status_code = '3';
+                                invoice.status_desc = 'NOT STARTED';
+                                invoice.payor_id = userId;
 
-                        retVal.invoice = invoice;
+                                retVal.invoice = invoice;
 
-                        // Inserting the invoice into the database
-                        uhx.Repositories.invoiceRepository.insert(invoice);
-                        console.log(`Invoice for ${userId} created successfully.`)
-                        fulfill(retVal);
-                    }
-                })
-        });
+                                // Inserting the invoice into the database
+                                uhx.Repositories.invoiceRepository.insert(invoice);
+                                console.log(`Invoice for ${userId} created successfully.`)
+                                fulfill(retVal);
+                            }
+                        })
+                });
 
-        return retVal;
+                return retVal;
+            } else {
+                return new exception.Exception("Invalid security permissions.", exception.ErrorCodes.SECURITY_ERROR);
+            }
+        }
+        catch (ex) {
+            return new exception.Exception("Error creating invoice.", exception.ErrorCodes.UNKNOWN, ex);
+        }
     }
-
 
     /**
     * @method
@@ -174,8 +182,10 @@ module.exports = class GreenMoney {
                 console.log(`Invoice ${invoice.id} is now proccessing.`);
                 break;
             case "2":
+            case "":
                 invoice.status_desc = 'DELETED';
                 console.log(`Invoice ${invoice.id} was deleted.`);
+                invoice.payment_status[0].paymentResult = "2";
                 break;
             case "3":
                 invoice.status_desc = 'NOT STARTED';
@@ -202,13 +212,7 @@ module.exports = class GreenMoney {
                 var invoices = await uhx.Repositories.invoiceRepository.getAllForUser(userId);
 
                 // Check and update invoice statuses
-                for (var i = 0; i < invoices.length; i++) {
-                    invoices[i].payment_status = await uhx.GreenMoney.checkInvoice(invoices[i].invoiceId);
-                    if (invoices[i].payment_status[0].paymentResult != invoices[i].status_code && invoices[i].status_code != "0" && invoices[i].status_code != "2") {
-                        await uhx.GreenMoney.updateInvoice(invoices[i]);
-                    }
-                }
-                return invoices;
+                return uhx.GreenMoney.checkForUpdates(invoices);
             } else {
                 return new exception.Exception("Invalid security permissions.", exception.ErrorCodes.SECURITY_ERROR);
             }
@@ -220,6 +224,26 @@ module.exports = class GreenMoney {
 
     /**
     * @method
+    * @summary Checks and updates an array of invoices
+    * @param {Invoices} invoices An array of invoices
+    * @returns All invoices with updated statuses
+    */
+    async checkForUpdates(invoices) {
+        var updated = 0;
+        for (var i = 0; i < invoices.length; i++) {
+            if (invoices[i].status_code != "0" && invoices[i].status_code != "2") {
+                invoices[i].payment_status = await uhx.GreenMoney.checkInvoice(invoices[i].invoiceId);
+                if (invoices[i].payment_status[0].paymentResult != invoices[i].status_code) {
+                    await uhx.GreenMoney.updateInvoice(invoices[i]);
+                    updated = updated + 1;
+                }
+            }
+        }
+        console.log(`${updated} invoice(s) updated.`)
+        return (invoices);
+    }
+    /**
+    * @method
     * @summary Gets all invoices
     * @returns All invoices
     */
@@ -229,31 +253,22 @@ module.exports = class GreenMoney {
 
     /**
     * @method
-    * @summary Check for updates
-    * @returns Updated invoices count
+    * @summary Check for updates for all invoices
+    * @returns Invoices updated boolean
     */
     async updateAllInvoices() {
 
-        console.log("Updating invoices with Green Money");
+        console.log("Updating invoices with Green Money API");
         try {
             var invoices = await uhx.GreenMoney.getAllInvoices();
-            var updated = 0;
-            for (var i = 0; i < invoices.length; i++) {
-                invoices[i].payment_status = await uhx.GreenMoney.checkInvoice(invoices[i].invoiceId);
-                if (invoices[i].payment_status[0].paymentResult != invoices[i].status_code && invoices[i].status_code != "0" && invoices[i].status_code != "2") {
-                    await uhx.GreenMoney.updateInvoice(invoices[i]);
-                    updated = updated + 1;
-                }
-            }
-            console.log(`${updated} invoice(s) updated.`)
-            return updated;
+            invoices = uhx.GreenMoney.checkForUpdates(invoices);
+            return true;
         }
         catch (ex) {
             return new exception.Exception("Error updating invoices.", exception.ErrorCodes.UNKNOWN, ex);
             console.log("An error occurred while updating all invoices: " + ex);
         }
     }
-
 
     /**
     * @method
