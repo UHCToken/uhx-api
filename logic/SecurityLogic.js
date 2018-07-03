@@ -627,6 +627,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
     async sendConfirmationEmail(user, _txc) {
         try {
             var confirmToken = this.generateSignedClaimToken();
+            await uhx.Repositories.userRepository.deleteClaim(user.id, '$confirm.email');
             await uhx.Repositories.userRepository.addClaim(user.id, {
                 type: EMAIL_CONFIRM_CLAIM,
                 value: confirmToken,
@@ -657,6 +658,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
     async sendConfirmationSms(user, _txc) {
         try {
             var confirmToken = this.generateSignedClaimToken('tfa');
+            await uhx.Repositories.userRepository.deleteClaim(user.id, '$confirm.sms');
             await uhx.Repositories.userRepository.addClaim(user.id, {
                 type: SMS_CONFIRM_CLAIM,
                 value: confirmToken,
