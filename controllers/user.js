@@ -288,6 +288,8 @@ class UserApiResource {
             var balance = {};
             balance.code = 'USD';
             balance.value = usd.amount;
+            wallet.balances[0] = balance;
+            wallet.userId = usd.userId;
             user._wallets.push(wallet)
         }
 
