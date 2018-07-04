@@ -38,7 +38,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
   * @class
   * @summary Represents the core business logic of the UhX application
   */
- module.exports = class SecurityLogic {
+module.exports = class SecurityLogic {
 
     /**
      * @constructor
@@ -69,7 +69,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
     async authenticateClientApplication(clientId, clientSecret) {
         // Get the application and verify
         var application = await uhx.Repositories.applicationRepository.getByNameSecret(clientId, clientSecret);
-        if(application.deactivationTime)
+        if (application.deactivationTime)
             throw new exception.Exception("Application has been deactivated", exception.ErrorCodes.SECURITY_ERROR);
         await application.loadGrants();
         return new security.Principal(application);
@@ -93,17 +93,17 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
 
         try {
             var user = await uhx.Repositories.userRepository.getByNameSecret(username, password);
-            
+
             // User was successful but their account is still locked
-            if(!user)
+            if (!user)
                 throw new exception.Exception("Invalid username or password", exception.ErrorCodes.INVALID_ACCOUNT);
-            else if(user.lockout > new Date())
+            else if (user.lockout > new Date())
                 throw new exception.Exception("Account is locked", exception.ErrorCodes.ACCOUNT_LOCKED);
-            else if(user.deactivationTime && user.deactivationTime < new Date())
+            else if (user.deactivationTime && user.deactivationTime < new Date())
                 throw new exception.Exception("Account has been deactivated", exception.ErrorCodes.UNAUTHORIZED);
 
             var tfa = await user.loadTfaMethod();
-            if(tfa && !tfa_secret)  // SEND TFA code and FAIL login
+            if (tfa && !tfa_secret)  // SEND TFA code and FAIL login
             {
                 // Send code
                 await uhx.Repositories.transaction(async (_txc) => {
@@ -118,24 +118,24 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                 });
                 throw new exception.Exception("Account requires TFA code", exception.ErrorCodes.TFA_REQUIRED);
             }
-            else if(tfa) { // Verify the TFA
-                if(!await uhx.Repositories.userRepository.assertClaim(user.id, TFA_CLAIM, tfa_secret))
+            else if (tfa) { // Verify the TFA
+                if (!await uhx.Repositories.userRepository.assertClaim(user.id, TFA_CLAIM, tfa_secret))
                     throw new exception.Exception("Invalid TFA code", exception.ErrorCodes.TFA_FAILED);
             }
         }
-        catch(e) {
+        catch (e) {
             uhx.log.error("Error performing authentication: " + e.message);
 
             // TFA is required, this is not necessarily a login failure
-            if(e.code && e.code == exception.ErrorCodes.TFA_REQUIRED)
+            if (e.code && e.code == exception.ErrorCodes.TFA_REQUIRED)
                 throw e;
 
             // Attempt to increment the invalid login count
             var invalidUser = await uhx.Repositories.userRepository.incrementLoginFailure(username, uhx.Config.security.maxFailedLogin);
-            
-            if(invalidUser && invalidUser.lockout) 
+
+            if (invalidUser && invalidUser.lockout)
                 throw new exception.Exception("Account is locked", exception.ErrorCodes.ACCOUNT_LOCKED, e);
-            else if(e.code == exception.ErrorCodes.NOT_FOUND)
+            else if (e.code == exception.ErrorCodes.NOT_FOUND)
                 throw new exception.Exception("Invalid username or password", exception.ErrorCodes.INVALID_ACCOUNT);
 
             throw e;
@@ -146,9 +146,9 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
             var session = await uhx.Repositories.transaction(async (_txc) => {
                 user.invalidLogins = 0;
                 user.lastLogin = new Date();
-                
+
                 await uhx.Repositories.userRepository.update(user);
-    
+
                 // Create the session object
                 var ses = new model.Session(user, application, scope, uhx.Config.security.sessionLength, remote_ip);
                 return await uhx.Repositories.sessionRepository.insert(ses);
@@ -156,7 +156,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
             await session.loadGrants();
             return new security.Principal(session);
         }
-        catch(e) {
+        catch (e) {
             uhx.log.error("Error finalizing authentication: " + e.message);
             throw new exception.Exception("Error finalizing authentication", exception.ErrorCodes.SECURITY_ERROR, e);
         }
@@ -177,43 +177,42 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
             var success = false;
             // Now we want to do one of two things, first: 
             // If the code is a 9 digit short code, principal must be a user 
-            if(code.length == 9 && !await principal.session.loadUser())
+            if (code.length == 9 && !await principal.session.loadUser())
                 throw new exception.Exception("Short codes can only be verified from an existing principal", exception.ErrorCodes.ARGUMENT_EXCEPTION);
-            else if(code.length == 9) { // 9 digit assertion - we want to verify
-                 success = await uhx.Repositories.transaction(async (_txc) => {
-                     // Email confirmation code
-                    if(await uhx.Repositories.userRepository.assertClaim(principal.session.userId, EMAIL_CONFIRM_CLAIM, code, _txc)) // code is an email confirm claim
+            else if (code.length == 9) { // 9 digit assertion - we want to verify
+                success = await uhx.Repositories.transaction(async (_txc) => {
+                    // Email confirmation code
+                    if (await uhx.Repositories.userRepository.assertClaim(principal.session.userId, EMAIL_CONFIRM_CLAIM, code, _txc)) // code is an email confirm claim
                     {
-                        await uhx.Repositories.userRepository.update(new User().copy({id: principal.session.userId, emailVerified: true}), null, principal, _txc);
+                        await uhx.Repositories.userRepository.update(new User().copy({ id: principal.session.userId, emailVerified: true }), null, principal, _txc);
                         await uhx.Repositories.userRepository.deleteClaim(principal.session.userId, EMAIL_CONFIRM_CLAIM, _txc);
                         return true;
                     }
                     // SMS confirmation code
-                    else if(await uhx.Repositories.userRepository.assertClaim(principal.session.userId, SMS_CONFIRM_CLAIM, code, _txc))
-                    {
-                        await uhx.Repositories.userRepository.update(new User().copy({id: principal.session.userId, telVerified: true}), null, principal, _txc);
+                    else if (await uhx.Repositories.userRepository.assertClaim(principal.session.userId, SMS_CONFIRM_CLAIM, code, _txc)) {
+                        await uhx.Repositories.userRepository.update(new User().copy({ id: principal.session.userId, telVerified: true }), null, principal, _txc);
                         await uhx.Repositories.userRepository.deleteClaim(principal.session.userId, SMS_CONFIRM_CLAIM, _txc);
                         return true;
                     }
                     else
                         return false;
-                 });
+                });
             }
             else  // Confirm e-mail anonymously
                 success = await uhx.Repositories.transaction(async (_txc) => {
                     var user = await uhx.Repositories.userRepository.getByClaim(EMAIL_CONFIRM_CLAIM, code, _txc);
-                    if(user.length > 0) {
+                    if (user.length > 0) {
                         user[0].emailVerified = true;
                         await uhx.Repositories.userRepository.update(user[0], null, principal, _txc);
                         return true;
                     }
                     return false;
                 });
-            
+
             // Outcome?
-            if(!success)
+            if (!success)
                 throw new exception.Exception("Could not verify contact information. Token appears to be invalid", exception.ErrorCodes.RULES_VIOLATION);
-            
+
         }
         catch (e) {
             uhx.log.error(`Error confirming contact information: ${e.message}`);
@@ -230,14 +229,14 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
     async establishClientSession(clientPrincipal, scope, remoteAddr) {
 
         try {
- 
+
             var nilUser = await uhx.Repositories.userRepository.get("00000000-0000-0000-0000-000000000000");
             var session = new model.Session(nilUser, clientPrincipal._session.application, scope, uhx.Config.security.sessionLength, remoteAddr);
             session = await uhx.Repositories.sessionRepository.insert(session);
             await session.loadGrants();
             return new security.Principal(session);
         }
-        catch(e) {
+        catch (e) {
             uhx.log.error("Error finalizing client authentication " + e.message);
             throw new exception.Exception("Error finalizing authentication", exception.ErrorCodes.SECURITY_ERROR, e);
         }
@@ -255,15 +254,15 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
         // Ensure that the application information is loaded
         await clientPrincipal.session.loadApplication();
         var application = clientPrincipal.session.application;
-    
+
         try {
             var session = await uhx.Repositories.transaction(async (_txc) => {
 
                 // Get session
                 var session = await uhx.Repositories.sessionRepository.getByRefreshToken(refreshToken, uhx.Config.security.refreshValidity, _txc);
-                if(session == null)
+                if (session == null)
                     throw new exception.Exception("Invalid refresh token", exception.ErrorCodes.SECURITY_ERROR);
-                else if(session.applicationId != application.id)
+                else if (session.applicationId != application.id)
                     throw new exception.Exception("Refresh must be performed by originator", exception.ErrorCodes.SECURITY_ERROR);
                 // Abandon the existing session
                 await uhx.Repositories.sessionRepository.abandon(session.id, _txc);
@@ -274,15 +273,15 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                     null,
                     _txc
                 );
-                
-            }); 
-        
+
+            });
+
             await session.loadGrants();
             await session.loadUser();
             uhx.log.info(`Session ${session.id} was successfully refreshed`);
             return new security.Principal(session);
         }
-        catch(e) {
+        catch (e) {
             uhx.log.error("Error refreshing session: " + e.message);
             throw new exception.Exception("Error refreshing session", exception.ErrorCodes.SECURITY_ERROR, e);
         }
@@ -304,17 +303,16 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
             await uhx.Repositories.transaction(async (_txc) => {
                 var user = await uhx.Repositories.userRepository.getByClaim(PASSWORD_RESET_CLAIM, code, _txc);
                 this.validateUser(user, newPassword);
-                if(user.length == 0)
+                if (user.length == 0)
                     throw new exception.Exception("Invalid reset token", exception.ErrorCodes.SECURITY_ERROR);
-                else  {
+                else {
                     user[0].lockout = null;
                     user[0].invalidLogins = 0;
                     await uhx.Repositories.userRepository.update(user[0], newPassword, _txc);
                     await uhx.Repositories.userRepository.deleteClaim(user[0].id, PASSWORD_RESET_CLAIM, _txc);
                 }
                 // Notify the user that their password has been reset
-                if(user[0].emailVerified && user[0].email) 
-                {
+                if (user[0].emailVerified && user[0].email) {
                     await uhx.Mailer.sendEmail({
                         template: uhx.Config.mail.templates.passwordChange,
                         to: user[0].email,
@@ -322,8 +320,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                         subject: "Your UhX password has been reset!"
                     }, { user: user[0] });
                 }
-                else if(user[0].telVerified && user[0].tel)
-                {
+                else if (user[0].telVerified && user[0].tel) {
                     await uhx.Mailer.sendSms({
                         to: user[0].tel,
                         template: uhx.Config.mail.templates.passwordChange
@@ -331,7 +328,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                 }
             });
         }
-        catch(e) {
+        catch (e) {
             uhx.log.error(`Error resetting password: ${e.message}`);
             throw new exception.Exception("Error resetting password", e.code || exception.ErrorCodes.UNKNOWN, e);
         }
@@ -348,11 +345,11 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
 
         try {
 
-            await uhx.Repositories.transaction(async (_txc)=>{
+            await uhx.Repositories.transaction(async (_txc) => {
 
                 // Get the user
-                var users = await uhx.Repositories.userRepository.query(new User().copy({email: email, tel: tel}), 0, 1, null, _txc);
-                if(users.length == 0)
+                var users = await uhx.Repositories.userRepository.query(new User().copy({ email: email, tel: tel }), 0, 1, null, _txc);
+                if (users.length == 0)
                     return null;
                 var user = users[0];
                 // Cancel any current claim the user has for reset
@@ -367,14 +364,14 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                 });
 
                 // Generate e-mail 
-                    var options = {
-                        to: email,
-                        from: uhx.Config.mail.from,
-                        subject: "Reset your UhX password",
-                        template: uhx.Config.mail.templates.resetPassword
-                    };
-                    await uhx.Mailer.sendEmail(options, { user: user, token: claimToken, ui_base: uhx.Config.api.ui_base });
-                
+                var options = {
+                    to: email,
+                    from: uhx.Config.mail.from,
+                    subject: "Reset your UhX password",
+                    template: uhx.Config.mail.templates.resetPassword
+                };
+                await uhx.Mailer.sendEmail(options, { user: user, token: claimToken, ui_base: uhx.Config.api.ui_base });
+
                 /*else if(tel)
                     throw new exception.NotImplementedException("SMS password resets are disabled");*/
                 // else if(tel && user.telVerified) {
@@ -384,7 +381,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                 //     };
                 //     await uhx.Mailer.sendSms(options, { user: user, token: claimToken, ui_base: uhx.Config.api.ui_base });
                 // }
-                
+
             });
 
         }
@@ -405,7 +402,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
 
         // First we register the user in our DB
         try {
-                
+
             // Validate the user
             this.validateUser(user, password);
             await uhx.Repositories.transaction(async (_txc) => {
@@ -420,37 +417,37 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                 strWallet = await uhx.Repositories.walletRepository.insert(strWallet, principal, _txc);
 
                 // Ethereum 
-                if(uhx.Config.ethereum.enabled && false){
+                if (uhx.Config.ethereum.enabled && false) {
                     var web3Client = uhx.Web3Client;
                     var ethWallet = await web3Client.generateAccount()
                     ethWallet.userId = retVal.id;
                     ethWallet = await uhx.Repositories.walletRepository.insert(ethWallet, principal, _txc);
                     await web3Client.getBalance(ethWallet)
                 }
-                if(uhx.Config.bitcoin.enabled){
+                if (uhx.Config.bitcoin.enabled) {
                     var bitcoinClient = uhx.BitcoinClient;
-                    var btcWallet = await bitcoinClient.generateAccount(retVal.id); 
+                    var btcWallet = await bitcoinClient.generateAccount(retVal.id);
                     btcWallet = await uhx.Repositories.walletRepository.insert(btcWallet, principal, _txc);
                 }
 
-                if(isInvited){
+                if (isInvited) {
                     var initiatorWallet = await uhx.Repositories.walletRepository.get(uhx.Config.stellar.initiator_wallet_id);
                     await stellarClient.activateAccount(strWallet, "2", initiatorWallet)
                 }
 
                 // Add user
                 await uhx.Repositories.groupRepository.addUser(uhx.Config.security.sysgroups.users, retVal.id, principal, _txc);
-                if(!user.emailVerified ){
+                if (!user.emailVerified) {
                     await this.sendConfirmationEmail(user, _txc);
                 }
-                if(user.tel && !user.telVerified)
+                if (user.tel && !user.telVerified)
                     await this.sendConfirmationSms(user, _txc);
                 return retVal;
             });
 
             return user;
         }
-        catch(e) {
+        catch (e) {
             uhx.log.error("Error finalizing authentication: " + e.message);
             throw new exception.Exception("Error registering user", exception.ErrorCodes.UNKNOWN, e);
         }
@@ -466,16 +463,16 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
         try {
 
             return await uhx.Repositories.transaction(async (_txc) => {
-                
+
                 // Create stellar client
                 var stellarClient = uhx.StellarClient;
-                
+
                 // Verify user
                 var user = await uhx.Repositories.userRepository.get(userId, _txc);
 
                 // Does user already have wallet?
                 var wallet = await user.loadStellarWallet();
-                if(!wallet) { // Generate a KP
+                if (!wallet) { // Generate a KP
                     // Create a wallet
                     var wallet = await stellarClient.generateAccount();
                     // Insert 
@@ -486,12 +483,12 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                 }
 
                 // Activate wallet if not already active
-                if(!stellarClient.isActive(wallet))
-                    await stellarClient.activateAccount(wallet, "1",  await uhx.Repositories.walletRepository.get(uhx.Config.stellar.initiator_wallet_id));
+                if (!stellarClient.isActive(wallet))
+                    await stellarClient.activateAccount(wallet, "1", await uhx.Repositories.walletRepository.get(uhx.Config.stellar.initiator_wallet_id));
                 return wallet;
             });
         }
-        catch(e) {
+        catch (e) {
             uhx.log.error("Error finalizing authentication: " + e.message);
             throw new exception.Exception("Error creating waller user", exception.ErrorCodes.UNKNOWN, e);
         }
@@ -521,6 +518,17 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
     async updateUser(user, newPassword) {
         try {
 
+            // Delete fields which can't be set by clients 
+            delete (user.invalidLogins);
+            delete (user.lastLogin);
+            delete (user.lockout);
+            delete (user.walletId);
+            delete (user.email);
+            delete (user.telVerified);
+            delete (user.emailVerified);
+            if (user.address)
+                delete (user.address);
+
             // Validate the user
             this.validateUser(user, newPassword);
 
@@ -529,17 +537,14 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                 // Get existing user
                 var existingUser = await uhx.Repositories.userRepository.get(user.id);
 
-                // Delete fields which can't be set by clients 
-                delete(user.walletId);
-
                 // Was the user's e-mail address verified? 
-                if(newPassword) {
-                    if(existingUser.telVerified && existingUser.tel)
+                if (newPassword) {
+                    if (existingUser.telVerified && existingUser.tel)
                         await uhx.Mailer.sendSms({
                             to: existingUser.tel,
                             template: uhx.Config.mail.templates.passwordChange
                         }, { user: existingUser });
-                    else if(existingUser.emailVerified && existingUser.email)
+                    else if (existingUser.emailVerified && existingUser.email)
                         await uhx.Mailer.sendEmail({
                             to: existingUser.tel,
                             from: uhx.Config.mail.from,
@@ -547,7 +552,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                             subject: "Did you change your UhX password?"
                         }, { user: existingUser });
                 }
-                if(user.tel && existingUser.telVerified && existingUser.tel != user.tel) {
+                if (user.tel && existingUser.telVerified && existingUser.tel != user.tel) {
 
                     await uhx.Mailer.sendSms({
                         to: existingUser.tel,
@@ -559,19 +564,19 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                     user.telVerified = false;
                     user.tfaMethod = '0';
                 }
-                if(user.tel && !user.telVerified) {
+                if (user.tel && !user.telVerified) {
                     user.givenName = user.givenName || existingUser.givenName;
                     user.familyName = user.familyName || existingUser.familyName;
                     await this.sendConfirmationSms(user);
                 }
-                if(user.email && existingUser.emailVerified && existingUser.email != user.email) {
+                if (user.email && existingUser.emailVerified && existingUser.email != user.email) {
 
                     var undoToken = this.generateSignedClaimToken();
                     await uhx.Repositories.userRepository.addClaim(user.id, {
                         type: PASSWORD_RESET_CLAIM,
                         value: undoToken,
                         expiry: new Date(new Date().getTime() + uhx.Config.security.resetValidity)
-                     }, _txc);
+                    }, _txc);
 
                     // We want to send an e-mail to the previous e-mail address notifying the user of the change
                     await uhx.Mailer.sendEmail({
@@ -585,19 +590,18 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                     await this.sendConfirmationEmail(user);
                     user.emailVerified = false;
                 }
-                if(user.tfaMethod && user.tfaMethod != existingUser.tfaMethod) {
+                if (user.tfaMethod && user.tfaMethod != existingUser.tfaMethod) {
                     // Confirm to user that TFA was set
-                    if(user.tfaMethod == 1)
-                    {
-                        if(!existingUser.telVerified)
+                    if (user.tfaMethod == 1) {
+                        if (!existingUser.telVerified)
                             throw new exception.BusinessRuleViolationException(new exception.RuleViolation("SMS Two-Factor requires a verified phone number", exception.ErrorCodes.RULES_VIOLATION, exception.RuleViolationSeverity.ERROR));
                         await uhx.Mailer.sendSms({
                             to: existingUser.tel,
                             template: uhx.Config.mail.templates.tfaChange
                         }, { old: existingUser, new: user, token: undoToken, ui_base: uhx.Config.api.ui_base });
                     }
-                    else if(user.tfaMethod == 2) {
-                        if(!existingUser.emailVerified)
+                    else if (user.tfaMethod == 2) {
+                        if (!existingUser.emailVerified)
                             throw new exception.BusinessRuleViolationException(new exception.RuleViolation("E-Mail Two-Factor requires a verified e-mail address", exception.ErrorCodes.RULES_VIOLATION, exception.RuleViolationSeverity.ERROR));
                         await uhx.Mailer.sendEmail({
                             to: existingUser.email,
@@ -612,7 +616,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
 
             });
         }
-        catch(e) {
+        catch (e) {
             uhx.log.error("Error updating user: " + e.message);
             throw new exception.Exception("Error updating user", exception.ErrorCodes.UNKNOWN, e);
         }
@@ -643,7 +647,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
             }, { user: user, token: confirmToken, ui_base: uhx.Config.api.ui_base });
 
         }
-        catch(e) {
+        catch (e) {
             uhx.log.error(`Error sending confirmation e-mail: ${JSON.stringify(e)}`);
             throw e;
         }
@@ -672,7 +676,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
             }, { user: user, token: confirmToken, ui_base: uhx.Config.api.ui_base });
 
         }
-        catch(e) {
+        catch (e) {
             uhx.log.error(`Error sending confirmation sms: ${JSON.stringify(e)}`);
             throw e;
         }
@@ -689,19 +693,19 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
     validateUser(user, password) {
 
         var ruleViolations = [];
-        if(user.name && !new RegExp(uhx.Config.security.username_regex).test(user.name))
+        if (user.name && !new RegExp(uhx.Config.security.username_regex).test(user.name))
             ruleViolations.push(new exception.RuleViolation("Username format invalid", exception.ErrorCodes.INVALID_NAME, exception.RuleViolationSeverity.ERROR));
-        if(user.email && !new RegExp(uhx.Config.security.email_regex).test(user.email))
+        if (user.email && !new RegExp(uhx.Config.security.email_regex).test(user.email))
             ruleViolations.push(new exception.RuleViolation("Email format invalid", exception.ErrorCodes.INVALID_NAME, exception.RuleViolationSeverity.ERROR));
-        if(password && !new RegExp(uhx.Config.security.password_regex).test(password))
+        if (password && !new RegExp(uhx.Config.security.password_regex).test(password))
             ruleViolations.push(new exception.RuleViolation("Password does not meet complexity requirements", exception.ErrorCodes.PASSWORD_COMPLEXITY, exception.RuleViolationSeverity.ERROR));
-        if(user.givenName && !new RegExp(uhx.Config.security.name_regex).test(user.givenName))
+        if (user.givenName && !new RegExp(uhx.Config.security.name_regex).test(user.givenName))
             ruleViolations.push(new exception.RuleViolation("Given name format is invalid", exception.ErrorCodes.INVALID_NAME, exception.RuleViolationSeverity.ERROR));
-        if(user.familyName && !new RegExp(uhx.Config.security.name_regex).test(user.familyName))
+        if (user.familyName && !new RegExp(uhx.Config.security.name_regex).test(user.familyName))
             ruleViolations.push(new exception.RuleViolation("Family name format is invalid", exception.ErrorCodes.INVALID_NAME, exception.RuleViolationSeverity.ERROR));
-        if(ruleViolations.length > 0)
+        if (ruleViolations.length > 0)
             throw new exception.BusinessRuleViolationException(ruleViolations);
-        
+
         return true;
     }
 
@@ -735,7 +739,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
             return await uhx.Repositories.transaction(async (_txc) => {
 
                 // Insert the user and assign to user group
-                
+
 
                 // Now we want to claim the token
                 var newUser = await this.registerInternalUser(user, initialPassword, principal, true)
@@ -744,7 +748,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
 
                 await uhx.Repositories.invitationRepository.claim(invitation.id, newUser, _txc);
 
-                
+
                 // Now we want to notify the user
                 var sendOptions = {
                     to: newUser.email,
@@ -752,14 +756,14 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                     subject: "Welcome to the UhX community!",
                     template: uhx.Config.mail.templates.welcome
                 };
-                
+
 
                 // Replacements
                 const replacements = {
                     user: newUser,
                     ui_base: uhx.Config.api.ui_base
                 }
-                
+
                 await uhx.Mailer.sendEmail(sendOptions, replacements);
 
                 // Return the user
@@ -767,7 +771,7 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
             });
 
         }
-        catch(e) {
+        catch (e) {
             uhx.log.error(`Error claiming invitation: ${JSON.stringify(e)}`);
             throw new exception.Exception("Error claiming invitation", e.code || exception.ErrorCodes.UNKNOWN, e);
         }
@@ -780,16 +784,16 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
      */
     validateSignedClaimToken(token) {
 
-        if(token.length == 9) { // 9 code numeric with mod 10
-            var mod = (token.substring(0, 8).split('').reduce((a,b)=>parseInt(a)+parseInt(b)) % 10);
-            if(mod != token[token.length - 1])
+        if (token.length == 9) { // 9 code numeric with mod 10
+            var mod = (token.substring(0, 8).split('').reduce((a, b) => parseInt(a) + parseInt(b)) % 10);
+            if (mod != token[token.length - 1])
                 throw new exception.Exception("Token has failed validation", exception.ErrorCodes.SECURITY_ERROR);
         }
         else {
             var tokenParts = token.split(".");
-            if(tokenParts.length != 2)
+            if (tokenParts.length != 2)
                 throw new exception.ArgumentException("code");
-            else if(tokenParts[1] != crypto.createHmac('sha256', uhx.Config.security.hmac256secret).update(tokenParts[0]).digest('hex'))
+            else if (tokenParts[1] != crypto.createHmac('sha256', uhx.Config.security.hmac256secret).update(tokenParts[0]).digest('hex'))
                 throw new exception.Exception("Token signature does not match", exception.ErrorCodes.SECURITY_ERROR);
         }
     }
@@ -801,22 +805,22 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
      * @returns {string} The generated and signed claim token
      */
     generateSignedClaimToken(type) {
-        switch(type) {
+        switch (type) {
             case "tfa": // Generate a random 6 byte string which may or may not be unique
-            {
-                var token = "";
-                var bytes = crypto.randomBytes(8);
-                bytes.forEach((o)=>{ token += o % 10 });
-                token += (token.split('').reduce((a,b)=>parseInt(a)+parseInt(b)) % 10);
-                return token;
-            }
+                {
+                    var token = "";
+                    var bytes = crypto.randomBytes(8);
+                    bytes.forEach((o) => { token += o % 10 });
+                    token += (token.split('').reduce((a, b) => parseInt(a) + parseInt(b)) % 10);
+                    return token;
+                }
             case "8byte": // a shorter 8 byte code
-            {
-                var token = crypto.randomBytes(8).toString('hex');
-                
-                var sig = crypto.createHmac('sha256', uhx.Config.security.hmac256secret).update(token).digest('hex');
-                return token + "." + sig;
-            }                
+                {
+                    var token = crypto.randomBytes(8).toString('hex');
+
+                    var sig = crypto.createHmac('sha256', uhx.Config.security.hmac256secret).update(token).digest('hex');
+                    return token + "." + sig;
+                }
             default: {
                 var token = crypto.randomBytes(32).toString('hex');
                 var sig = crypto.createHmac('sha256', uhx.Config.security.hmac256secret).update(token).digest('hex');
@@ -838,9 +842,9 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
             var claimToken = this.generateSignedClaimToken();
 
             // Verify e-mail address is properly formatted
-            if(!invitation.email || !new RegExp(uhx.Config.security.email_regex).test(invitation.email))
+            if (!invitation.email || !new RegExp(uhx.Config.security.email_regex).test(invitation.email))
                 throw new exception.ArgumentException("email");
-            if(!uhx.Config.security.invitations.enabled)
+            if (!uhx.Config.security.invitations.enabled)
                 throw new exception.Exception("Invitations are disabled on this server", exception.ErrorCodes.UNAUTHORIZED);
 
             // Insert the invitation
@@ -859,9 +863,9 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
 
                 // Replacements
                 const replacements = {
-                    invitation:invitation,
+                    invitation: invitation,
                     claimToken: claimToken,
-                    sender: clientPrincipal.session.userId != "00000000-0000-0000-0000-000000000000" ? (await clientPrincipal.session.loadUser()).name : (await clientPrincipal.session.loadApplication()).name, 
+                    sender: clientPrincipal.session.userId != "00000000-0000-0000-0000-000000000000" ? (await clientPrincipal.session.loadUser()).name : (await clientPrincipal.session.loadApplication()).name,
                     ui_base: uhx.Config.api.ui_base
                 }
 
@@ -869,10 +873,10 @@ const PASSWORD_RESET_CLAIM = "$reset.password",
                 return invitation;
             });
         }
-        catch(e) {
+        catch (e) {
             uhx.log.error(`Error finalizing invitation: ${e.message}`);
             throw new exception.Exception("Error finalizing invitation", e.code || exception.ErrorCodes.UNKNOWN, e);
         }
     }
 
- }
+}

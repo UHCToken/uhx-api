@@ -338,7 +338,8 @@ const uhx = require('../uhx'),
         for(var k in this._claims){
             if(!k.startsWith("$"))
                 retVal.claims[k] = this._claims[k];
-            retVal.claims.activeClaims = true;
+            if(k != "$tfa.secret")
+                retVal.claims.activeClaims = true;
         }
         retVal.groups = this._groups;
         return retVal;
