@@ -90,6 +90,7 @@ module.exports = class Wallet extends ModelBase {
         this.networkId = dbWallet.network_id;
         this.network = dbWallet.network;
         this._symbol = dbWallet.symbol;
+        this.deactivationTime = dbWallet.deactivation_time;
         return this;
     }
 

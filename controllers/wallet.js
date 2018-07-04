@@ -234,7 +234,10 @@ class WalletApiResource {
      *          - "write:wallet"
      */
     async delete(req, res) {
-        res.status(201).json(await uhx.Repositories.walletRepository.deleteByUserId(req.params.uid));
+        var retVal = [];
+        retVal.push(await uhx.Repositories.balanceRepository.delete(req.params.uid));
+        retVal.push(await uhx.Repositories.walletRepository.deleteByUserId(req.params.uid));
+        res.status(201).json(retVal);
         return true;
     }
 

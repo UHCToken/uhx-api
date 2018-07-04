@@ -313,7 +313,7 @@ const pg = require('pg'),
         try {
             if(!_txc) await dbc.connect();
 
-            const rdr = await dbc.query("UPDATE wallet SET deactivation_time = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *", [walletId]);
+            const rdr = await dbc.query("UPDATE wallets SET deactivation_time = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *", [walletId]);
             if(rdr.rows.length == 0)
                 throw new exception.Exception("Could not deactivate wallet in data store", exception.ErrorCodes.DATA_ERROR);
             else
@@ -342,16 +342,19 @@ const pg = require('pg'),
         try {
             if(!_txc) {
                 await dbc.connect();
-                await dbc.query("BEGIN TRANSACTION");
+                //await dbc.query("BEGIN TRANSACTION");
             }
 
-            const rdr = await dbc.query("UPDATE wallet SET deactivation_time = CURRENT_TIMESTAMP WHERE id IN (SELECT wallet_id FROM users WHERE id = $1) RETURNING *", [userId]);
+            const rdr = await dbc.query("UPDATE wallets SET deactivation_time = CURRENT_TIMESTAMP WHERE user_id = $1 RETURNING *", [userId]);
             if(rdr.rows.length == 0)
                 throw new exception.Exception("Could not deactivate wallet in data store", exception.ErrorCodes.DATA_ERROR);
             else {
-                var retVal = new model.Wallet().fromData(rdr.rows[0]);
-                await dbc.query("UPDATE users SET wallet_id = NULL WHERE id = $1", [userId]); // Remove association
-                await dbc.query("COMMIT");
+                var retVal = [];
+                for(var i = 0; i < rdr.rows.length; i++){
+                    retVal[i] = new model.Wallet().fromData(rdr.rows[i]);
+                }
+                //await dbc.query("UPDATE users SET wallet_id = NULL WHERE id = $1", [userId]); // Remove association
+                //await dbc.query("COMMIT");
                 return retVal;
             }
         }
