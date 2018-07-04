@@ -158,8 +158,10 @@ class PurchaseApiResource {
                 o._payee = o.payee.summary();
             if(o.buyer)
                 o._buyer = o.buyer.summary();
-            if(o.memo == "ERR_NSF")
+            if(o.memo == "ERR_NSF"){
                 status = 500;
+                purchase = new exception.Exception("Insufficient funds for this purchase.", exception.ErrorCodes.INSUFFICIENT_FUNDS);
+            }
         })
 
         if (!status)
