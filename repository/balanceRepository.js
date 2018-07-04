@@ -102,7 +102,7 @@ module.exports = class BalanceRepository {
         try {
             if (!_txc) await dbc.connect();
 
-            var updateCmd = model.Utils.generateUpdate(balance, 'balances');
+            var updateCmd = model.Utils.generateUpdate(balance, 'balances', 'updated_time');
             const rdr = await dbc.query(updateCmd.sql, updateCmd.args);
             if (rdr.rows.length == 0)
                 throw new exception.Exception("Could not update balance in data store", exception.ErrorCodes.DATA_ERROR);

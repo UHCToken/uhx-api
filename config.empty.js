@@ -113,7 +113,7 @@ module.exports = {
         /**
          * @summary The validation regex for user passwords
          */
-        password_regex: /^(?=.*[A-Za-z])(?=.*[0-9])(?=.*[~`!@#$%^&*()-_=+{}[\];:'"|\\/.><,]).{8,}$/,
+        password_regex: /^(?=.*[A-Za-z])(?=.*[0-9])(?=.*[~`!@#$%^&*()\-_=+{}[\];:'"|\\/.><,]).{8,}$/,
         /**
          * @summary The validation regex for usernames following RFC2822 regex for e-mails
          */
