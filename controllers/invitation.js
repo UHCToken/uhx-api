@@ -169,7 +169,8 @@ class InvitationApiResource {
      *          - "list:invitation"
     */
     async getAll(req, res) {
-        throw new exception.NotImplementedException();
+        res.status(200).json(await uhx.Repositories.invitationRepository.getAll());
+        return true;
     }
 
     /**

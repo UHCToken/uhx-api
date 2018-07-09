@@ -26,6 +26,7 @@ const config = require('./config'),
     Mailer = require('./integration/mail'),
     StellarClient = require("./integration/stellar"),
     GreenMoney = require("./integration/greenmoney"),
+    ObjectStorage = require("./integration/storage"),
     poolio = require('poolio'),
     Web3Client = require("./integration/web3"),
     BitcoinClient = require("./integration/bitcoin"),
@@ -56,6 +57,8 @@ module.exports.init = () => {
         module.exports.BitcoinClient = new BitcoinClient(config.bitcoin.testnet_use, config.bitcoin.server);
         winston.info("GreenMoney Initialized...");
         module.exports.GreenMoney = new GreenMoney();
+        winston.info("ObjectStorage Initialized...");
+        module.exports.ObjectStorage = new ObjectStorage();
     });
 }
 /**

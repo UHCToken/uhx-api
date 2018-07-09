@@ -21,7 +21,6 @@ const uhx = require('../uhx'),
     exception = require('../exception'),
     security = require('../security'),
     walletRepository = require('../repository/walletRepository'),
-    GreenMoney = require("../integration/greenmoney"),
     Wallet = require('../model/Wallet'),
     model = require('../model/model');
 

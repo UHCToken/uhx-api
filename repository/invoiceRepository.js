@@ -104,11 +104,12 @@ module.exports = class InvoiceRepository {
             const rdr = await dbc.query("SELECT * FROM invoices WHERE payor_id = $1", [userId]);
             if (rdr.rows.length == 0)
                 throw new exception.NotFoundException('invoices', userId);
-            else
+            else {
                 var retVal = [];
-            for (var r in rdr.rows)
-                retVal.push(new Invoice().fromData(rdr.rows[r]));
-            return retVal;
+                for (var r in rdr.rows)
+                    retVal.push(new Invoice().fromData(rdr.rows[r]));
+                return retVal;
+            }
         }
         finally {
             if (!_txc) dbc.end();

@@ -20,7 +20,6 @@
     Purchase = require("../model/Purchase"),
     Balance = require("../model/Balance"),
     MonetaryAmount = require("../model/MonetaryAmount"),
-    GreenMoney = require("../integration/greenmoney"),
     crypto = require("crypto"),
     exception = require("../exception"),
     model = require("../model/model"),

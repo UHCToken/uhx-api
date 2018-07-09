@@ -277,6 +277,31 @@ module.exports = {
         }
     },
     /**
+     * @summary File storage configuration
+     */
+    objectStorage: {
+        /**
+         * @summary Access key id
+         */
+        key:"XXXXXXXXXXXXXXXXXXXXXXXXX",
+        /**
+         * @summary Secret key
+         */
+        secret:"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        /**
+         * @summary Storage bucket
+         */
+        bucket:"mybucketname",
+        /**
+         * @summary Storage endpoint
+         */
+        endpoint:"s3.tor01.objectstorage.softlayer.net",
+        /**
+         * @summary Maximum file size in bytes
+         */
+        maxFileSize: 1048576
+    },
+    /**
      * @summary Swagger configuration
      */
     swagger: {
