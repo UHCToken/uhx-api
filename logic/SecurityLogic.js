@@ -526,6 +526,7 @@ module.exports = class SecurityLogic {
             delete (user.email);
             delete (user.telVerified);
             delete (user.emailVerified);
+            delete (user.profileImage);
             if (user.address)
                 delete (user.address);
 

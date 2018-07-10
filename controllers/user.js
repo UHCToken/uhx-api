@@ -713,15 +713,13 @@ class UserApiResource {
  *          - "read:user"
  */
     async getProfilePicture(req, res) {
-        try {
-            var image = await uhx.ObjectStorage.getProfileImage(req, res);
-            if (image)
-                image.pipe(res);
-            else
-                res.status(404).json("Image not found.");
-        } catch (ex) {
-            res.status(500).json("Error fetching image.");
-        }
+        var image = await uhx.ObjectStorage.getProfileImage(req, res);
+        var status = image instanceof exception.Exception ? 404 : 201;
+        if (status == 201)
+            image.pipe(res);
+        else
+            res.status(status).json(image);
+
         return true;
     }
 

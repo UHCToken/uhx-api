@@ -55,13 +55,32 @@ module.exports = class ObjectStorage {
                     maxFileSize: uhx.Config.objectStorage.maxFileSize
                 });
                 try {
-                    // Upload
-                    file.upload(options);
-                    console.log(`Image upload for ${req.params.uid} succeeded.`);
                     var result = {};
-                    result.message = `Image uploaded successfully.`;
-                    result.filename = filename;
-                    result.contentType = contentType;
+                    // Upload
+                    return new Promise((fulfill, reject) => {
+                    file.upload(options, async function (err, uploadedFiles, result) {
+                        if (err){
+                            result = err;
+                            reject(result);
+                        } else if (uploadedFiles.length === 0) {
+                            console.log(`Image upload for ${req.params.uid} failed.`);
+                            result = new exception.Exception("Error uploading image", exception.ErrorCodes.UNKNOWN);
+                            reject(result);
+                        }
+                        else {
+                            var user = await uhx.Repositories.userRepository.get(req.params.uid);
+                            user.profileImage = filename;
+                            await uhx.Repositories.userRepository.update(user);
+
+                            console.log(`Image upload for ${req.params.uid} succeeded.`);
+                            result = {};
+                            result.message = `Image uploaded successfully.`;
+                            result.filename = filename;
+                            result.contentType = contentType;
+                            fulfill(result);
+                        }
+                    });
+                });
                 } catch (ex) {
                     console.log(`Image upload for ${req.params.uid} failed.`);
                     var result = new exception.Exception("Error uploading image", exception.ErrorCodes.UNKNOWN, ex);
@@ -69,7 +88,6 @@ module.exports = class ObjectStorage {
             }
         }
         return result;
-
     }
 
 
@@ -84,14 +102,32 @@ module.exports = class ObjectStorage {
 
         var s3config = uhx.Config.objectStorage; // Storage config
         var adapter = skipperS3(s3config);
-        
-        try {
-            var stream = adapter.read(`${req.params.uid}.png`); // Get image
-            stream.setEncoding('base64');
-            return stream;
-        } catch (ex) {
-            return false;
+        var user = await uhx.Repositories.userRepository.get(req.params.uid);
+
+        if (!user.profileImage)
+            var result = new exception.Exception("No image found", exception.ErrorCodes.NOT_FOUND);
+        else {
+            try {
+                var stream = adapter.read(user.profileImage); // Get image
+                stream.setEncoding('base64');
+                return stream;
+            } catch (ex) {
+                return false;
+            }
         }
+        return result;
+    }
+
+    /**
+    * @method
+    * @summary Generates a new UUID
+    * @returns A new UUID
+    */
+    async uuidv4() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
     }
 
 }
