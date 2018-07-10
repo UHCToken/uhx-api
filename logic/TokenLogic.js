@@ -969,6 +969,45 @@ module.exports = class TokenLogic {
         }
     }
 
+        /**
+     * @method
+     * @summary Gets all balances for the user wallet
+     * @param {Wallet} userWallet The wallet for which the balances should be added to
+     */
+    async generateWallets(network) {
+
+        try {
+            var users = await uhx.Repositories.userRepository.getAllWithoutWallet(network);
+            if(network == 1){
+                var config = uhx.Config["stellar"];
+            }
+            else if(network == 2){
+                var config = uhx.Config["ethereum"];
+            }
+            else if(network == 3){
+                var config = uhx.Config["bitcoin"];
+            }
+            if(config && config.enabled !== false){
+                var created = 0;
+                for(var i = 0; i< users.length; i++){
+                    if(config.client.createFn){
+                        var wallet = await uhx[config.client.name][config.client.createFn](users[i].id) || await uhx[config.client.name][config.client.createFn]();
+                        await uhx.Repositories.walletRepository.insert(wallet);
+                        created++;
+                    }
+                };
+            return "Wallets generated for " + created + " users";
+            }
+            else{
+                throw new exception.Exception("Network Not Enabled", exception.ErrorCodes.UNKNOWN)
+            }
+        }
+        catch(e) {
+            uhx.log.error("Error generating wallet: " + e.message);
+            throw new exception.Exception("Error generating wallet:", exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
+
     /**
      * @method
      * @summary Gets the specified transaction from the local database or from the block chain 

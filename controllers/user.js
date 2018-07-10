@@ -271,7 +271,7 @@ class UserApiResource {
     async get(req, res) {
         var user = await uhx.Repositories.userRepository.get(req.params.uid);
         await user.loadWallets();
-
+        
         // Load balances from blockchain
         if (user._wallets)
             user._wallets = await uhx.TokenLogic.getAllBalancesForWallets(user._wallets);

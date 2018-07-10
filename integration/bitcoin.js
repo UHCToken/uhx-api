@@ -23,7 +23,7 @@
     model = require("../model/model"),
     Asset = require('../model/Asset'),
     Wallet = require("../model/Wallet"),
-    exception = require('../exception'),
+    exception = require("../exception"),
     Transaction = require('../model/Transaction'),
     crypto = require('crypto'),
     MonetaryAmount = require('../model/MonetaryAmount');
@@ -89,9 +89,14 @@ module.exports = class BitcoinClient {
                 passphrase: token,
                 id: id
             });
+            if(newWallet.status !== 500){
             wallet.address = newWallet.data;
             wallet.seed = token;
             return(wallet);
+        }
+            else{
+                throw new exception.Exception("Bitcoin Node Error", 500);
+            }
         }
         catch(e) {
             console.error(`Account generation has failed : ${JSON.stringify(e)}`);

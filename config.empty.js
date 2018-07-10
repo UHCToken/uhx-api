@@ -165,7 +165,8 @@ module.exports = {
         client: {
             name: 'StellarClient',
             balanceFn: 'getAccount',
-            activeFn: 'isActive'
+            activeFn: 'isActive',
+            createFn: 'generateAccount'
         },
         /**
          * @summary The wallet from which the initial balance of XLM should be retrieved
@@ -203,7 +204,8 @@ module.exports = {
         client: {
             name: 'Web3Client',
             balanceFn: 'getBalance',
-        },
+            createFn: 'generateAccount',
+         },
         /**
          * @summary Flag for using ethereum
          */
@@ -226,10 +228,11 @@ module.exports = {
          * @summary Bitcoin client name
          */
         client: {
-            name: 'Bitcoin',
+            name: 'BitcoinClient',
             balanceFn: 'getBalance',
+            createFn: 'generateAccount',
             network: 'testnet'
-        },
+         },
         /**
          * @summary Flag for using bitcoin
          */

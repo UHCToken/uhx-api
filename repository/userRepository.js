@@ -37,6 +37,7 @@ const pg = require('pg'),
     constructor(connectionString) {
         this._connectionString = connectionString;
         this.get = this.get.bind(this);
+        this.getAllWithoutWallet = this.getAllWithoutWallet.bind(this);
         this.getByNameSecret = this.getByNameSecret.bind(this);
         this.getByName= this.getByName.bind(this);
         this.incrementLoginFailure = this.incrementLoginFailure.bind(this);
@@ -112,6 +113,35 @@ const pg = require('pg'),
                 throw new exception.NotFoundException('user', id);
             else
                 return new User().fromData(rdr.rows[0]);
+        }
+        finally {
+            if(!_txc) dbc.end();
+        }
+
+    }
+
+        /**
+     * @method
+     * @summary Retrieve all users without a wallet on a network
+     * @param {string} network Network id
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {users} The retrieved users
+     */
+    async getAllWithoutWallet(network, _txc) {
+
+        const dbc =  _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+            const rdr = await dbc.query("SELECT * FROM users WHERE users.id IN (SELECT user_group.user_id from user_group WHERE user_group.group_id='330d2fb4-ba61-4b48-a0a1-8162a4708e96') AND users.id NOT IN (SELECT wallets.user_id from wallets WHERE wallets.network_id=$1)", [network]);
+            if(rdr.rows.length == 0)
+                return [];
+            else{
+                var users = [];
+                rdr.rows.forEach(function(user){
+                    users.push(new User().fromData(user));
+                });
+                return (users);
+            }
         }
         finally {
             if(!_txc) dbc.end();

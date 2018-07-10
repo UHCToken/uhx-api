@@ -417,12 +417,11 @@ module.exports = class SecurityLogic {
                 strWallet = await uhx.Repositories.walletRepository.insert(strWallet, principal, _txc);
 
                 // Ethereum 
-                if (uhx.Config.ethereum.enabled && false) {
+                if(uhx.Config.ethereum.enabled){
                     var web3Client = uhx.Web3Client;
                     var ethWallet = await web3Client.generateAccount()
                     ethWallet.userId = retVal.id;
                     ethWallet = await uhx.Repositories.walletRepository.insert(ethWallet, principal, _txc);
-                    await web3Client.getBalance(ethWallet)
                 }
                 if (uhx.Config.bitcoin.enabled) {
                     var bitcoinClient = uhx.BitcoinClient;

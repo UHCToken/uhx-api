@@ -77,6 +77,13 @@ class WalletApiResource {
                         "demand": security.PermissionType.READ,
                         "method": this.getWallet
                     }
+                },
+                {
+                    "path": "wallet/generate",
+                    "post": {
+                        "demand": security.PermissionType.EXECUTE,
+                        "method": this.generateWallets
+                    }
                 }
             ]
         };
@@ -323,6 +330,55 @@ class WalletApiResource {
         wallet = await uhx.TokenLogic.getAllBalancesForWallets(wallet);
         res.status(200).json(wallet);
         return true;
+    }
+
+    /**
+     * @summary Generates wallets for those without for a specific network
+     * @method
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to the client
+    * @swagger
+     * /wallet/generate:
+     *  poast:
+     *      tags:
+     *      - "wallet"
+     *      summary: "Creates wallets for current users on a specific network if they don't have one"
+     *      description: "This method will find all users without a wallet on the network and create one for each"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - in: "path"
+     *        name: "network"
+     *        description: "The network id that the wallets will be generated on"
+     *        required: true
+     *        type: string
+     *      responses:
+     *          200: 
+     *             description: "The wallets were created successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/Asset"
+     *          404: 
+     *             description: "No users exist without a wallet"
+     *             schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "execute:wallet"
+     */
+    async generateWallets(req, res) {
+        if(req.body.network){
+            var response = await uhx.TokenLogic.generateWallets(req.body.network);
+            res.status(200).json(response);
+            return true;
+        }
+        else{
+            res.status(500).json("Missing parameters")
+            return true;
+        }
     }
 
     /**
