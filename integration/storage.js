@@ -33,12 +33,19 @@ module.exports = class ObjectStorage {
      */
     async uploadProfileImage(req, res) {
         var s3config = uhx.Config.objectStorage; // Load storage config
-        if (!req.file || req.file.name == "") { // No file supplied
-            var result = new exception.Exception("Missing file", exception.ErrorCodes.MISSING_PAYLOAD);
+        if (!req.file || req.file.name == "" || req.body.file == "undefined") { // No file supplied
+            var result = new exception.Exception("Missing file payload", exception.ErrorCodes.MISSING_PAYLOAD);
         } else {
-            var file = req.file('file');
-            var contentType = file._files[0].stream.headers['content-type'];
-            if (contentType != 'image/png' && contentType != 'image/gif' && contentType != 'image/jpeg') { // Invalid file type
+            try {
+                var file = req.file('file');
+            } catch (ex) {
+                console.log(ex);
+            }
+            if (file._files[0])
+                var contentType = file._files[0].stream.headers['content-type'];
+            else
+                var contentType = null;
+            if ((contentType != 'image/png' && contentType != 'image/gif' && contentType != 'image/jpeg') || file.fieldName != "file") { // Invalid file type
                 var result = new exception.Exception("File type provided is not supported", exception.ErrorCodes.NOT_SUPPORTED);
             } else if (file._files[0].stream.byteCount <= 4096) { // File too small
                 var result = new exception.Exception("File size must be larger than 4KB", exception.ErrorCodes.NOT_SUPPORTED);
@@ -58,29 +65,29 @@ module.exports = class ObjectStorage {
                     var result = {};
                     // Upload
                     return new Promise((fulfill, reject) => {
-                    file.upload(options, async function (err, uploadedFiles, result) {
-                        if (err){
-                            result = err;
-                            reject(result);
-                        } else if (uploadedFiles.length === 0) {
-                            console.log(`Image upload for ${req.params.uid} failed.`);
-                            result = new exception.Exception("Error uploading image", exception.ErrorCodes.UNKNOWN);
-                            reject(result);
-                        }
-                        else {
-                            var user = await uhx.Repositories.userRepository.get(req.params.uid);
-                            user.profileImage = filename;
-                            await uhx.Repositories.userRepository.update(user);
+                        file.upload(options, async function (err, uploadedFiles, result) {
+                            if (err) {
+                                result = err;
+                                reject(result);
+                            } else if (uploadedFiles.length === 0) {
+                                console.log(`Image upload for ${req.params.uid} failed.`);
+                                result = new exception.Exception("Error uploading image", exception.ErrorCodes.UNKNOWN);
+                                reject(result);
+                            }
+                            else {
+                                var user = await uhx.Repositories.userRepository.get(req.params.uid);
+                                user.profileImage = filename;
+                                await uhx.Repositories.userRepository.update(user);
 
-                            console.log(`Image upload for ${req.params.uid} succeeded.`);
-                            result = {};
-                            result.message = `Image uploaded successfully.`;
-                            result.filename = filename;
-                            result.contentType = contentType;
-                            fulfill(result);
-                        }
+                                console.log(`Image upload for ${req.params.uid} succeeded.`);
+                                result = {};
+                                result.message = `Image uploaded successfully.`;
+                                result.filename = filename;
+                                result.contentType = contentType;
+                                fulfill(result);
+                            }
+                        });
                     });
-                });
                 } catch (ex) {
                     console.log(`Image upload for ${req.params.uid} failed.`);
                     var result = new exception.Exception("Error uploading image", exception.ErrorCodes.UNKNOWN, ex);
@@ -108,7 +115,7 @@ module.exports = class ObjectStorage {
             var result = new exception.Exception("No image found", exception.ErrorCodes.NOT_FOUND);
         else {
             try {
-                var stream = adapter.read(user.profileImage); // Get image
+                var stream = await adapter.read(user.profileImage); // Get image
                 stream.setEncoding('base64');
                 return stream;
             } catch (ex) {
