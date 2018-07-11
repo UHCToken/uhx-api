@@ -47,7 +47,7 @@ class InvoiceApiResource {
      */
     get routes() {
         return {
-            "permission_group": "user",
+            "permission_group": "invoice",
             "routes": [
                 {
                     "path": "user/:uid/invoice",
@@ -114,7 +114,7 @@ class InvoiceApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "write:user"
+     *          - "write:invoice"
      */
     async put(req, res) {
 
@@ -171,7 +171,7 @@ class InvoiceApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "read:user"
+     *          - "read:invoice"
      */
     async get(req, res) {
         var invoices = await uhx.GreenMoney.getInvoicesForUser(req.params.uid, req.principal);
@@ -209,7 +209,7 @@ class InvoiceApiResource {
  *                  $ref: "#/definitions/Exception"
  *      security:
  *      - uhx_auth:
- *          - "list:user"
+ *          - "list:invoice"
  */
     async getAll(req, res) {
         var invoices = await uhx.GreenMoney.getAllInvoices();

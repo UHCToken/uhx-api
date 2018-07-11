@@ -228,7 +228,7 @@ class UserApiResource {
 
         // does the request have a password if so we want to ensure that get's passed
         req.body.id = req.params.uid;
-        res.status(201).json(await uhx.SecurityLogic.updateUser(new model.User().copy(req.body), req.body.password));
+        res.status(201).json(await uhx.SecurityLogic.updateUser(new model.User().copy(req.body), req.body.password, req.body.oldPassword, req.principal));
         return true;
     }
     /**

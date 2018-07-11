@@ -514,110 +514,133 @@ module.exports = class SecurityLogic {
      * @param {string} newPassword The new password to set the user account to
      * @returns {User} The updated user
      */
-    async updateUser(user, newPassword) {
-        try {
+    async updateUser(user, newPassword, oldPassword, principal) {
+        if (principal.grant["user"] & security.PermissionType.OWNER) {
+            try {
 
-            // Delete fields which can't be set by clients 
-            delete (user.invalidLogins);
-            delete (user.lastLogin);
-            delete (user.lockout);
-            delete (user.walletId);
-            delete (user.email);
-            delete (user.telVerified);
-            delete (user.emailVerified);
-            if (user.address)
-                delete (user.address);
+                // Delete fields which can't be set by clients 
+                delete (user.invalidLogins);
+                delete (user.lastLogin);
+                delete (user.lockout);
+                delete (user.walletId);
+                delete (user.email);
+                delete (user.telVerified);
+                delete (user.emailVerified);
+                delete (user.profileImage);
+                if (user.address)
+                    delete (user.address);
 
-            // Validate the user
-            this.validateUser(user, newPassword);
+                // Validate the user
+                this.validateUser(user, newPassword);
 
-            return await uhx.Repositories.transaction(async (_txc) => {
+                return await uhx.Repositories.transaction(async (_txc) => {
 
-                // Get existing user
-                var existingUser = await uhx.Repositories.userRepository.get(user.id);
+                    // Get existing user
+                    var existingUser = await uhx.Repositories.userRepository.get(user.id);
 
-                // Was the user's e-mail address verified? 
-                if (newPassword) {
-                    if (existingUser.telVerified && existingUser.tel)
-                        await uhx.Mailer.sendSms({
-                            to: existingUser.tel,
-                            template: uhx.Config.mail.templates.passwordChange
-                        }, { user: existingUser });
-                    else if (existingUser.emailVerified && existingUser.email)
-                        await uhx.Mailer.sendEmail({
-                            to: existingUser.tel,
-                            from: uhx.Config.mail.from,
-                            template: uhx.Config.mail.templates.passwordChange,
-                            subject: "Did you change your UhX password?"
-                        }, { user: existingUser });
-                }
-                if (user.tel && existingUser.telVerified && existingUser.tel != user.tel) {
-
-                    await uhx.Mailer.sendSms({
-                        to: existingUser.tel,
-                        template: uhx.Config.mail.templates.contactChange
-                    }, { old: existingUser, new: user, token: undoToken, ui_base: uhx.Config.api.ui_base });
-
-                    await this.sendConfirmationSms(user);
-
-                    user.telVerified = false;
-                    user.tfaMethod = '0';
-                }
-                if (user.tel && !user.telVerified) {
-                    user.givenName = user.givenName || existingUser.givenName;
-                    user.familyName = user.familyName || existingUser.familyName;
-                    await this.sendConfirmationSms(user);
-                }
-                if (user.email && existingUser.emailVerified && existingUser.email != user.email) {
-
-                    var undoToken = this.generateSignedClaimToken();
-                    await uhx.Repositories.userRepository.addClaim(user.id, {
-                        type: PASSWORD_RESET_CLAIM,
-                        value: undoToken,
-                        expiry: new Date(new Date().getTime() + uhx.Config.security.resetValidity)
-                    }, _txc);
-
-                    // We want to send an e-mail to the previous e-mail address notifying the user of the change
-                    await uhx.Mailer.sendEmail({
-                        to: existingUser.email,
-                        from: uhx.Config.mail.from,
-                        subject: "Did you change your e-mail address?",
-                        template: uhx.Config.mail.templates.contactChange
-                    }, { old: existingUser, new: user, token: undoToken, ui_base: uhx.Config.api.ui_base });
-
-                    // TODO: We want to send a confirmation e-mail to the e-mail address
-                    await this.sendConfirmationEmail(user);
-                    user.emailVerified = false;
-                }
-                if (user.tfaMethod && user.tfaMethod != existingUser.tfaMethod) {
-                    // Confirm to user that TFA was set
-                    if (user.tfaMethod == 1) {
-                        if (!existingUser.telVerified)
-                            throw new exception.BusinessRuleViolationException(new exception.RuleViolation("SMS Two-Factor requires a verified phone number", exception.ErrorCodes.RULES_VIOLATION, exception.RuleViolationSeverity.ERROR));
-                        await uhx.Mailer.sendSms({
-                            to: existingUser.tel,
-                            template: uhx.Config.mail.templates.tfaChange
-                        }, { old: existingUser, new: user, token: undoToken, ui_base: uhx.Config.api.ui_base });
+                    // Was the user's e-mail address verified? 
+                    if (newPassword && oldPassword) {
+                        try {
+                            var validatedPassword = await uhx.Repositories.userRepository.getByNameSecret(existingUser.name, oldPassword);
+                        } catch (ex) {
+                            throw new exception.Exception("Incorrect old password provided.", exception.ErrorCodes.NOT_FOUND);
+                        }
+                        if (validatedPassword.id == user.id) {
+                            if (existingUser.telVerified && existingUser.tel)
+                                await uhx.Mailer.sendSms({
+                                    to: existingUser.tel,
+                                    template: uhx.Config.mail.templates.passwordChange
+                                }, { user: existingUser });
+                            else if (existingUser.emailVerified && existingUser.email)
+                                await uhx.Mailer.sendEmail({
+                                    to: existingUser.tel,
+                                    from: uhx.Config.mail.from,
+                                    template: uhx.Config.mail.templates.passwordChange,
+                                    subject: "Did you change your UhX password?"
+                                }, { user: existingUser });
+                        }
                     }
-                    else if (user.tfaMethod == 2) {
-                        if (!existingUser.emailVerified)
-                            throw new exception.BusinessRuleViolationException(new exception.RuleViolation("E-Mail Two-Factor requires a verified e-mail address", exception.ErrorCodes.RULES_VIOLATION, exception.RuleViolationSeverity.ERROR));
+                    if (user.tel && existingUser.telVerified && existingUser.tel != user.tel) {
+
+                        await uhx.Mailer.sendSms({
+                            to: existingUser.tel,
+                            template: uhx.Config.mail.templates.contactChange
+                        }, { old: existingUser, new: user, token: undoToken, ui_base: uhx.Config.api.ui_base });
+
+                        await this.sendConfirmationSms(user);
+
+                        user.telVerified = false;
+                        user.tfaMethod = '0';
+                    }
+                    if (user.tel && !user.telVerified) {
+                        user.givenName = user.givenName || existingUser.givenName;
+                        user.familyName = user.familyName || existingUser.familyName;
+                        await this.sendConfirmationSms(user);
+                    }
+                    if (user.email && existingUser.emailVerified && existingUser.email != user.email) {
+
+                        var undoToken = this.generateSignedClaimToken();
+                        await uhx.Repositories.userRepository.addClaim(user.id, {
+                            type: PASSWORD_RESET_CLAIM,
+                            value: undoToken,
+                            expiry: new Date(new Date().getTime() + uhx.Config.security.resetValidity)
+                        }, _txc);
+
+                        // We want to send an e-mail to the previous e-mail address notifying the user of the change
                         await uhx.Mailer.sendEmail({
                             to: existingUser.email,
                             from: uhx.Config.mail.from,
-                            subject: "UhX Two-factor authentication setup successful",
-                            template: uhx.Config.mail.templates.tfaChange
+                            subject: "Did you change your e-mail address?",
+                            template: uhx.Config.mail.templates.contactChange
                         }, { old: existingUser, new: user, token: undoToken, ui_base: uhx.Config.api.ui_base });
-                    }
-                }
-                // Update the user
-                return await uhx.Repositories.userRepository.update(user, newPassword, null, _txc);
 
-            });
-        }
-        catch (e) {
-            uhx.log.error("Error updating user: " + e.message);
-            throw new exception.Exception("Error updating user", exception.ErrorCodes.UNKNOWN, e);
+                        // TODO: We want to send a confirmation e-mail to the e-mail address
+                        await this.sendConfirmationEmail(user);
+                        user.emailVerified = false;
+                    }
+                    if (user.tfaMethod && user.tfaMethod != existingUser.tfaMethod) {
+                        // Confirm to user that TFA was set
+                        if (user.tfaMethod == 1) {
+                            if (!existingUser.telVerified)
+                                throw new exception.BusinessRuleViolationException(new exception.RuleViolation("SMS Two-Factor requires a verified phone number", exception.ErrorCodes.RULES_VIOLATION, exception.RuleViolationSeverity.ERROR));
+                            await uhx.Mailer.sendSms({
+                                to: existingUser.tel,
+                                template: uhx.Config.mail.templates.tfaChange
+                            }, { old: existingUser, new: user, token: undoToken, ui_base: uhx.Config.api.ui_base });
+                        }
+                        else if (user.tfaMethod == 2) {
+                            if (!existingUser.emailVerified)
+                                throw new exception.BusinessRuleViolationException(new exception.RuleViolation("E-Mail Two-Factor requires a verified e-mail address", exception.ErrorCodes.RULES_VIOLATION, exception.RuleViolationSeverity.ERROR));
+                            await uhx.Mailer.sendEmail({
+                                to: existingUser.email,
+                                from: uhx.Config.mail.from,
+                                subject: "UhX Two-factor authentication setup successful",
+                                template: uhx.Config.mail.templates.tfaChange
+                            }, { old: existingUser, new: user, token: undoToken, ui_base: uhx.Config.api.ui_base });
+                        }
+                    }
+                    // Update the user
+                    return await uhx.Repositories.userRepository.update(user, newPassword, null, _txc);
+
+                });
+            }
+            catch (e) {
+                uhx.log.error("Error updating user: " + e.message);
+                throw new exception.Exception("Error updating user", exception.ErrorCodes.UNKNOWN, e);
+            }
+        } else if (principal.grant["user"] & security.PermissionType.LIST) {
+            try {
+                // Validate the user
+                this.validateUser(user, newPassword);
+
+                return await uhx.Repositories.transaction(async (_txc) => {
+
+                    return await uhx.Repositories.userRepository.update(user, newPassword, null, _txc);
+                });
+            } catch (ex) {
+                uhx.log.error("Error updating user: " + ex.message);
+                throw new exception.Exception("Error updating user", exception.ErrorCodes.UNKNOWN, ex);
+            }
         }
     }
 
