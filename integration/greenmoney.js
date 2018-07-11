@@ -89,9 +89,11 @@ module.exports = class GreenMoney {
                                 response.checkId = raw_data[5];
                                 retVal.response = response;
 
-                                if (response.result != "0")
-                                    return new exception.Exception("Error creating invoice.", exception.ErrorCodes.Exception);
-
+                                if (response.result != "0") {
+                                    reject(new exception.Exception("Error creating invoice. Green Money Error", exception.ErrorCodes.COM_FAILURE));
+                                    return retVal;
+                                }
+                                
                                 // Preparing invoice
                                 var invoice = new Invoice();
                                 invoice.amount = {};
@@ -99,7 +101,7 @@ module.exports = class GreenMoney {
                                 invoice.code = 'USD';
                                 invoice.amount = amount;
                                 invoice.creation_time = new Date();
-                                invoice.expiry = null;
+                                invoice.expiry = new Date(new Date().getTime() + uhx.Config.greenMoney.expiryTime);
                                 invoice.status_code = '3';
                                 invoice.status_desc = 'NOT STARTED';
                                 invoice.payor_id = userId;
@@ -191,6 +193,9 @@ module.exports = class GreenMoney {
                 invoice.status_desc = 'NOT STARTED';
                 console.log(`Invoice ${invoice.id} has not been started.`);
                 break;
+            case "4":
+                invoice.status_desc = 'EXPIRED';
+                break;
             default:
                 res.status(500).json(new exception.Exception("Error updating invoice.", exception.ErrorCodes.UNKNOWN));
                 break;
@@ -233,7 +238,9 @@ module.exports = class GreenMoney {
         for (var i = 0; i < invoices.length; i++) {
             if (invoices[i].status_code != "0" && invoices[i].status_code != "2") {
                 invoices[i].payment_status = await uhx.GreenMoney.checkInvoice(invoices[i].invoiceId);
-                if (invoices[i].payment_status[0].paymentResult != invoices[i].status_code) {
+                if (invoices[i].payment_status[0].paymentResult != invoices[i].status_code || invoices[i].expiry < new Date()) {
+                    if (invoices[i].expiry < new Date() && (invoices[i].status_code != "4" || invoices[i].payment_status[0].paymentResult == "3"))
+                        invoices[i].payment_status[0].paymentResult = "4";
                     await uhx.GreenMoney.updateInvoice(invoices[i]);
                     updated = updated + 1;
                 }
@@ -248,7 +255,11 @@ module.exports = class GreenMoney {
     * @returns All invoices
     */
     async getAllInvoices() {
-        return await uhx.Repositories.invoiceRepository.getAll();
+        try {
+            return await uhx.Repositories.invoiceRepository.getAll();
+        } catch (ex) {
+            return new exception.Exception("Error fetching invoices.", exception.ErrorCodes.UNKNOWN, ex);
+        }
     }
 
     /**

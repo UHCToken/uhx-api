@@ -47,7 +47,7 @@ class InvoiceApiResource {
      */
     get routes() {
         return {
-            "permission_group": "wallet",
+            "permission_group": "user",
             "routes": [
                 {
                     "path": "user/:uid/invoice",
@@ -57,6 +57,13 @@ class InvoiceApiResource {
                     },
                     "get": {
                         "demand": security.PermissionType.READ,
+                        "method": this.get
+                    }
+                },
+                {
+                    "path": "invoice",
+                    "get": {
+                        "demand": security.PermissionType.LIST,
                         "method": this.getAll
                     }
                 }
@@ -107,7 +114,7 @@ class InvoiceApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "write:wallet"
+     *          - "write:user"
      */
     async put(req, res) {
 
@@ -164,9 +171,9 @@ class InvoiceApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "read:wallet"
+     *          - "read:user"
      */
-    async getAll(req, res) {
+    async get(req, res) {
         var invoices = await uhx.GreenMoney.getInvoicesForUser(req.params.uid, req.principal);
 
         if (invoices)
@@ -175,6 +182,39 @@ class InvoiceApiResource {
         res.status(status).json(invoices);
 
         return true
+    }
+
+    /**
+ * @method
+ * @summary Retrieves all invoices
+ * @param {Express.Request} req The HTTP request made by the client
+ * @param {Express.Response} res The HTTP response being sent back to the client
+ * @swagger
+ * /invoice:
+ *  get:
+ *      tags:
+ *      - "invoice"
+ *      summary: "Gets all invoices posted matching the filter parameter"
+ *      description: "This method will request the server to produce a complete list of invoices"
+ *      produces:
+ *      - "application/json"
+ *      responses:
+ *          200: 
+ *             description: "The query completed successfully and the results are in the payload"
+ *             schema: 
+ *                  $ref: "#/definitions/Invoice"
+ *          500:
+ *              description: "An internal server error occurred"
+ *              schema:
+ *                  $ref: "#/definitions/Exception"
+ *      security:
+ *      - uhx_auth:
+ *          - "list:user"
+ */
+    async getAll(req, res) {
+        var invoices = await uhx.GreenMoney.getAllInvoices();
+        res.status(200).json(invoices);
+        return true;
     }
 
 }

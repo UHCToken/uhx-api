@@ -266,6 +266,10 @@ module.exports = {
         */
         updateTimer: 14400000,
         /**
+        * @summary The amount of time before an invoice is marked to be removed
+        */
+        expiryTime: 1209600000,
+        /**
         * @summary Setting maximum count per delay period and total count of invoices for that period
         */
         invoiceLimit: {
