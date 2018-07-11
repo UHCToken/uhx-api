@@ -60,8 +60,8 @@ module.exports = class GreenMoney {
                     + '&ApiPassword=' + uhx.Config.greenMoney.apiPassword.password
                     + '&PayorName=' + encodeURI(user.givenName) + ' ' + encodeURI(user.familyName)
                     + '&EmailAddress=' + user.name
-                    + '&ItemName=' + amount + ' USD Credit'
-                    + '&ItemDescription=USD credit for UhX wallet (' + user.name + ')'
+                    + '&ItemName=$' + amount + ' USD Credit'
+                    + '&ItemDescription=USD credit for UhX wallet ' + user.name
                     + '&Amount=' + amount
                     + '&PaymentDate=' + await uhx.GreenMoney.formatDate(new Date())
                     + '&x_delim_data=true&x_delim_char=,';
