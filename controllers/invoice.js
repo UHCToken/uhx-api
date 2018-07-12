@@ -21,8 +21,7 @@ const uhx = require('../uhx'),
     exception = require('../exception'),
     security = require('../security'),
     Invoice = require('../model/Invoice'),
-    model = require('../model/model'),
-    GreenMoney = require("../integration/greenmoney");
+    model = require('../model/model');
 
 const dollar_regex = /(^[0-9]{0,}).([0-9]{0,2}$)/;
 

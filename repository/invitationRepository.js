@@ -17,7 +17,7 @@
  * 
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
- 
+
 const pg = require('pg'),
     exception = require('../exception'),
     security = require('../security'),
@@ -26,11 +26,11 @@ const pg = require('pg'),
     User = require("../model/User"),
     uhx = require("../uhx");
 
- /**
-  * @class
-  * @summary Represents the asset data repository logic
-  */
- module.exports = class InvitationRepository {
+/**
+ * @class
+ * @summary Represents the asset data repository logic
+ */
+module.exports = class InvitationRepository {
 
     /**
      * @constructor
@@ -53,17 +53,46 @@ const pg = require('pg'),
     async get(id, _txc) {
         var dbc = _txc || new pg.Client(this._connectionString);
         try {
-            if(!_txc) await dbc.connect();
+            if (!_txc) await dbc.connect();
 
             // Get by ID
             var rdr = await dbc.query("SELECT * FROM invitations WHERE id = $1", [id]);
-            if(rdr.rows.length == 0)
+            if (rdr.rows.length == 0)
                 throw new exception.NotFoundException("invitation", id);
-            else 
+            else
                 return new Invitation().fromData(rdr.rows[0]);
         }
-        finally{
-            if(!_txc) dbc.end();
+        finally {
+            if (!_txc) dbc.end();
+        }
+
+    }
+
+    /**
+ * @method
+ * @summary Gets the specified invitation
+ * @param {string} id The identifier of the invitation
+ * @param {Client} _txc The database transaction to use
+ * @returns {Invitation} The retrieved invitation
+ */
+    async getAll(id, _txc) {
+        var dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+
+            // Get by ID
+            var rdr = await dbc.query("SELECT * FROM invitations");
+            if (rdr.rows.length == 0)
+                throw new exception.NotFoundException("invitation");
+            else {
+                var retVal = [];
+                for (var r in rdr.rows)
+                    retVal.push(new Invitation().fromData(rdr.rows[r]));
+                return retVal;
+            }
+        }
+        finally {
+            if (!_txc) dbc.end();
         }
 
     }
@@ -78,17 +107,17 @@ const pg = require('pg'),
     async getByClaimToken(token, _txc) {
         var dbc = _txc || new pg.Client(this._connectionString);
         try {
-            if(!_txc) await dbc.connect();
+            if (!_txc) await dbc.connect();
 
             // Get by ID
             var rdr = await dbc.query("SELECT * FROM invitations WHERE claim_token = crypt($1, claim_token) AND expiration_time > CURRENT_TIMESTAMP AND claim_time IS NULL AND deactivation_time IS NULL", [token]);
-            if(rdr.rows.length == 0)
+            if (rdr.rows.length == 0)
                 throw new exception.NotFoundException("invitation", token);
-            else 
+            else
                 return new Invitation().fromData(rdr.rows[0]);
         }
-        finally{
-            if(!_txc) dbc.end();
+        finally {
+            if (!_txc) dbc.end();
         }
     }
 
@@ -102,31 +131,31 @@ const pg = require('pg'),
      * @return {Invitation} The inserted invitation information
      */
     async insert(invitation, claimToken, expirationPeriod, runAs, _txc) {
-        
+
         // Verify input parameters
-        if(!runAs || !(runAs instanceof security.Principal))
+        if (!runAs || !(runAs instanceof security.Principal))
             throw new exception.ArgumentException("runAs");
-        if(!claimToken)
+        if (!claimToken)
             throw new exception.ArgumentException("claimToken");
 
         var dbc = _txc || new pg.Client(this._connectionString);
         try {
-            if(!_txc) await dbc.connect();
+            if (!_txc) await dbc.connect();
 
             var dbInvitation = invitation.toData();
-            delete(dbInvitation.id);
+            delete (dbInvitation.id);
             dbInvitation.$claim_token = claimToken;
             dbInvitation.created_by = runAs.session.userId;
             dbInvitation.expiration_time = new Date(new Date().getTime() + expirationPeriod);
             var insertCmd = model.Utils.generateInsert(dbInvitation, "invitations");
             const rdr = await dbc.query(insertCmd.sql, insertCmd.args);
-            if(rdr.rows.length == 0)
+            if (rdr.rows.length == 0)
                 throw new exception.Exception("Error inserting invitation", exception.ErrorCodes.DATA_ERROR);
-            else 
+            else
                 return invitation.fromData(rdr.rows[0]);
         }
         finally {
-            if(!_txc) dbc.end();
+            if (!_txc) dbc.end();
         }
     }
 
@@ -141,18 +170,18 @@ const pg = require('pg'),
     async claim(id, user, _txc) {
         var dbc = _txc || new pg.Client(this._connectionString);
         try {
-            
-            if(!_txc) await dbc.connect();
-            
+
+            if (!_txc) await dbc.connect();
+
             const rdr = await dbc.query("UPDATE invitations SET signup_user_id = $1, claim_time = CURRENT_TIMESTAMP WHERE id = $2 AND claim_time IS NULL AND expiration_time > CURRENT_TIMESTAMP AND deactivation_time IS NULL RETURNING *", [user.id, id]);
-            if(rdr.rows.length == 0)
+            if (rdr.rows.length == 0)
                 throw new exception.Exception("Error claiming invitation", exception.ErrorCodes.DATA_ERROR);
             else
                 return new Invitation().fromData(rdr.rows[0]);
 
         }
         finally {
-            if(!_txc) dbc.end();
+            if (!_txc) dbc.end();
         }
     }
 
@@ -165,18 +194,18 @@ const pg = require('pg'),
     async delete(invitationId, _txc) {
         var dbc = _txc || new pg.Client(this._connectionString);
         try {
-            
-            if(!_txc) await dbc.connect();
-            
+
+            if (!_txc) await dbc.connect();
+
             const rdr = await dbc.query("UPDATE invitations SET deactivation_time = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *", [invitationId]);
-            if(rdr.rows.length == 0)
+            if (rdr.rows.length == 0)
                 throw new exception.Exception("Error rescinding invitation", exception.ErrorCodes.DATA_ERROR);
             else
                 return new Invitation().fromData(rdr.rows[0]);
 
         }
         finally {
-            if(!_txc) dbc.end();
+            if (!_txc) dbc.end();
         }
     }
 }

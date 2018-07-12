@@ -93,7 +93,6 @@ module.exports = class GreenMoney {
                                     reject(new exception.Exception("Error creating invoice. Green Money Error", exception.ErrorCodes.COM_FAILURE));
                                     return retVal;
                                 }
-                                
                                 // Preparing invoice
                                 var invoice = new Invoice();
                                 invoice.amount = {};
@@ -139,7 +138,7 @@ module.exports = class GreenMoney {
                 + '&Invoice_ID=' + invoiceId
                 + '&x_delim_data=true&x_delim_char=,';
         else
-            new exception.Exception("Invalid invoice Id", exception.ErrorCodes.ERR_NOTFOUND, err);
+            new exception.Exception("Invalid invoice Id", exception.ErrorCodes.ERR_NOTFOUND);
 
         // Promise 
         return new Promise((fulfill, reject) => {

@@ -39,7 +39,8 @@
     toobusy = require('toobusy-js'),
     https = require('https'),
     helmet = require('helmet'),
-    http = require('http');
+    http = require('http'),
+    skipper = require("skipper");
     
     toobusy.maxLag(10000);
 // Startup application
@@ -53,6 +54,7 @@ app.use(function(req, res, next) {
         next();
 });
 app.use(helmet());
+app.use(skipper());
 
 // Construct REST API
 var restApi = new api.RestApi(uhx.Config.api.base, app);
