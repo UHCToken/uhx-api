@@ -19,3 +19,12 @@ CREATE TABLE IF NOT EXISTS service_invoices (
     CONSTRAINT fk_transaction FOREIGN KEY (transaction_id) REFERENCES transactions(id),
     CONSTRAINT fk_invoice_created_by FOREIGN KEY (created_by) REFERENCES users(id)
 );
+
+CREATE TABLE IF NOT EXISTS services (
+    id uuid NOT NULL DEFAULT uuid_generate_v4(),
+    creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID NOT NULL,
+    service_invoice_id UUID NOT NULL,
+    CONSTRAINT pk_service_id PRIMARY KEY (id),
+    CONSTRAINT fk_service_invoice FOREIGN KEY (service_invoice_id) REFERENCES service_invoices(id),
+)
