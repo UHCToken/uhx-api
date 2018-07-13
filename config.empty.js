@@ -99,6 +99,10 @@ module.exports = {
          */
         tfaValidity: 300000,
         /**
+         * @summary Specifies the amount time for invoice expiry
+         */
+        invoiceValidity: 400000000,
+        /**
          * @summary Confirmation validatity
          */
         confirmationValidity: 300000,

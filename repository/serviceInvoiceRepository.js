@@ -93,14 +93,14 @@ module.exports = class ServiceInvoiceRepository {
             if (!_txc) await dbc.connect();
 
             // Delete the asset offer
-            var dbAsset = asset.toData();
-            dbAsset.updated_by = runAs.session.userId;
-            var updateCmd = model.Utils.generateUpdate(dbAsset, "assets", "updated_time");
+            var dbServiceInvoice = serviceInvoice.toData();
+            dbServiceInvoice.updated_by = runAs.session.userId;
+            var updateCmd = model.Utils.generateUpdate(dbServiceInvoice, "service_invoices", "updated_time");
             var rdr = await dbc.query(updateCmd.sql, updateCmd.args);
             if (rdr.rows.length == 0)
-                throw new exception.Exception("Could not update asset", exception.ErrorCodes.DATA_ERROR);
+                throw new exception.Exception("Could not update service invoice", exception.ErrorCodes.DATA_ERROR);
             else
-                return asset.fromData(rdr.rows[0]); 
+                return serviceInvoice.fromData(rdr.rows[0]); 
         }
         finally {
             if (!_txc) dbc.end();
@@ -120,11 +120,11 @@ module.exports = class ServiceInvoiceRepository {
             if (!_txc) await dbc.connect();
 
             // Get by ID
-            var rdr = await dbc.query("SELECT * FROM assets WHERE id = $1", [id]);
+            var rdr = await dbc.query("SELECT * FROM service_invoices WHERE id = $1", [id]);
             if (rdr.rows.length == 0)
-                throw new exception.NotFoundException("asset", id);
+                throw new exception.NotFoundException("serviceInvoice", id);
             else
-                return new Asset().fromData(rdr.rows[0]);
+                return new ServiceInvoice().fromData(rdr.rows[0]);
         }
         finally {
             if (!_txc) dbc.end();
@@ -153,11 +153,11 @@ module.exports = class ServiceInvoiceRepository {
                 if (!filter.deactivationTime)
                     dbFilter.deactivation_time = filter.deactivationTime;
             }
-            var selectCmd = model.Utils.generateSelect(dbFilter, "assets", offset, count);
+            var selectCmd = model.Utils.generateSelect(dbFilter, "service_invoices", offset, count);
             var rdr = await dbc.query(selectCmd.sql, selectCmd.args);
             var retVal = [];
             for (var r in rdr.rows)
-                retVal.push(new Asset().fromData(rdr.rows[r]));
+                retVal.push(new ServiceInvoice().fromData(rdr.rows[r]));
             return retVal;
         }
         finally {

@@ -52,6 +52,7 @@ module.exports = class SecurityLogic {
         this.createStellarWallet = this.activateStellarWalletForUser.bind(this);
         this.updateUser = this.updateUser.bind(this);
         this.validateUser = this.validateUser.bind(this);
+        this.createServiceInvoice = this.createServiceInvoice.bind(this);
         this.createInvitation = this.createInvitation.bind(this);
         this.initiatePasswordReset = this.initiatePasswordReset.bind(this);
         this.resetPassword = this.resetPassword.bind(this);
@@ -875,6 +876,75 @@ module.exports = class SecurityLogic {
         catch (e) {
             uhx.log.error(`Error finalizing invitation: ${e.message}`);
             throw new exception.Exception("Error finalizing invitation", e.code || exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
+
+    /**
+     * @method
+     * @summary Create an invitation on the data store
+     * @param {ServiceInvoice} serviceInvoice The service invoice that is to be created
+     * @param {SecurityPrincipal} principal The principal which is creating the service invoice
+     * @returns {ServiceInvoice} The created service invoice
+     */
+    async createServiceInvoice(serviceInvoiceBody, principal) {
+
+        try {
+
+            return await uhx.Repositories.transaction(async (_txc) => {
+                
+                serviceInvoiceBody.providerId = principal.session.userId;
+                serviceInvoiceBody.assetId = (await uhx.Repositories.assetRepository.getByCode("RECOIN")).id;
+                serviceInvoiceBody.userId = (await uhx.Repositories.userRepository.getByName(serviceInvoiceBody.username)).id;
+                serviceInvoiceBody.expiry = new Date(new Date().getTime() + uhx.Config.security.invoiceValidity);
+                var serviceInvoice = new model.ServiceInvoice().copy(serviceInvoiceBody);
+
+                serviceInvoice = await uhx.Repositories.serviceInvoiceRepository.insert(serviceInvoice, principal, _txc);
+
+                return serviceInvoice;
+            });
+        }
+        catch (e) {
+            uhx.log.error(`Error finalizing service invoice: ${e.message}`);
+            throw new exception.Exception("Error finalizing service invoice", e.code || exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
+
+    /**
+     * @method
+     * @summary Create an invitation on the data store
+     * @param {ServiceInvoice} serviceInvoice The service invoice that is to be created
+     * @param {SecurityPrincipal} principal The principal which is creating the service invoice
+     * @returns {ServiceInvoice} The created service invoice
+     */
+    async completeServiceInvoice(serviceInvoiceId, transaction, principal) {
+
+        try {
+
+            return await uhx.Repositories.transaction(async (_txc) => {
+                
+
+                var serviceInvoice = await uhx.Repositories.serviceInvoiceRepository.get(serviceInvoiceId);
+                var asset = await uhx.Repositories.assetRepository.get(serviceInvoice.assetId);
+
+                if(transaction.network == 1 && transaction.amount.value == parseFloat(serviceInvoice.amount) && transaction.amount.code == asset.code && new Date() < serviceInvoice.expiry ){
+                    var transactionArray = [];
+                    transactionArray.push(new model.Transaction().copy(transaction))
+                    var transactions = await uhx.TokenLogic.createTransaction(transactionArray, principal);
+                    
+                    serviceInvoice.transactionId = transactions.id;
+                    serviceInvoice.completionTime = new Date();
+
+                    await uhx.Repositories.serviceInvoiceRepository.update(serviceInvoice)
+
+                    serviceInvoice = await uhx.Repositories.serviceInvoiceRepository.insert(serviceInvoice, principal, _txc);
+
+                    return serviceInvoice;
+                }
+            });
+        }
+        catch (e) {
+            uhx.log.error(`Error completing service invoice: ${e.message}`);
+            throw new exception.Exception("Error completing service invoice", e.code || exception.ErrorCodes.UNKNOWN, e);
         }
     }
 

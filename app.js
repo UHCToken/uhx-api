@@ -32,6 +32,7 @@
     asset = require('./controllers/asset'),
     invitation = require('./controllers/invitation'),
     transaction = require('./controllers/transaction'),
+    serviceInvoice = require('./controllers/serviceInvoice'),
     reports = require('./controllers/stats'),
     swagger = require('./controllers/js-doc'),
     stellarFederation = require('./federation/stellar-fed.js'),
@@ -76,6 +77,7 @@ restApi.addResource(new group.GroupApiResource());
 restApi.addResource(new permission.PermissionApiResource());
 restApi.addResource(new asset.AssetApiResource());
 restApi.addResource(new invitation.InvitationApiResource());
+restApi.addResource(new serviceInvoice.ServiceInvoiceApiResource());
 restApi.addResource(new reports.StatisticsApiResource());
 restApi.addResource(new transaction.TransactionApiResource());
 restApi.addResource(new stellarFederation.StellarFederationApiResource());

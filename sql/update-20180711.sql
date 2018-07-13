@@ -11,9 +11,11 @@ CREATE TABLE IF NOT EXISTS service_invoices (
     user_id UUID NOT NULL,
     asset_id UUID NOT NULL,
     provider_id UUID NOT NULL,
+    transaction_id UUID,
     CONSTRAINT pk_service_invoice PRIMARY KEY (id),
     CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(id),
     CONSTRAINT fk_provider FOREIGN KEY (provider_id) REFERENCES users(id),
     CONSTRAINT fk_asset FOREIGN KEY (asset_id) REFERENCES assets(id),
+    CONSTRAINT fk_transaction FOREIGN KEY (transaction_id) REFERENCES transactions(id),
     CONSTRAINT fk_invoice_created_by FOREIGN KEY (created_by) REFERENCES users(id)
 );
