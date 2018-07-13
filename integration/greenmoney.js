@@ -70,7 +70,7 @@ module.exports = class GreenMoney {
                 retVal.payor = user;
                 retVal.amount = amount;
 
-                return new Promise((fulfill, reject) => {
+                return await new Promise((fulfill, reject) => {
                     request(url,
                         function (err, res, body) {
                             if (err) {
@@ -141,7 +141,7 @@ module.exports = class GreenMoney {
             new exception.Exception("Invalid invoice Id", exception.ErrorCodes.ERR_NOTFOUND);
 
         // Promise 
-        return new Promise((fulfill, reject) => {
+        return await new Promise((fulfill, reject) => {
             request(url,
                 function (err, res, body) {
                     var retVal = [];
@@ -277,6 +277,60 @@ module.exports = class GreenMoney {
         catch (ex) {
             return new exception.Exception("Error updating invoices.", exception.ErrorCodes.UNKNOWN, ex);
             console.log("An error occurred while updating all invoices: " + ex);
+        }
+    }
+
+    /**
+    * @method
+    * @summary Resends an invoice email from Green Money
+    * @param {Number} userId The userId to lookup
+    * @param {Number} invoiceId The invoiceId to resend an email for
+    * @param {SecurityPrincipal} principal The security principal
+    */
+    async resendInvoice(userId, invoiceId, principal) {
+        try {
+            if ((principal._session.userId == userId && principal.grant["invoice"] && security.PermissionType.OWNER) || (principal.grant["user"] & security.PermissionType.LIST)) {
+
+                if (invoiceId) {
+                    var url = `https://greenbyphone.com/echeck/Invoice.aspx?GreenInvoice_ID=${parseFloat(invoiceId)}`;
+                    url = url;
+                }
+                else
+                    new exception.Exception("Invalid invoice Id", exception.ErrorCodes.ERR_NOTFOUND);
+
+                var options = {
+                    url: url,
+                    headers: {
+                        'Cookie': 'ASP.NET_SessionId=0uv1ldt3ckh04f3xkbhukawz;'
+                    }
+                };
+                // Promise 
+                return await new Promise((fulfill, reject) => {
+                    request(options,
+                        function (err, res, body) {
+                            var retVal = {};
+                            if (err) {
+                                uhx.log.error(`HTTP ERR: ${err}`)
+                                reject(new exception.Exception("Error contacting GreenMoney", exception.ErrorCodes.COM_FAILURE, err));
+                            }
+                            else if (res.statusCode == 200) {
+                                if (res.body.search("Your new invoice link is already on it's way to your email address") > 0){
+                                    retVal.code = "Success";
+                                    retVal.msg = "Invoice email resent successfully";
+                                    fulfill(retVal);
+                                }
+                                else
+                                reject(new exception.Exception("Error resending invoice.", exception.ErrorCodes.COM_FAILURE, err));
+                            }
+                        })
+                });
+                return retVal;
+            } else {
+                return new exception.Exception("Invalid security permissions.", exception.ErrorCodes.SECURITY_ERROR);
+            }
+        }
+        catch (ex) {
+            return new exception.Exception("Error resending invoice.", exception.ErrorCodes.UNKNOWN, ex);
         }
     }
 

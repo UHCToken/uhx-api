@@ -24,6 +24,7 @@ const uhx = require('../uhx'),
     model = require('../model/model');
 
 const dollar_regex = /(^[0-9]{0,}).([0-9]{0,2}$)/;
+const invoice_regex = /(^[0-9]{6,8}$)/;
 
 /**
  * @class
@@ -57,6 +58,13 @@ class InvoiceApiResource {
                     "get": {
                         "demand": security.PermissionType.READ,
                         "method": this.get
+                    }
+                },
+                {
+                    "path": "user/:uid/invoice/resend",
+                    "post": {
+                        "demand": security.PermissionType.WRITE,
+                        "method": this.resend
                     }
                 },
                 {
@@ -135,6 +143,7 @@ class InvoiceApiResource {
 
         return true;
     }
+
     /**
      * @method
      * @summary Get invoices posted to a user's wallet
@@ -184,32 +193,89 @@ class InvoiceApiResource {
     }
 
     /**
- * @method
- * @summary Retrieves all invoices
- * @param {Express.Request} req The HTTP request made by the client
- * @param {Express.Response} res The HTTP response being sent back to the client
- * @swagger
- * /invoice:
- *  get:
- *      tags:
- *      - "invoice"
- *      summary: "Gets all invoices posted matching the filter parameter"
- *      description: "This method will request the server to produce a complete list of invoices"
- *      produces:
- *      - "application/json"
- *      responses:
- *          200: 
- *             description: "The query completed successfully and the results are in the payload"
- *             schema: 
- *                  $ref: "#/definitions/Invoice"
- *          500:
- *              description: "An internal server error occurred"
- *              schema:
- *                  $ref: "#/definitions/Exception"
- *      security:
- *      - uhx_auth:
- *          - "list:invoice"
- */
+     * @method
+     * @summary Resend an invoice email
+     * @param {Express.Reqeust} req The request from the client 
+     * @param {Express.Response} res The response from the client
+     * @swagger
+     * /user/{userid}/invoice/resend:
+     *  post:
+     *      tags:
+     *      - "resend"
+     *      summary: "Resends an invoice email to the user"
+     *      description: "This method will request an invoice email to be resent to a user"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - in: "path"
+     *        name: "userid"
+     *        description: "The identity of the user to find invoices for"
+     *        required: true
+     *        type: string
+     *      responses:
+     *          200: 
+     *             description: "The status of the resend"
+     *             schema: 
+     *                  $ref: "#/definitions/Invoices"
+     *          404: 
+     *             description: "The invoice was not found"
+     *             schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "write:invoice"
+     */
+    async resend(req, res) {
+        if (!req.body)
+            throw new exception.Exception("Missing Body", exception.ErrorCodes.MISSING_PROPERTY);
+
+        if (!req.body.invoiceId)
+            throw new exception.Exception("Missing Invoice Id", exception.ErrorCodes.MISSING_PROPERTY);
+
+        if (!invoice_regex.test(req.body.invoiceId))
+            throw new exception.ArgumentException("invoice id");
+
+        var resend = await uhx.GreenMoney.resendInvoice(req.params.uid, req.body.invoiceId, req.principal)
+
+        if (resend)
+            var status = resend instanceof exception.Exception ? 500 : 200;
+
+        res.status(status).json(resend);
+
+        return true
+    }
+
+    /**
+     * @method
+     * @summary Retrieves all invoices
+     * @param {Express.Request} req The HTTP request made by the client
+     * @param {Express.Response} res The HTTP response being sent back to the client
+     * @swagger
+     * /invoice:
+     *  get:
+     *      tags:
+     *      - "invoice"
+     *      summary: "Gets all invoices posted matching the filter parameter"
+     *      description: "This method will request the server to produce a complete list of invoices"
+     *      produces:
+     *      - "application/json"
+     *      responses:
+     *          200: 
+     *             description: "The query completed successfully and the results are in the payload"
+     *             schema: 
+     *                  $ref: "#/definitions/Invoice"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "list:invoice"
+     */
     async getAll(req, res) {
         var invoices = await uhx.GreenMoney.getAllInvoices();
         res.status(200).json(invoices);
