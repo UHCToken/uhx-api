@@ -30,6 +30,7 @@ const UserRepository = require('./userRepository'),
     InvoiceRepository = require('./invoiceRepository'),
     BalanceRepository = require('./balanceRepository'),
     ServiceInvoiceRepository = require('./serviceInvoiceRepository'),
+    ServiceRepository = require('./serviceRepository'),
     pg = require('pg'),
     uhx = require('../uhx'),
     exception = require('../exception');
@@ -138,6 +139,18 @@ class UhcRepositories {
             this._serviceInvoiceRepository = new ServiceInvoiceRepository(this.connectionString);
         return this._serviceInvoiceRepository;
     }
+
+    /**
+     * @property
+     * @summary Gets the service invoice repository
+     * @type {ServiceRepository}
+     */
+    get serviceRepository() {
+        if(!this._serviceRepository)
+            this._serviceRepository = new ServiceRepository(this.connectionString);
+        return this._serviceRepository;
+    }
+
 
     /**
      * @property

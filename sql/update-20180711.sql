@@ -12,8 +12,11 @@ CREATE TABLE IF NOT EXISTS service_invoices (
     asset_id UUID NOT NULL,
     provider_id UUID NOT NULL,
     transaction_id UUID,
+    updated_time TIMESTAMPTZ, 
+    updated_by UUID,
     CONSTRAINT pk_service_invoice PRIMARY KEY (id),
     CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_updated_by FOREIGN KEY (updated_by) REFERENCES users(id),
     CONSTRAINT fk_provider FOREIGN KEY (provider_id) REFERENCES users(id),
     CONSTRAINT fk_asset FOREIGN KEY (asset_id) REFERENCES assets(id),
     CONSTRAINT fk_transaction FOREIGN KEY (transaction_id) REFERENCES transactions(id),
@@ -23,8 +26,13 @@ CREATE TABLE IF NOT EXISTS service_invoices (
 CREATE TABLE IF NOT EXISTS services (
     id uuid NOT NULL DEFAULT uuid_generate_v4(),
     creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    amount NUMERIC(20, 7) NOT NULL,
+    code VARCHAR(256) NOT NULL,
+    info VARCHAR(256),
+    asset_id UUID NOT NULL,
     created_by UUID NOT NULL,
     service_invoice_id UUID NOT NULL,
     CONSTRAINT pk_service_id PRIMARY KEY (id),
     CONSTRAINT fk_service_invoice FOREIGN KEY (service_invoice_id) REFERENCES service_invoices(id),
+    CONSTRAINT fk_invoice_created_by FOREIGN KEY (created_by) REFERENCES users(id)
 )

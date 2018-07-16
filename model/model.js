@@ -32,6 +32,7 @@
     Wallet = require('./Wallet'),
     Balance = require('./Balance'),
     Invoice = require('./Invoice'),
+    Service = require('./Service'),
     ServiceInvoice = require('./ServiceInvoice');
 
 /**
@@ -74,6 +75,7 @@ module.exports.Utils = new ModelUtil();
 module.exports.Wallet = Wallet;
 module.exports.Invoice = Invoice;
 module.exports.ServiceInvoice = ServiceInvoice;
+module.exports.Service = Service;
 module.exports.Balance = Balance;
 module.exports.MonetaryAmount = MonetaryAmount;
 module.exports.Transaction = Transaction;

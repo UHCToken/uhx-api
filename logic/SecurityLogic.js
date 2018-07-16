@@ -896,9 +896,21 @@ module.exports = class SecurityLogic {
                 serviceInvoiceBody.assetId = (await uhx.Repositories.assetRepository.getByCode("RECOIN")).id;
                 serviceInvoiceBody.userId = (await uhx.Repositories.userRepository.getByName(serviceInvoiceBody.username)).id;
                 serviceInvoiceBody.expiry = new Date(new Date().getTime() + uhx.Config.security.invoiceValidity);
+                serviceInvoiceBody.amount = "0";
                 var serviceInvoice = new model.ServiceInvoice().copy(serviceInvoiceBody);
+                
+
+                for(var i = 0; i< serviceInvoiceBody.services.length; i++){
+                    serviceInvoice.amount = parseFloat(serviceInvoice.amount) + parseFloat(serviceInvoiceBody.services[i].amount);
+                };
 
                 serviceInvoice = await uhx.Repositories.serviceInvoiceRepository.insert(serviceInvoice, principal, _txc);
+                for(var i = 0; i< serviceInvoiceBody.services.length; i++){
+                    serviceInvoiceBody.services[i].assetId = serviceInvoiceBody.assetId;
+                    serviceInvoiceBody.services[i].serviceInvoiceId = serviceInvoice.id;
+                    var service = new model.Service().copy(serviceInvoiceBody.services[i]);
+                    await uhx.Repositories.serviceRepository.insert(service, principal, _txc);
+                };
 
                 return serviceInvoice;
             });
@@ -931,12 +943,10 @@ module.exports = class SecurityLogic {
                     transactionArray.push(new model.Transaction().copy(transaction))
                     var transactions = await uhx.TokenLogic.createTransaction(transactionArray, principal);
                     
-                    serviceInvoice.transactionId = transactions.id;
+                    serviceInvoice.transactionId = transactions[0].id;
                     serviceInvoice.completionTime = new Date();
 
-                    await uhx.Repositories.serviceInvoiceRepository.update(serviceInvoice)
-
-                    serviceInvoice = await uhx.Repositories.serviceInvoiceRepository.insert(serviceInvoice, principal, _txc);
+                    await uhx.Repositories.serviceInvoiceRepository.update(serviceInvoice, principal);
 
                     return serviceInvoice;
                 }
