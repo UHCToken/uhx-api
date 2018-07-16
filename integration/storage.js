@@ -37,7 +37,7 @@ module.exports = class ObjectStorage {
             var result = new exception.Exception("Missing file payload", exception.ErrorCodes.MISSING_PAYLOAD);
         } else {
             try {
-                var file = req.file('file');
+                var file = await req.file('file');
             } catch (ex) {
                 console.log(ex);
             }
@@ -58,8 +58,7 @@ module.exports = class ObjectStorage {
                     headers: {
                         'x-amz-acl': 'private'
                     },
-                    saveAs: filename,
-                    maxFileSize: uhx.Config.objectStorage.maxFileSize
+                    saveAs: filename
                 });
                 try {
                     var result = {};
