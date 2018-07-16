@@ -553,7 +553,7 @@ module.exports = class SecurityLogic {
                                 }, { user: existingUser });
                             else if (existingUser.emailVerified && existingUser.email)
                                 await uhx.Mailer.sendEmail({
-                                    to: existingUser.tel,
+                                    to: existingUser.name,
                                     from: uhx.Config.mail.from,
                                     template: uhx.Config.mail.templates.passwordChange,
                                     subject: "Did you change your UhX password?"

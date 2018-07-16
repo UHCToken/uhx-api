@@ -205,7 +205,7 @@ module.exports = {
             name: 'Web3Client',
             balanceFn: 'getBalance',
             createFn: 'generateAccount',
-         },
+        },
         /**
          * @summary Flag for using ethereum
          */
@@ -232,7 +232,7 @@ module.exports = {
             balanceFn: 'getBalance',
             createFn: 'generateAccount',
             network: 'testnet'
-         },
+        },
         /**
          * @summary Flag for using bitcoin
          */
@@ -266,6 +266,10 @@ module.exports = {
         */
         updateTimer: 14400000,
         /**
+        * @summary How often to resend a reminder email prior to expiry
+        */
+        reminderTime: 604800000,
+        /**
         * @summary The amount of time before an invoice is marked to be removed
         */
         expiryTime: 1209600000,
@@ -290,19 +294,19 @@ module.exports = {
         /**
          * @summary Access key id
          */
-        key:"XXXXXXXXXXXXXXXXXXXXXXXXX",
+        key: "XXXXXXXXXXXXXXXXXXXXXXXXX",
         /**
          * @summary Secret key
          */
-        secret:"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        secret: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
         /**
          * @summary Storage bucket
          */
-        bucket:"mybucketname",
+        bucket: "mybucketname",
         /**
          * @summary Storage endpoint
          */
-        endpoint:"s3.tor01.objectstorage.softlayer.net",
+        endpoint: "s3.tor01.objectstorage.softlayer.net",
         /**
          * @summary Maximum file size in bytes
          */
@@ -349,7 +353,8 @@ module.exports = {
             resetPassword: "./templates/resetPassword",
             tfa: "./templates/tfa",
             tfaChange: "./templates/tfaChanged",
-            passwordChange: "./templates/passwordChanged"
+            passwordChange: "./templates/passwordChanged",
+            greenMoneyReminder: "./templates/greenMoneyReminder"
         }
     },
     logging: {

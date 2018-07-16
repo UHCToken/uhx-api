@@ -94,6 +94,7 @@ module.exports = class Invoice extends ModelBase {
         this.code = dbInvoice.code || 'USD';
         this.creationTime = dbInvoice.creation_time;
         this.expiry = dbInvoice.expiry || null;
+        this.reminderDate = dbInvoice.reminder_date || null;
         this.status_code = dbInvoice.status_code;
         this.status_desc = dbInvoice.status_desc;
         this.payorId = dbInvoice.payor_id;
@@ -112,6 +113,7 @@ module.exports = class Invoice extends ModelBase {
             code: this.code || 'USD',
             creation_time: this.creationTime,
             expiry: this.expiry || null,
+            reminder_date: this.reminderDate || null,
             status_code: this.status_code,
             status_desc: this.status_desc,
             payor_id: this.payor_id

@@ -68,6 +68,13 @@ class InvoiceApiResource {
                     }
                 },
                 {
+                    "path": "user/:uid/invoice/cancel",
+                    "post": {
+                        "demand": security.PermissionType.WRITE,
+                        "method": this.cancel
+                    }
+                },
+                {
                     "path": "invoice",
                     "get": {
                         "demand": security.PermissionType.LIST,
@@ -245,6 +252,63 @@ class InvoiceApiResource {
             var status = resend instanceof exception.Exception ? 500 : 200;
 
         res.status(status).json(resend);
+
+        return true
+    }
+
+    /**
+     * @method
+     * @summary Cancels an invoice
+     * @param {Express.Reqeust} req The request from the client 
+     * @param {Express.Response} res The response from the client
+     * @swagger
+     * /user/{userid}/invoice/cancel:
+     *  post:
+     *      tags:
+     *      - "cancel"
+     *      summary: "Cancels an invoice"
+     *      description: "This method will mark an invoice as cancelled within the system"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - in: "path"
+     *        name: "userid"
+     *        description: "The identity of the user to cancel the invoice for"
+     *        required: true
+     *        type: string
+     *      responses:
+     *          200: 
+     *             description: "The status of the resend"
+     *             schema: 
+     *                  $ref: "#/definitions/Invoices"
+     *          404: 
+     *             description: "The invoice was not found"
+     *             schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "write:invoice"
+     */
+    async cancel(req, res) {
+        if (!req.body)
+            throw new exception.Exception("Missing Body", exception.ErrorCodes.MISSING_PROPERTY);
+
+        if (!req.body.invoiceId)
+            throw new exception.Exception("Missing Invoice Id", exception.ErrorCodes.MISSING_PROPERTY);
+
+        if (!invoice_regex.test(req.body.invoiceId))
+            throw new exception.ArgumentException("invoice id");
+
+        var cancelled = await uhx.GreenMoney.cancelInvoice(req.params.uid, req.body.invoiceId, req.principal)
+
+        if (cancelled)
+            var status = cancelled instanceof exception.Exception ? 500 : 200;
+
+        res.status(status).json(cancelled);
 
         return true
     }
