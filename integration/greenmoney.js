@@ -289,7 +289,31 @@ module.exports = class GreenMoney {
     */
     async resendInvoice(userId, invoiceId, principal) {
         try {
-            if ((principal._session.userId == userId && principal.grant["invoice"] && security.PermissionType.OWNER) || (principal.grant["user"] & security.PermissionType.LIST)) {
+            var invoices = await uhx.GreenMoney.getInvoicesForUser(userId, principal);
+            var invoiceOwner = false;
+            if (invoices.length > 0) {
+
+                for (var i in invoices) {
+                    if (invoices[i].status_code == "3" || invoices[i].status_code == "4") {
+                        if (invoices[i].invoiceId == invoiceId) {
+                            invoiceOwner = true;
+                        }
+                    }
+                }
+            } else
+                new exception.Exception("Invalid invoice Id", exception.ErrorCodes.ERR_NOTFOUND);
+            /*
+        for (var i = 0; i < invoices.length; i++) {
+            if (invoices[i].status_code == "3" || invoices[i].status_code == "4") {
+                if (invoices[i].invoiceId == invoiceId) {
+                    invoiceOwner = true;
+                }
+            }
+        }
+    } else
+            new exception.Exception("Invalid invoice Id", exception.ErrorCodes.ERR_NOTFOUND);
+*/
+            if ((principal._session.userId == userId && principal.grant["invoice"] && security.PermissionType.OWNER && invoiceOwner == true) || (principal.grant["user"] & security.PermissionType.LIST)) {
 
                 if (invoiceId) {
                     var url = `https://greenbyphone.com/echeck/Invoice.aspx?GreenInvoice_ID=${parseFloat(invoiceId)}`;
@@ -314,14 +338,16 @@ module.exports = class GreenMoney {
                                 reject(new exception.Exception("Error contacting GreenMoney", exception.ErrorCodes.COM_FAILURE, err));
                             }
                             else if (res.statusCode == 200) {
-                                if (res.body.search("Your new invoice link is already on it's way to your email address") > 0){
+                                if (res.body.search("Your new invoice link is already on it's way to your email address") > 0) {
                                     retVal.code = "Success";
                                     retVal.msg = "Invoice email resent successfully";
                                     fulfill(retVal);
                                 }
                                 else
-                                reject(new exception.Exception("Error resending invoice.", exception.ErrorCodes.COM_FAILURE, err));
+                                    reject(new exception.Exception("Error resending invoice.", exception.ErrorCodes.COM_FAILURE, err));
                             }
+                            else
+                                reject(new exception.Exception("Error resending invoice.", exception.ErrorCodes.COM_FAILURE, err));
                         })
                 });
                 return retVal;
