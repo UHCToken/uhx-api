@@ -477,7 +477,7 @@ class UserApiResource {
      *          - "execute:user"
     */
     async reset(req, res) {
-        await uhx.SecurityLogic.initiatePasswordReset(req.body.email, req.body.tel);
+        await uhx.SecurityLogic.initiatePasswordReset(req.body.email.toLowerCase(), req.body.tel);
         res.status(204).send();
         return true;
     }
