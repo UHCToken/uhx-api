@@ -245,10 +245,17 @@ class TransactionApiResource {
 
         // Minify user information
         transactions = transactions.map((t)=> {
-            if(t._payor)
+            if(t._payor){
                 t._payor = t._payor.summary();
-            if(t._payee) 
-                t._payee = t._payee.summary();
+                if(req.params.uid === t.payor.id)
+                    t.fee = 100;
+                else if(req.params.uid === t.buyerId && t._payor.id === t.buyerId)
+                    t.fee = 200;
+            }
+            if(t._payee) {
+                try { t._payee = t._payee.summary(); }
+                catch(e){}
+            }
             if(t._buyer)
                 t._buyer = t._buyer.summary();
             if(t._asset)
@@ -259,6 +266,7 @@ class TransactionApiResource {
         return true;
     }
 
+    
     /**
      * @method
      * @summary Posts a new transaction to the user's wallet
@@ -312,7 +320,7 @@ class TransactionApiResource {
      *      tags:
      *      - "transaction"
      *      summary: "Posts a new transaction for general processing"
-     *      description: "This method will request that a transaction be posted to the UHX API for further processing"
+     *      description: "This method will request that a transaction be posted to the UhX API for further processing"
      *      consumes: 
      *      - "application/json"
      *      produces:
@@ -354,14 +362,22 @@ class TransactionApiResource {
         if(!req.body)
             throw new exception.ArgumentException("body missing");
 
-        if(!Array.isArray(req.body))
-            req.body = [req.body];
-        
-        var transactions = await uhx.TokenLogic.createTransaction(req.body.map(o=>new Transaction().copy(o)), req.principal);
+        if(!req.body.network || req.body.network == 1){
+            if(!Array.isArray(req.body))
+                req.body = [req.body];
+            
+            var transactions = await uhx.TokenLogic.createTransaction(req.body.map(o=>new Transaction().copy(o)), req.principal);
 
-        var status = transactions.find(o=>o.state != 2) ? 202 : 201;
-        res.status(status).json(transactions);
+            var status = transactions.find(o=>o.state != 2) ? 400 : 201;
+            res.status(status).json(transactions);
 
+        }
+        else if (req.body.network == 2){
+            res.status(201).json(await uhx.TokenLogic.transferEther(req.body, req.principal));
+        }
+        else if (req.body.network == 3){
+            res.status(201).json(await uhx.TokenLogic.transferBitcoin(req.body, req.principal));
+        }
         return true;
     }
 

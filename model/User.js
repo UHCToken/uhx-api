@@ -112,6 +112,9 @@ const uhx = require('../uhx'),
   *                 enum: 
   *                 - 1: SMS
   *                 - 2: E-MAIL
+  *             profileImage:
+  *                 description: The filename for the profile image for the user
+  *                 type: string
   *             claims:
   *                 description: Additional claims that systems have made about the user
   *                 schema:
@@ -194,6 +197,7 @@ const uhx = require('../uhx'),
         this.creationTime = dbUser.creation_time;
         this.updatedTime = dbUser.updated_time;
         this.deactivationTime = dbUser.deactivation_time;
+        this.profileImage = dbUser.profile_image;
         return this;
     }
 
@@ -215,7 +219,8 @@ const uhx = require('../uhx'),
             description: this.profileText,
             tel: this.tel,
             tel_verified: this.telVerified,
-            tfa_method: this.tfaMethod
+            tfa_method: this.tfaMethod,
+            profile_image: this.profileImage
             // creation timestamp properites are skipped beecause they are set by repo
         };
 
@@ -335,9 +340,12 @@ const uhx = require('../uhx'),
         retVal.externalIds = this._externIds;
         retVal.wallets = this._wallets;
         retVal.claims = {};
-        for(var k in this._claims)
+        for(var k in this._claims){
             if(!k.startsWith("$"))
                 retVal.claims[k] = this._claims[k];
+            if(k != "$tfa.secret")
+                retVal.claims.activeClaims = true;
+        }
         retVal.groups = this._groups;
         return retVal;
     }

@@ -136,23 +136,23 @@ module.exports = class WebClient {
         }
     }
 
-    async createPayment(buyerEthWallet, ethDistributionAccount, amount) {
+    async createPayment(payorWallet, payeeWallet, amount) {
         
         try {
             var gasPrice = await this.server.eth.getGasPrice();
             var gasLimit = await this.server.eth.getBlock("latest").gasLimit;
-            var nonce = await this.server.eth.getTransactionCount(buyerEthWallet.address)
+            var nonce = await this.server.eth.getTransactionCount(payorWallet.address)
             var rawTx = {
                 nonce: this.server.utils.toHex(nonce),
                 gasPrice: this.server.utils.toHex(gasPrice), 
                 gasLimit:  this.server.utils.toHex('21000'),
-                from: buyerEthWallet.address, 
-                to: ethDistributionAccount, 
+                from: payorWallet.address, 
+                to: payeeWallet, 
                 value: this.server.utils.toHex(this.server.utils.toWei(amount.value, "ether"))
             }
 
             var tx = new EthereumTx(rawTx)
-            var pk = Buffer.from(buyerEthWallet.seed.substring(2), 'hex')
+            var pk = Buffer.from(payorWallet.seed.substring(2), 'hex')
             tx.sign(pk)
 
             var serializedTx = tx.serialize();

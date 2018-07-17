@@ -105,6 +105,7 @@ module.exports = class Purchase extends Transaction {
         this.loadBuyer = this.loadBuyer.bind(this);
         this.loadCreatedBy = this.loadCreatedBy.bind(this);
         this.loadQuote = this.loadQuote.bind(this);
+        this.autoActivate = false;
     }
 
     /**

@@ -37,9 +37,9 @@
     // Step 1. We want to ensure that the buyer has sufficient XLM
     var asset = await orderInfo.loadAsset();
     var buyer = await orderInfo.loadBuyer();
-    var ethWallet = await uhx.Repositories.walletRepository.getTypeForUserByUserId(buyer.id, "ETHEREUM")
+    var btcWallet = await uhx.Repositories.walletRepository.getTypeForUserByUserId(buyer.id, "BITCOIN")
 
-    var buyerEthWallet = await uhx.Web3Client.getBalance(ethWallet);
+    var buyerBtcWallet = await uhx.BitcoinClient.getBalance(btcWallet);
     
     var buyerStrWallet = await uhx.StellarClient.isActive(await buyer.loadStellarWallet());
     // Buyer's stellar wallet is empty and not active, we should activate it
@@ -47,11 +47,10 @@
         buyerStrWallet = await uhx.Repositories.walletRepository.getByUserId(buyer.id);
         await uhx.StellarClient.activateAccount(buyerStrWallet, "1.6", distributionAccount);
     }
-
-    var sourceEthBalance = buyerEthWallet.balances.find(o=>o.code == orderInfo.invoicedAmount.code);
+    var sourceBtcBalance = buyerBtcWallet.balances.find(o=>o.code == orderInfo.invoicedAmount.code);
 
     var sourceStrBalance = buyerStrWallet.balances.find(o=>o.code == "XLM");
-    if(!sourceEthBalance || parseFloat(sourceEthBalance.value) < parseFloat(orderInfo.invoicedAmount.value)) // Must carry min balance
+    if(!sourceBtcBalance || parseFloat(sourceBtcBalance.value) < parseFloat(orderInfo.invoicedAmount.value)) // Must carry min balance
     {
         orderInfo.memo = exception.ErrorCodes.INSUFFICIENT_FUNDS;
         return model.TransactionStatus.Failed;
@@ -69,7 +68,7 @@
         if(!buyerStrWallet.balances.find(o=>o.code == asset.code))
             await uhx.StellarClient.createTrust(buyerStrWallet, asset);
         // TODO: If this needs to go to escrow this will need to be changed
-        await uhx.Web3Client.createPayment(buyerEthWallet, uhx.Config.ethereum.distribution_wallet_address, orderInfo.invoicedAmount)
+        await uhx.BitcoinClient.createPayment(buyerBtcWallet, uhx.Config.bitcoin.distribution_wallet_address, orderInfo.invoicedAmount)
         await uhx.StellarClient.createPayment(distributionAccount, buyerStrWallet, {value: orderInfo.quantity, code: asset.code})
 
         //orderInfo.ref = transaction.ref;
@@ -78,7 +77,7 @@
         return model.TransactionStatus.Complete;
     }
     catch(e) {
-        uhx.log.error(`Error transacting with ethereum network: ${e.message}`);
+        uhx.log.error(`Error transacting with bitcoin network: ${e.message}`);
         orderInfo.ref = e.code || exception.ErrorCodes.COM_FAILURE;
         orderInfo.transactionTime = new Date();
         return model.TransactionStatus.Failed;

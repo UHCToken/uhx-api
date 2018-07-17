@@ -191,7 +191,7 @@ module.exports = class Transaction extends ModelBase {
     /**
      * @method
      * @returns {User} The payor of the transaction
-     * @summary Loads the payor from the UHX database
+     * @summary Loads the payor from the UhX database
      */
     async loadPayor(_txc) {
         if(!this._payor && this.payorId)
@@ -206,11 +206,13 @@ module.exports = class Transaction extends ModelBase {
     /**
      * @method
      * @returns {User} The payee of the transaction
-     * @summary Loads the payee from the UHX database
+     * @summary Loads the payee from the UhX database
      */
     async loadPayee(_txc) {
-        if(!this._payee && this.payeeId) 
+        if(!this._payee && this.payeeId && !uhx.Config.security.username_regex.test(this.payeeId)) 
             this._payee = await uhx.Repositories.userRepository.get(this.payeeId, _txc);
+        else if(!this._payee && this.payeeId)
+            this._payee = await uhx.Repositories.userRepository.getByName(this.payeeId, _txc);
         else if(!this._payee && this._payeeWalletId) {
             this._payee = await uhx.Repositories.userRepository.getByWalletId(this._payeeWalletId, _txc) || 
                 await uhx.Repositories.assetRepository.getByWalletId(this._payeeWalletId, _txc);
@@ -250,7 +252,9 @@ module.exports = class Transaction extends ModelBase {
         {
             if(this._payeeWalletId)
                 this._payeeWallet = await uhx.Repositories.walletRepository.get(this._payeeWalletId, _txc);
-            else if(this.payeeId && !uuidRegex.test(this.payeeId))
+            else if (this.payeeId && uhx.Config.security.username_regex.test(this.payeeId))
+                this._payeeWallet = await uhx.Repositories.walletRepository.getByName(this.payeeId, _txc);
+            else if(this.payeeId && !uuidRegex.test(this.payeeId) && !uhx.Config.security.username_regex.test(this.payeeId))
                 this._payeeWallet = await uhx.Repositories.walletRepository.getByPublicKey(this.payeeId, _txc);
             else if(this.payeeId) {
                 try { this._payeeWallet = await uhx.Repositories.walletRepository.get(this.payeeId, _txc); }

@@ -29,7 +29,7 @@
     if(to.emailVerified)
         await uhx.Mailer.sendEmail({
             to: to.email, 
-            subject: "Your UHX TFA secret",
+            subject: "Your UhX TFA secret",
             template: uhx.Config.mail.templates.tfa
         }, { user: to, token: code });
  }

@@ -18,7 +18,7 @@
  */
 
  /**
-  * @enum UHX API Error Codes
+  * @enum UhX API Error Codes
   * @description This is used to expose common error codes 
   */
  const ErrorCodes = {

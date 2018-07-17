@@ -147,6 +147,8 @@ class PurchaseApiResource {
         else if(!req.body.quantity)
             throw new exception.ArgumentException("quantity missing");
 
+        var status;
+
         req.body.buyerId = req.params.uid;
         var purchase = await uhx.TokenLogic.createPurchase(new Purchase().copy(req.body), req.principal);
         purchase.forEach(o=>{
@@ -156,8 +158,16 @@ class PurchaseApiResource {
                 o._payee = o.payee.summary();
             if(o.buyer)
                 o._buyer = o.buyer.summary();
+            if(o.memo == "ERR_NSF"){
+                status = 500;
+                purchase = new exception.Exception("Insufficient funds for this purchase.", exception.ErrorCodes.INSUFFICIENT_FUNDS);
+            }
         })
-        res.status(201)
+
+        if (!status)
+            status = 201;
+
+        res.status(status)
             .set("Location", `${uhx.Config.api.scheme}://${uhx.Config.api.host}:${uhx.Config.api.port}${uhx.Config.api.base}/user/${req.params.uid}/purchase/${purchase.id}`)
             .json(purchase);
         return true;
@@ -297,7 +307,7 @@ class PurchaseApiResource {
                 "name": "Stellar Lumens",
                 "network": "Stellar",
                 "description": "Pay with Lumens",
-                "note": "Your UHX account must contain 2 XLM for transaction processing, if you use this option you should transfer an extra 2 XLM to your account",
+                "note": "Your UhX account must contain 2 XLM for transaction processing, if you use this option you should transfer an extra 2 XLM to your account",
                 "currency": "XLM"
             },
             {

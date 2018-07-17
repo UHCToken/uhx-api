@@ -16,7 +16,7 @@
  * 
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
- 
+
 const uhx = require('../uhx'),
     exception = require('../exception'),
     security = require('../security'),
@@ -47,19 +47,19 @@ class WalletApiResource {
     get routes() {
         return {
             "permission_group": "wallet",
-            "routes" : [
+            "routes": [
                 {
-                    "path" : "user/:uid/wallet",
+                    "path": "user/:uid/wallet",
                     "put": {
-                        "demand" : security.PermissionType.WRITE,
-                        "method" : this.put
+                        "demand": security.PermissionType.WRITE,
+                        "method": this.put
                     },
-                    "get" : {
-                        "demand":security.PermissionType.LIST,
+                    "get": {
+                        "demand": security.PermissionType.LIST,
                         "method": this.get
                     },
-                    "delete" : {
-                        "demand":security.PermissionType.WRITE,
+                    "delete": {
+                        "demand": security.PermissionType.WRITE,
                         "method": this.delete
                     }
                 },
@@ -75,6 +75,13 @@ class WalletApiResource {
                     "get": {
                         "demand": security.PermissionType.READ,
                         "method": this.getWallet
+                    }
+                },
+                {
+                    "path": "wallet/generate",
+                    "post": {
+                        "demand": security.PermissionType.EXECUTE,
+                        "method": this.generateWallets
                     }
                 }
             ]
@@ -126,7 +133,7 @@ class WalletApiResource {
      *      - uhx_auth:
      *          - "write:wallet"
      */
-    async put(req, res)  {
+    async put(req, res) {
         res.status(201).json(await uhx.TokenLogic.activateStellarWalletForUser(req.params.uid));
         return true;
     }
@@ -156,7 +163,7 @@ class WalletApiResource {
      *             schema: 
      *                  $ref: "#/definitions/Wallet"
      *          404: 
-     *             description: "The user has not bought any UHX yet and does not have an active wallet"
+     *             description: "The user has not bought any UhX yet and does not have an active wallet"
      *             schema: 
      *                  $ref: "#/definitions/Exception"
      *          500:
@@ -173,8 +180,24 @@ class WalletApiResource {
         wallets = await uhx.TokenLogic.getAllBalancesForWallets(wallets);
 
         var retVal = {};
-        wallets.forEach(o=> retVal[o._symbol] = o);
-        
+        wallets.forEach(o => retVal[o._symbol] = o);
+
+        // Get USD balance
+        var usd = await uhx.GreenMoney.getBalance(req.params.uid, 'USD');
+
+        if (usd) {
+            retVal.usd = {};
+            retVal.usd.id = usd.id;
+            retVal.usd.balances = [];
+            var balance = {};
+            balance.code = 'USD';
+            balance.value = usd.amount;
+            retVal.usd.balances.push(balance)
+        }
+        else
+            retVal.usd = null;
+
+
         res.status(200).json(retVal);
         return true
     }
@@ -205,7 +228,7 @@ class WalletApiResource {
      *             schema: 
      *                  $ref: "#/definitions/Wallet"
      *          404: 
-     *             description: "The user has not bought any UHX yet and does not have an active wallet"
+     *             description: "The user has not bought any UhX yet and does not have an active wallet"
      *             schema: 
      *                  $ref: "#/definitions/Exception"
      *          500:
@@ -217,7 +240,10 @@ class WalletApiResource {
      *          - "write:wallet"
      */
     async delete(req, res) {
-        res.status(201).json(await uhx.Repositories.walletRepository.deleteByUserId(req.params.uid));
+        var retVal = [];
+        retVal.push(await uhx.Repositories.balanceRepository.delete(req.params.uid));
+        retVal.push(await uhx.Repositories.walletRepository.deleteByUserId(req.params.uid));
+        res.status(201).json(retVal);
         return true;
     }
 
@@ -247,7 +273,7 @@ class WalletApiResource {
      *             schema: 
      *                  $ref: "#/definitions/Asset"
      *          404: 
-     *             description: "The user has not bought any UHX yet and does not have an active wallet"
+     *             description: "The user has not bought any UhX yet and does not have an active wallet"
      *             schema: 
      *                  $ref: "#/definitions/Exception"
      *          500:
@@ -260,24 +286,24 @@ class WalletApiResource {
      *          - "read:asset"
      */
     async getAssetWallet(req, res) {
-        
+
         var assetWalletStat = await uhx.Repositories.transaction(async (_txc) => {
             var asset = await uhx.Repositories.assetRepository.get(req.params.assetId, _txc);
             await asset.loadDistributorWallet(_txc);
 
-            var stellarPromises = [ 
+            var stellarPromises = [
                 (async () => { asset.distWallet = await uhx.StellarClient.getAccount(asset._distWallet) })(),
-                (async () => { asset.issuerWallet = await uhx.StellarClient.getAccount(new Wallet().copy({ address: asset.issuer }))})()
+                (async () => { asset.issuerWallet = await uhx.StellarClient.getAccount(new Wallet().copy({ address: asset.issuer })) })()
             ];
             // Load from stellar network but don't want ... haha
             var offers = await asset.loadOffers(_txc);
 
             offers.forEach((o) => {
-                stellarPromises.push((async () => { 
+                stellarPromises.push((async () => {
                     await o.loadWallet(_txc)
                     o.wallet = await uhx.StellarClient.getAccount(o._wallet);
-                    o.remain = new Date() > o.startDate && new Date() < o.stopDate ? o.wallet.balances.find(b=>b.code == asset.code).value : o.stopDate < new Date() ? 0 : o.amount;
-                    
+                    o.remain = new Date() > o.startDate && new Date() < o.stopDate ? o.wallet.balances.find(b => b.code == asset.code).value : o.stopDate < new Date() ? 0 : o.amount;
+
                 })());
             });
 
@@ -306,6 +332,55 @@ class WalletApiResource {
     }
 
     /**
+     * @summary Generates wallets for those without for a specific network
+     * @method
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to the client
+    * @swagger
+     * /wallet/generate:
+     *  poast:
+     *      tags:
+     *      - "wallet"
+     *      summary: "Creates wallets for current users on a specific network if they don't have one"
+     *      description: "This method will find all users without a wallet on the network and create one for each"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - in: "path"
+     *        name: "network"
+     *        description: "The network id that the wallets will be generated on"
+     *        required: true
+     *        type: string
+     *      responses:
+     *          200: 
+     *             description: "The wallets were created successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/Asset"
+     *          404: 
+     *             description: "No users exist without a wallet"
+     *             schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "execute:wallet"
+     */
+    async generateWallets(req, res) {
+        if(req.body.network){
+            var response = await uhx.TokenLogic.generateWallets(req.body.network);
+            res.status(200).json(response);
+            return true;
+        }
+        else{
+            res.status(500).json("Missing parameters")
+            return true;
+        }
+    }
+
+    /**
      * @method
      * @summary Determines additional access control on the wallet resource
      * @param {security.Principal} principal The JWT principal data that has authorization information
@@ -315,17 +390,17 @@ class WalletApiResource {
      */
     async acl(principal, req, res) {
 
-        if(!(principal instanceof security.Principal)) {
+        if (!(principal instanceof security.Principal)) {
             uhx.log.error("ACL requires a security principal to be passed");
             return false;
         }
 
         // if the token has OWNER set for USER permission then this user must be SELF
         return (principal.grant.wallet & security.PermissionType.OWNER && req.params.uid == principal.session.userId) // the permission on the principal is for OWNER only
-                ^ !(principal.grant.wallet & security.PermissionType.OWNER); // XOR the owner grant flag is not set.
-                
+            ^ !(principal.grant.wallet & security.PermissionType.OWNER); // XOR the owner grant flag is not set.
+
     }
-    
+
 }
 
 // Module exports

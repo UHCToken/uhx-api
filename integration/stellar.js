@@ -28,6 +28,8 @@ const Stellar = require('stellar-sdk'),
     Offer = require('../model/Offer'),
     crypto = require("crypto");
 
+const uuidRegex = /[A-F0-9]{8}-(?:[A-F0-9]{4}\-){3}[A-F0-9]{12}/i;
+
 /**
  * @class
  * @summary Represents a stellar exception
@@ -63,6 +65,8 @@ module.exports = class StellarClient {
         // "private" members
         if (useTestNetwork) {
             Stellar.Network.useTestNetwork()
+        } else {
+            Stellar.Network.usePublicNetwork()
         }
 
         this._feeAccount = feeTarget;
@@ -392,7 +396,7 @@ module.exports = class StellarClient {
         }
         catch (e) {
 
-            if (e.data && e.data.status == 404)
+            if ((e.response && e.response.status == 404) || (e.data && e.data.status == 404))
                 throw new exception.NotFoundException("wallet", userWallet.id); // soft fail
             uhx.log.error(`Account getAccount has failed: ${JSON.stringify(e)}`);
             throw new StellarException(e);
@@ -413,8 +417,18 @@ module.exports = class StellarClient {
         try {
 
             uhx.log.info(`createPayment() : ${payorWallet.address} > ${payeeWallet.address} [${amount.value} ${amount.code}]`);
+            
+            if (payorWallet.address == payeeWallet.address)
+                throw new exception.BusinessRuleViolationException("Cannot send to self");
+
             // Load payor stellar account
             var payorStellarAcct = await this.server.loadAccount(payorWallet.address);
+
+            // Check for minimum balance
+            var payorBalance = payorStellarAcct.balances.find(o=>o.asset_type == "native").balance;
+            var minBalance = payorStellarAcct.balances.length * 0.5 + 0.50001
+            if (((payorBalance - amount.value) < minBalance) && amount.code == "XLM")
+                throw new exception.BusinessRuleViolationException("Payment would exceed the minimum required balance");
 
             // New tx
             var paymentTx = new Stellar.TransactionBuilder(payorStellarAcct);
@@ -436,7 +450,12 @@ module.exports = class StellarClient {
 
             // Memo field if memo is present
             if (ref) {
-                var memoObject = Stellar.Memo.hash(crypto.createHash('sha256').update(ref).digest('hex'));
+                var memoObject = null;
+                if(uuidRegex.test(ref)) // uuid
+                    memoObject = Stellar.Memo.hash(crypto.createHash('sha256').update(ref).digest('hex'));
+                else
+                    memoObject = Stellar.Memo.text(ref);
+                    
                 paymentTx.addMemo(memoObject);
             }
 
@@ -470,8 +489,8 @@ module.exports = class StellarClient {
      * @param {string} ref A memo to add to the transaction
      * @param {boolean} asTrade Indicates whether the exchange should be as a official "trade" or just purchases
      * @returns {Transaction} The transaction information for the operation
-     * @example UserA wallet wishes to swap 100 UHX for 20 XLM from UserB wallet
-     * client.exchangeAsset(userA, userB, new MonetaryAmount(20, "XLM"), new MonetaryAmount(100, "UHX"), "ID")
+     * @example UserA wallet wishes to swap 100 UhX for 20 XLM from UserB wallet
+     * client.exchangeAsset(userA, userB, new MonetaryAmount(20, "XLM"), new MonetaryAmount(100, "UhX"), "ID")
      */
     async exchangeAsset(sellerWallet, buyerWallet, selling, buying, ref, asTrade) {
 
@@ -669,6 +688,7 @@ module.exports = class StellarClient {
         var type = null;
         switch (opRecord.type) {
             case "change_trust":
+                memo = "Trustline created";
             case "allow_trust":
                 type = model.TransactionType.Trust;
                 break;
@@ -756,8 +776,12 @@ module.exports = class StellarClient {
                     break;
                 case model.TransactionType.Purchase:
                 case model.TransactionType.Deposit:
+                case model.TransactionType.Payment:
                 case model.TransactionType.Airdrop:
-                    stlrTx = await this.createPayment(transaction._payorWallet, transaction._payeeWallet, transaction.amount, transaction.id);
+                    if (transaction.memo && transaction.memo.length <= 28)
+                        stlrTx = await this.createPayment(transaction._payorWallet, transaction._payeeWallet, transaction.amount, transaction.memo);
+                    else
+                        stlrTx = await this.createPayment(transaction._payorWallet, transaction._payeeWallet, transaction.amount, transaction.id);
                     break;
                 default:
                     throw new exception.Exception(`Cannot understand ${transaction.type}`);

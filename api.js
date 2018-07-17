@@ -173,7 +173,7 @@ class RouteHandler {
 }
 /**
  * @class
- * @summary UHX Api class
+ * @summary UhX Api class
  */
  class RestApi {
 
@@ -268,7 +268,7 @@ class RouteHandler {
      * @swagger
      * /:
      *  options:
-     *      summary: Gets the operations uspported on this UHX API instance
+     *      summary: Gets the operations uspported on this UhX API instance
      *      description: "Note: When the session is authenticated this resource will only show routes which the authenticated user has access to"
      *      responses:
      *          200:

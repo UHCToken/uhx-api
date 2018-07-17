@@ -27,6 +27,7 @@
     user = require('./controllers/user'),
     wallet = require('./controllers/wallet'),
     group = require('./controllers/group'),
+    invoice = require('./controllers/invoice'),
     permission = require('./controllers/permission'),
     asset = require('./controllers/asset'),
     invitation = require('./controllers/invitation'),
@@ -38,7 +39,8 @@
     toobusy = require('toobusy-js'),
     https = require('https'),
     helmet = require('helmet'),
-    http = require('http');
+    http = require('http'),
+    skipper = require("skipper");
     
     toobusy.maxLag(10000);
 // Startup application
@@ -52,6 +54,7 @@ app.use(function(req, res, next) {
         next();
 });
 app.use(helmet());
+app.use(skipper());
 
 // Construct REST API
 var restApi = new api.RestApi(uhx.Config.api.base, app);
@@ -69,6 +72,7 @@ if(uhx.Config.swagger.enabled) {
 restApi.addResource(new oauth.OAuthTokenService());
 restApi.addResource(new user.UserApiResource());
 restApi.addResource(new purchase.PurchaseApiResource());
+restApi.addResource(new invoice.InvoiceApiResource());
 restApi.addResource(new wallet.WalletApiResource());
 restApi.addResource(new group.GroupApiResource());
 restApi.addResource(new permission.PermissionApiResource());
@@ -80,6 +84,7 @@ restApi.addResource(new stellarFederation.StellarFederationApiResource());
 restApi.addResource(new airdrop.AirdropApiResource());
 
 uhx.init();
+uhx.initWorker();
 // Start REST API
 restApi.start();
 
@@ -91,4 +96,4 @@ else {
     https.createServer(uhx.Config.api.tls, app).listen(uhx.Config.api.port);
 }
 
-uhx.log.info(`UHX API started on ${uhx.Config.api.scheme} port ${uhx.Config.api.port}`);
+uhx.log.info(`UhX API started on ${uhx.Config.api.scheme} port ${uhx.Config.api.port}`);

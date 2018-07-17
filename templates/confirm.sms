@@ -1,4 +1,1 @@
-Hi {{user.givenName}},
-
-This is UHX, someone just registered this number as their primary phone for your wallet. If this was you, login to your wallet and 
-use the confirmation code {{token}} to verify it is actually you!
+Thanks for adding your mobile number to your UhX wallet. If this was you, login to your wallet and use code {{token}} to verify. If not, please disregard.

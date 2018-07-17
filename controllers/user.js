@@ -28,7 +28,7 @@ const uhx = require('../uhx'),
  * @swagger
  * tags:
  *  - name: "user"
- *    description: "The user resource represents a single user (client, provider, etc.) which is a member of UHX"
+ *    description: "The user resource represents a single user (client, provider, etc.) which is a member of UhX"
  */
 class UserApiResource {
 
@@ -46,7 +46,7 @@ class UserApiResource {
     get routes() {
         return {
             "permission_group": "user",
-            "routes" : [
+            "routes": [
                 {
                     "path": "user/reset",
                     "post": {
@@ -66,47 +66,60 @@ class UserApiResource {
                     }
                 },
                 {
-                    "path" : "user",
+                    "path": "user",
                     "post": {
-                        "demand" : security.PermissionType.WRITE,
-                        "method" : this.post
+                        "demand": security.PermissionType.WRITE,
+                        "method": this.post
                     },
                     "get": {
-                        "demand" : security.PermissionType.LIST,
-                        "method" : this.getAll
+                        "demand": security.PermissionType.LIST,
+                        "method": this.getAll
                     }
                 },
                 {
-                    "path":"user/:uid",
-                    "get" :{
+                    "path": "user/:uid",
+                    "get": {
                         "demand": security.PermissionType.READ,
                         "method": this.get
                     },
-                    "put" : {
+                    "put": {
                         "demand": security.PermissionType.WRITE | security.PermissionType.READ,
                         "method": this.put
                     },
-                    "delete" : {
-                        "demand":security.PermissionType.WRITE | security.PermissionType.READ,
+                    "delete": {
+                        "demand": security.PermissionType.WRITE | security.PermissionType.READ,
                         "method": this.delete
                     },
-                    "lock" : {
-                        "demand": security.PermissionType.WRITE,
+                    "lock": {
+                        "demand": security.PermissionType.WRITE | security.PermissionType.READ,
                         "method": this.lock
                     },
                     "unlock": {
-                        "demand": security.PermissionType.WRITE,
+                        "demand": security.PermissionType.WRITE | security.PermissionType.READ,
                         "method": this.unlock
                     }
                 },
                 {
                     "path": "user/:uid/confirm",
-                    "post":{
-                        "demand": security.PermissionType.EXECUTE | security.PermissionType.WRITE,
+                    "post": {
+                        "demand": security.PermissionType.WRITE,
                         "method": this.confirm
                     }
+                },
+                {
+                    "path": "user/:uid/upload",
+                    "post": {
+                        "demand": security.PermissionType.WRITE,
+                        "method": this.upload
+                    }
+                },
+                {
+                    "path": "user/:uid/img",
+                    "get": {
+                        "demand": security.PermissionType.READ,
+                        "method": this.getProfilePicture
+                    }
                 }
-                
             ]
         };
     }
@@ -121,8 +134,8 @@ class UserApiResource {
      *  post:
      *      tags:
      *      - "user"
-     *      summary: "Registers a new user in the UHX API"
-     *      description: "This method will register a new user in the UHX API and create the necessary accounts and trust transactions"
+     *      summary: "Registers a new user in the UhX API"
+     *      description: "This method will register a new user in the UhX API and create the necessary accounts and trust transactions"
      *      consumes: 
      *      - "application/json"
      *      produces:
@@ -153,26 +166,27 @@ class UserApiResource {
      *      - app_auth:
      *          - "write:user"
      */
-    async post(req, res)  {
-        
+    async post(req, res) {
+
         // Verify the request
         var ruleViolations = [];
 
-        if(!req.body)
+        if (!req.body)
             throw new exception.Exception("Missing body", exception.ErrorCodes.MISSING_PAYLOAD);
-        if(!((!req.body.name || !req.body.password) ^ (!req.body.externalIds)))
+        if (!((!req.body.name || !req.body.password) ^ (!req.body.externalIds)))
             throw new exception.Exception("Must have either username & password OR externalId", exception.ErrorCodes.MISSING_PROPERTY);
-        
+
         var user = new model.User().copy(req.body);
-        
+
         // USE CASE 1: User has passed up a username and password
-        if(req.body.password && req.body.name) 
+        if (req.body.password && req.body.name)
             res.status(201).json(await uhx.SecurityLogic.registerInternalUser(user, req.body.password, req.principal));
         else // USE CASE 2: User is attempting to sign up with an external identifier
             res.status(201).json(await uhx.SecurityLogic.registerExternalUser(req.body.externalIds, req.principal));
 
         return true;
     }
+
     /**
      * @method
      * @summary Updates an existing user
@@ -183,8 +197,8 @@ class UserApiResource {
      *  put:
      *      tags:
      *      - "user"
-     *      summary: "Updates an existing user in the UHX API"
-     *      description: "This method will update an existing  user in the UHX API"
+     *      summary: "Updates an existing user in the UhX API"
+     *      description: "This method will update an existing  user in the UhX API"
      *      consumes: 
      *      - "application/json"
      *      produces:
@@ -224,12 +238,12 @@ class UserApiResource {
      *          - "read:user"
      */
     async put(req, res) {
-        
         // does the request have a password if so we want to ensure that get's passed
         req.body.id = req.params.uid;
-        res.status(201).json(await uhx.SecurityLogic.updateUser(new model.User().copy(req.body), req.body.password));
+        res.status(201).json(await uhx.SecurityLogic.updateUser(new model.User().copy(req.body), req.body.password, req.body.oldPassword, req.principal));
         return true;
     }
+
     /**
      * @method
      * @summary Get a single user 
@@ -240,8 +254,8 @@ class UserApiResource {
      *  get:
      *      tags:
      *      - "user"
-     *      summary: "Gets an existing user from the UHX member database"
-     *      description: "This method will fetch an existing user from the UHX member database"
+     *      summary: "Gets an existing user from the UhX member database"
+     *      description: "This method will fetch an existing user from the UhX member database"
      *      produces:
      *      - "application/json"
      *      parameters:
@@ -270,21 +284,39 @@ class UserApiResource {
     async get(req, res) {
         var user = await uhx.Repositories.userRepository.get(req.params.uid);
         await user.loadWallets();
-
-        // Load balances from blockchain
-        if(user._wallets)
-            user._wallets = await uhx.TokenLogic.getAllBalancesForWallets(user._wallets);
         
+        // Load balances from blockchain
+        if (user._wallets)
+            user._wallets = await uhx.TokenLogic.getAllBalancesForWallets(user._wallets);
+
+        // Get USD balance
+        var usd = await uhx.GreenMoney.getBalance(req.params.uid, 'USD');
+
+        var wallet = {};
+
+        if (usd) {
+            var wallet = {};
+            wallet.id = usd.id;
+            wallet.balances = [];
+            var balance = {};
+            balance.code = 'USD';
+            balance.value = usd.amount;
+            wallet.balances[0] = balance;
+            wallet.userId = usd.userId;
+            user._wallets.push(wallet)
+        }
+
         await user.loadExternalIds();
         await user.loadClaims();
         await user.loadGroups();
-        
+
         res.status(200).json(user);
         return true;
     }
+
     /**
      * @method
-     * @summary Get all users from the UHX database (optional search parameters)
+     * @summary Get all users from the UhX database (optional search parameters)
      * @param {Express.Reqeust} req The request from the client 
      * @param {Express.Response} res The response from the client
      * @swagger
@@ -292,8 +324,8 @@ class UserApiResource {
      *  get:
      *      tags:
      *      - "user"
-     *      summary: "Queries the UHX member database for users matching the specified parameters"
-     *      description: "This method performs a query against the UHX user's database. This method will return additional information about the specified user including any external identities and wallet"
+     *      summary: "Queries the UhX member database for users matching the specified parameters"
+     *      description: "This method performs a query against the UhX user's database. This method will return additional information about the specified user including any external identities and wallet"
      *      produces:
      *      - "application/json"
      *      parameters:
@@ -346,7 +378,7 @@ class UserApiResource {
      *          - "list:user"
      */
     async getAll(req, res) {
-        
+
         var filterUser = new model.User().copy({
             name: req.query.name,
             email: req.query.email,
@@ -354,15 +386,15 @@ class UserApiResource {
             familyName: req.query.familyName,
             deactivationTime: req.query._all ? null : "null"
         });
-        
+
         var results = await uhx.Repositories.userRepository.query(filterUser, req.query._offset, req.query._count, req.query._sort);
-        results.forEach((o)=>{ o._externalIds = null;});
+        results.forEach((o) => { o._externalIds = null; });
         res.status(200).json(results);
         return true;
     }
     /**
      * @method
-     * @summary Deactivate a user account from the UHX database
+     * @summary Deactivate a user account from the UhX database
      * @param {Express.Reqeust} req The request from the client 
      * @param {Express.Response} res The response from the client
      * @swagger
@@ -370,7 +402,7 @@ class UserApiResource {
      *  delete:
      *      tags:
      *      - "user"
-     *      summary: "Deactivates a user in the UHX member database"
+     *      summary: "Deactivates a user in the UhX member database"
      *      description: "This method will set the deactivation time of the specified user account so they no longer can login or appear in searches."
      *      produces:
      *      - "application/json"
@@ -493,9 +525,9 @@ class UserApiResource {
     */
     async resetComplete(req, res) {
 
-        if(!req.body.code)
+        if (!req.body.code)
             throw new exception.ArgumentException("code");
-        else if(!req.body.password)
+        else if (!req.body.password)
             throw new exception.ArgumentException("password");
 
         // Reset password 
@@ -575,15 +607,122 @@ class UserApiResource {
      *          - "execute:user"
     */
     async confirm(req, res) {
-        
-        if(!req.body.code)
+
+        if (!req.body.code)
             throw new exception.ArgumentException("code");
-        
+
         await uhx.SecurityLogic.confirmContact(req.body.code, req.principal);
         res.status(204).send();
         return true;
     }
-    
+
+    /**
+     * @method
+     * @summary Uploads an image for the user
+     * @param {Express.Request} req The request from the client
+     * @param {Express.Response} res The response to the client
+     * @swagger
+     * /user/{userid}/upload:
+     *  post:
+     *      tags:
+     *      - "user"
+     *      summary: "Uploads an image for the user"
+     *      description: "This method will allow the user to upload an image into object storage"
+     *      consumes: 
+     *      - "application/json"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "userid"
+     *        in: "path"
+     *        description: "The ID of the user adding an image"
+     *        required: true
+     *        type: "string"
+     *      - in: "body"
+     *        name: "body"
+     *        description: "The file to upload"
+     *        required: true
+     *        schema:
+     *          $ref: "#/definitions/User"
+     *      responses:
+     *          201: 
+     *             description: "The requested resource was updated successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/User"
+     *          404:
+     *              description: "The specified user cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          422:
+     *              description: "The user object sent by the client was rejected"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "write:user"
+     */
+    async upload(req, res) {
+        req.body.id = req.params.uid;
+        var result = await uhx.ObjectStorage.uploadProfileImage(req, res);
+        var status = result instanceof exception.Exception ? 500 : 201;
+
+        res.status(status).json(result);
+
+        return true;
+    }
+
+    /**
+ * @method
+ * @summary Get a single users profile picture
+ * @param {Express.Reqeust} req The request from the client 
+ * @param {Express.Response} res The response from the client
+ * @swagger
+ * /user/{userid}/img:
+ *  get:
+ *      tags:
+ *      - "user"
+ *      summary: "Gets the profile picture for a specified user"
+ *      description: "This method will fetch the profile image for a specific user"
+ *      produces:
+ *      - "application/json"
+ *      parameters:
+ *      - name: "userid"
+ *        in: "path"
+ *        description: "The ID of the user for the profile image"
+ *        required: true
+ *        type: "string"
+ *      responses:
+ *          200: 
+ *             description: "The requested resource was fetched successfully"
+ *             schema: 
+ *                  $ref: "#/definitions/User"
+ *          404:
+ *              description: "The specified user cannot be found"
+ *              schema: 
+ *                  $ref: "#/definitions/Exception"
+ *          500:
+ *              description: "An internal server error occurred"
+ *              schema:
+ *                  $ref: "#/definitions/Exception"
+ *      security:
+ *      - uhx_auth:
+ *          - "read:user"
+ */
+    async getProfilePicture(req, res) {
+        var image = await uhx.ObjectStorage.getProfileImage(req, res);
+        var status = image instanceof exception.Exception ? 404 : 201;
+        if (status == 201)
+            image.pipe(res);
+        else
+            res.status(status).json(image);
+
+        return true;
+    }
+
     /**
      * @method
      * @summary Locks a user account
@@ -619,9 +758,9 @@ class UserApiResource {
      *          - "write:user"
      */
     async lock(req, res) {
-        if(req.principal.grant["user"] & security.PermissionType.OWNER)
+        if (req.principal.grant["user"] & security.PermissionType.OWNER)
             throw new security.SecurityException(new security.Permission("user", 1));
-        
+
         var usr = await uhx.Repositories.userRepository.get(req.params.uid);
         usr.lockout = new Date("9999-12-31T00:00:00Z");
         await uhx.Repositories.userRepository.update(usr, null, req.principal);
@@ -664,9 +803,9 @@ class UserApiResource {
      *          - "write:user"
      */
     async unlock(req, res) {
-        if(req.principal.grant["user"] & security.PermissionType.OWNER)
+        if (req.principal.grant["user"] & security.PermissionType.OWNER)
             throw new security.SecurityException(new security.Permission("user", 1));
-        
+
         var usr = await uhx.Repositories.userRepository.get(req.params.uid);
         usr.lockout = null;
         await uhx.Repositories.userRepository.update(usr, null, req.principal);
@@ -684,15 +823,15 @@ class UserApiResource {
      */
     async acl(principal, req, res) {
 
-        if(!(principal instanceof security.Principal)) {
+        if (!(principal instanceof security.Principal)) {
             uhx.log.error("ACL requires a security principal to be passed");
             return false;
         }
 
         // if the token has OWNER set for USER permission then this user must be SELF
         return (principal.grant.user & security.PermissionType.OWNER && req.params.uid == principal.session.userId) // the permission on the principal is for OWNER only
-                ^ !(principal.grant.user & security.PermissionType.OWNER); // XOR the owner grant flag is not set.
-                
+            ^ !(principal.grant.user & security.PermissionType.OWNER); // XOR the owner grant flag is not set.
+
     }
 }
 
