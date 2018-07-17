@@ -808,6 +808,7 @@ class UserApiResource {
 
         var usr = await uhx.Repositories.userRepository.get(req.params.uid);
         usr.lockout = null;
+        usr.invalidLogins = 0;
         await uhx.Repositories.userRepository.update(usr, null, req.principal);
         res.status(204).send();
         return true;
