@@ -64,8 +64,12 @@ class InvitationApiResource {
                         "demand": security.PermissionType.READ,
                         "method": this.get
                     },
+                    "put" : {
+                        "demand": security.PermissionType.READ,
+                        "method": this.extend
+                    },
                     "delete" : {
-                        "demand": security.PermissionType.WRITE,
+                        "demand": security.PermissionType.READ,
                         "method": this.delete
                     }
                 },
@@ -224,6 +228,50 @@ class InvitationApiResource {
      * @param {Express.Response} res The HTTP response from the user
      * @swagger
      * /invitation/{id}:
+     *  put:
+     *      tags:
+     *      - "invitation"
+     *      summary: "Extend an active invitation"
+     *      description: "This method will extend the specific invitation expiry date on the UhX server"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "id"
+     *        in: "path"
+     *        description: "The identity of the invitation to extend"
+     *        required: true
+     *        type: string
+     *      responses:
+     *          201: 
+     *             description: "The invitation was extended successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/Invitation"
+     *          404: 
+     *             description: "The invitation cannot be found"
+     *             schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "read:invitation"
+     *      - app_auth:
+     *          - "read:invitation"
+     */
+    async extend(req, res) {
+        res.status(201).json(await uhx.Repositories.invitationRepository.extend(req.params.id));
+        return true;
+    }
+
+    /**
+     * @method
+     * @summary Rescinds a particular invitation
+     * @param {Express.Request} req The HTTP request from the user
+     * @param {Express.Response} res The HTTP response from the user
+     * @swagger
+     * /invitation/{id}:
      *  delete:
      *      tags:
      *      - "invitation"
@@ -252,9 +300,9 @@ class InvitationApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "write:invitation"
+     *          - "read:invitation"
      *      - app_auth:
-     *          - "write:invitation"
+     *          - "read:invitation"
      */
     async delete(req, res) {
         res.status(201).json(await uhx.Repositories.invitationRepository.delete(req.params.id));

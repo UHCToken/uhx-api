@@ -191,6 +191,30 @@ module.exports = class InvitationRepository {
      * @param {string} invitationId The id of the invitation to rescind
      * @param {Client} _txc The client which is in a transaction
      */
+    async extend(invitationId, _txc) {
+        var dbc = _txc || new pg.Client(this._connectionString);
+        try {
+
+            if (!_txc) await dbc.connect();
+            var newExpiry = new Date(new Date().getTime() + uhx.Config.security.invitations.validityTime);
+            const rdr = await dbc.query("UPDATE invitations SET expiration_time = $2 WHERE id = $1 RETURNING *", [invitationId, newExpiry]);
+            if (rdr.rows.length == 0)
+                throw new exception.Exception("Error updating invitation", exception.ErrorCodes.DATA_ERROR);
+            else
+                return new Invitation().fromData(rdr.rows[0]);
+
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Rescinds the invitation
+     * @param {string} invitationId The id of the invitation to rescind
+     * @param {Client} _txc The client which is in a transaction
+     */
     async delete(invitationId, _txc) {
         var dbc = _txc || new pg.Client(this._connectionString);
         try {
