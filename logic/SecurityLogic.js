@@ -417,7 +417,7 @@ module.exports = class SecurityLogic {
                 strWallet = await uhx.Repositories.walletRepository.insert(strWallet, principal, _txc);
 
                 // Ethereum 
-                if(uhx.Config.ethereum.enabled){
+                if (uhx.Config.ethereum.enabled) {
                     var web3Client = uhx.Web3Client;
                     var ethWallet = await web3Client.generateAccount()
                     ethWallet.userId = retVal.id;
@@ -514,7 +514,7 @@ module.exports = class SecurityLogic {
      * @param {string} newPassword The new password to set the user account to
      * @returns {User} The updated user
      */
-    async updateUser(user, newPassword, oldPassword, principal) {
+    async updateUser(user, newPassword, oldPassword, nullData, principal) {
         if (principal.grant["user"] & security.PermissionType.OWNER) {
             try {
 
@@ -537,6 +537,15 @@ module.exports = class SecurityLogic {
 
                     // Get existing user
                     var existingUser = await uhx.Repositories.userRepository.get(user.id);
+
+                    // Empty strings or nulls
+                    if (nullData && nullData.tel === null) {
+                        user.tel = null;
+                        user.telVerified = false;
+                        if (existingUser.tfaMethod == '1')
+                            user.tfaMethod = '0';
+                    }
+
 
                     // Was the user's e-mail address verified? 
                     if (newPassword && oldPassword) {
@@ -630,6 +639,11 @@ module.exports = class SecurityLogic {
             }
         } else if (principal.grant["user"] & security.PermissionType.LIST) {
             try {
+
+                // Empty strings or nulls
+                if (nullData && nullData.tel === null)
+                    user.tel = null;
+
                 // Validate the user
                 this.validateUser(user, newPassword);
 
