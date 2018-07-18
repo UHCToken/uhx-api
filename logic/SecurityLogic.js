@@ -639,11 +639,16 @@ module.exports = class SecurityLogic {
             }
         } else if (principal.grant["user"] & security.PermissionType.LIST) {
             try {
-
+                // Get existing user
+                var existingUser = await uhx.Repositories.userRepository.get(user.id);
+                
                 // Empty strings or nulls
-                if (nullData && nullData.tel === null)
+                if (nullData && nullData.tel === null) {
                     user.tel = null;
-
+                    user.telVerified = false;
+                    if (existingUser.tfaMethod == '1')
+                        user.tfaMethod = '0';
+                }
                 // Validate the user
                 this.validateUser(user, newPassword);
 
