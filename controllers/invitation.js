@@ -16,7 +16,7 @@
  * 
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
- 
+
 const uhx = require('../uhx'),
     exception = require('../exception'),
     security = require('../security'),
@@ -46,29 +46,29 @@ class InvitationApiResource {
     get routes() {
         return {
             "permission_group": "invitation",
-            "routes" : [
+            "routes": [
                 {
-                    "path" : "invitation",
+                    "path": "invitation",
                     "post": {
-                        "demand" : security.PermissionType.WRITE,
-                        "method" : this.post
+                        "demand": security.PermissionType.WRITE,
+                        "method": this.post
                     },
-                    "get" : {
+                    "get": {
                         "demand": security.PermissionType.LIST,
                         "method": this.getAll
                     }
                 },
                 {
-                    "path":"invitation/:id",
-                    "get" :{
+                    "path": "invitation/:id",
+                    "get": {
                         "demand": security.PermissionType.READ,
                         "method": this.get
                     },
-                    "put" : {
+                    "put": {
                         "demand": security.PermissionType.READ,
                         "method": this.extend
                     },
-                    "delete" : {
+                    "delete": {
                         "demand": security.PermissionType.READ,
                         "method": this.delete
                     }
@@ -131,10 +131,10 @@ class InvitationApiResource {
      *          - "write:invitation"
      */
     async post(req, res) {
-        
-        if(!req.body)
+
+        if (!req.body)
             throw new exception.Exception("Missing payload", exception.ErrorCodes.MISSING_PAYLOAD);
-        
+
         var invite = await uhx.SecurityLogic.createInvitation(new Invitation().copy(req.body), req.principal);
         res.status(201)
             .set("Location", `${uhx.Config.api.scheme}://${uhx.Config.api.host}:${uhx.Config.api.port}${uhx.Config.api.base}/invitation/${invite.id}`)
@@ -261,7 +261,37 @@ class InvitationApiResource {
      *          - "read:invitation"
      */
     async extend(req, res) {
-        res.status(200).json(await uhx.Repositories.invitationRepository.extend(req.params.id));
+        try {
+
+            var invitation = await uhx.Repositories.invitationRepository.get(req.params.id);
+
+            if (invitation.claimTime)
+                throw new exception.Exception("Cannot extend claimed invitations", exception.ErrorCodes.RULES_VIOLATION);
+            if (invitation.deactivatedTime)
+                throw new exception.Exception("Cannot extend deactivated invitations", exception.ErrorCodes.RULES_VIOLATION);
+            
+            var claimToken = uhx.SecurityLogic.generateSignedClaimToken();
+
+            var sendOptions = {
+                to: invitation.email,
+                from: uhx.Config.mail.from,
+                subject: "Your wallet is waiting for you on UhX!",
+                template: uhx.Config.mail.templates.resendInvitation
+            };
+
+            // Replacements
+            const replacements = {
+                invitation: invitation,
+                claimToken: claimToken,
+                ui_base: uhx.Config.api.ui_base
+            }
+
+            await uhx.Mailer.sendEmail(sendOptions, replacements);
+
+            res.status(200).json(await uhx.Repositories.invitationRepository.extend(req.params.id, claimToken));
+        } catch (ex) {
+            throw new exception.Exception("An error occurred while resending the invitation", exception.ErrorCodes.UNKNOWN, ex);
+        }
         return true;
     }
 
@@ -308,7 +338,7 @@ class InvitationApiResource {
         res.status(200).json(await uhx.Repositories.invitationRepository.delete(req.params.id));
         return true;
     }
-    
+
     /**
      * @method
      * @summary Claims the specfied authorization grant and returns a CSRF authorization code which can be used to obtain a session
@@ -353,11 +383,11 @@ class InvitationApiResource {
      */
     async claim(req, res) {
 
-        if(!req.body.code) // The claim code
+        if (!req.body.code) // The claim code
             throw new exception.ArgumentException("code");
-        if(!req.body.password) // The password to set on the created user instance
+        if (!req.body.password) // The password to set on the created user instance
             throw new exception.ArgumentException("password");
-        
+
         var user = await uhx.SecurityLogic.claimInvitation(req.body.code, req.body.password, req.principal);
         res.status(201)
             .set("Location", `${uhx.Config.api.scheme}://${uhx.Config.api.host}:${uhx.Config.api.port}${uhx.Config.api.base}/user/${user.id}`)

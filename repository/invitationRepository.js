@@ -189,15 +189,21 @@ module.exports = class InvitationRepository {
      * @method
      * @summary Rescinds the invitation
      * @param {string} invitationId The id of the invitation to rescind
+     * @param {string} claimToken The randomly generated claim token data
      * @param {Client} _txc The client which is in a transaction
      */
-    async extend(invitationId, _txc) {
+    async extend(invitationId, claimToken, _txc) {
+        if (!claimToken)
+            throw new exception.ArgumentException("claimToken");
+
         var dbc = _txc || new pg.Client(this._connectionString);
         try {
 
             if (!_txc) await dbc.connect();
+
             var newExpiry = new Date(new Date().getTime() + uhx.Config.security.invitations.validityTime);
-            const rdr = await dbc.query("UPDATE invitations SET expiration_time = $2 WHERE id = $1 RETURNING *", [invitationId, newExpiry]);
+           
+            const rdr = await dbc.query("UPDATE invitations SET expiration_time = $2, claim_token = crypt($3, claim_token) WHERE id = $1 RETURNING *", [invitationId, newExpiry, claimToken]);
             if (rdr.rows.length == 0)
                 throw new exception.Exception("Error updating invitation", exception.ErrorCodes.DATA_ERROR);
             else

@@ -3,7 +3,7 @@
     <body>
         <p><strong>Hello {{user.givenName}},</strong></p>
         <p>This is a friendly reminder that you have an invoice still pending for ${{invoice.amount}} USD Credit on UhX.</p>
-        <p>You should have received an email for invoice {{invoice.invoiceId}} from our partner at Green.Money with instructions on how to complete payment.</p>
-        <p>If you have lost the invoice email, or would like to cancel the invoice: Log into your UhX wallet and click Pending Processes</p>
+        <p>You should have received an email for invoice #{{invoice.invoiceId}} from our payment processing partner at Green.Money with instructions on how to complete payment. The email should come from the address support@green.money</p>
+        <p>If you would like the invoice to be resent or would like to cancel this request, log into your UhX wallet and click the "Pending Processes" link.</p>
     </body>
 </html>
