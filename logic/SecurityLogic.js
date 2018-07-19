@@ -542,6 +542,8 @@ module.exports = class SecurityLogic {
                     if (nullData && nullData.tel === null) {
                         user.tel = null;
                         user.telVerified = false;
+                        await uhx.Repositories.userRepository.deleteClaim(user.id, TFA_CLAIM);
+                        await uhx.Repositories.userRepository.deleteClaim(user.id, SMS_CONFIRM_CLAIM);
                         if (existingUser.tfaMethod == '1')
                             user.tfaMethod = '0';
                     }
@@ -641,11 +643,16 @@ module.exports = class SecurityLogic {
             try {
                 // Get existing user
                 var existingUser = await uhx.Repositories.userRepository.get(user.id);
-                
+
                 // Empty strings or nulls
                 if (nullData && nullData.tel === null) {
                     user.tel = null;
                     user.telVerified = false;
+                }
+
+                if (!user.telVerified) {
+                    await uhx.Repositories.userRepository.deleteClaim(user.id, TFA_CLAIM);
+                    await uhx.Repositories.userRepository.deleteClaim(user.id, SMS_CONFIRM_CLAIM);
                     if (existingUser.tfaMethod == '1')
                         user.tfaMethod = '0';
                 }
