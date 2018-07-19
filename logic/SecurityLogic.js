@@ -650,7 +650,7 @@ module.exports = class SecurityLogic {
                     user.telVerified = false;
                 }
 
-                if (!user.telVerified) {
+                if (user.telVerified == "false") {
                     await uhx.Repositories.userRepository.deleteClaim(user.id, TFA_CLAIM);
                     await uhx.Repositories.userRepository.deleteClaim(user.id, SMS_CONFIRM_CLAIM);
                     if (existingUser.tfaMethod == '1')
