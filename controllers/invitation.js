@@ -261,7 +261,7 @@ class InvitationApiResource {
      *          - "read:invitation"
      */
     async extend(req, res) {
-        res.status(201).json(await uhx.Repositories.invitationRepository.extend(req.params.id));
+        res.status(200).json(await uhx.Repositories.invitationRepository.extend(req.params.id));
         return true;
     }
 
@@ -305,7 +305,7 @@ class InvitationApiResource {
      *          - "read:invitation"
      */
     async delete(req, res) {
-        res.status(201).json(await uhx.Repositories.invitationRepository.delete(req.params.id));
+        res.status(200).json(await uhx.Repositories.invitationRepository.delete(req.params.id));
         return true;
     }
     
