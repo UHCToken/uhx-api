@@ -347,6 +347,7 @@ module.exports = {
         from: "no-reply@domain.com",
         templates: {
             invitation: "./templates/invitation",
+            resendInvitation: "./templates/resendInvitation",
             welcome: "./templates/welcome",
             confirmation: "./templates/confirm",
             contactChange: "./templates/contactChange",

@@ -431,7 +431,6 @@ module.exports = class SecurityLogic {
 
                 if (isInvited) {
                     var initiatorWallet = await uhx.Repositories.walletRepository.get(uhx.Config.stellar.initiator_wallet_id);
-                    await stellarClient.activateAccount(strWallet, "2", initiatorWallet)
                 }
 
                 // Add user
