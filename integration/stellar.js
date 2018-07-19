@@ -798,4 +798,71 @@ module.exports = class StellarClient {
         }
         return transaction;
     }
+
+    /**
+     * @method
+     * @summary Creates a payment between the payor and payee
+     * @param {Wallet} payorWallet The wallet from which the payment should be made
+     * @param {Wallet} payeeWallet The wallet to which the payment should be made
+     * @param {MonetaryAmount} amount The amount of the payment
+     * @param {string} ref The id of the batch or ID that is being used for this payment
+     * @returns {Transaction} The transaction information for the operation
+     */
+    async createEscrow(payorWallet, payeeWallet, amount, ref) {
+
+        try {
+
+            uhx.log.info(`createPayment() : ${payorWallet.address} > ${payeeWallet.address} [${amount.value} ${amount.code}]`);
+            
+            if (payorWallet.address == payeeWallet.address)
+                throw new exception.BusinessRuleViolationException("Cannot send to self");
+
+            // Load payor stellar account
+            var payorStellarAcct = await this.server.loadAccount(payorWallet.address);
+
+            // Check for minimum balance
+            var payorBalance = payorStellarAcct.balances.find(o=>o.asset_type == "native").balance;
+            var minBalance = payorStellarAcct.balances.length * 0.5 + 0.50001
+            if (((payorBalance - amount.value) < minBalance) && amount.code == "XLM")
+                throw new exception.BusinessRuleViolationException("Payment would exceed the minimum required balance");
+
+            var escrowAccount = await this.server.loadAccount('GALBQIH3HAEFWEVKMCEOGAF3C7ZCALBRXHHXMDMPS5GBNMU4QDALFBR4');
+            var escrowTx = new Stellar.TransactionBuilder(escrowAccount);
+
+            // Create payment transaction
+            escrowTx.addOperation(Stellar.Operation.setOptions({
+                signer: { 
+                    ed25519PublicKey: payorWallet.address,
+                    weight: 1
+                }
+            }))
+            .addOperation(Stellar.Operation.setOptions({
+                masterWeight: 0,
+                lowThreshold: 2,
+                medThreshold: 2,
+                highThreshold: 2,
+                signer: {
+                    ed25519PublicKey: payeeWallet.address,
+                    weight: 1
+                }
+            }))
+
+            escrowTx = escrowTx.build();
+
+            // Load signing key
+            escrowTx.sign(Stellar.Keypair.fromSecret('SD5PKT3CLAOFMLMCOEALBVZY7WEOXX6P3VFZEZHP7QMFEDAOMMYFWDCE'));
+
+            // Submit transaction
+            var ref = null;
+            var escrowResult = await this.server.submitTransaction(escrowTx);
+            uhx.log.info(`Payment ${payorWallet.address} > ${payeeWallet.address} (${amount.value} ${amount.code}) success`);
+
+
+            return new model.Transaction(escrowResult.ledger, model.TransactionType.Payment, null, new Date(), await payorWallet.loadUser(), await payeeWallet.loadUser(), amount, null, escrowResult._links.transaction.href, model.TransactionStatus.Complete);
+        }
+        catch (e) {
+            uhx.log.error(`Account payment has failed: ${e.message}`);
+            throw new StellarException(e);
+        }
+    }
 }

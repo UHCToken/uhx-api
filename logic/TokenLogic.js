@@ -1053,4 +1053,28 @@ module.exports = class TokenLogic {
 
         }
     }
+
+
+        /**
+     * @method
+     * @summary Gets the specified transaction from the local database or from the block chain 
+     * @param {String} txId The identifier of the transaction to retrieve
+     * @param {SecurityPrincipal} principal The user who is making the request
+     */
+    async createEscrow(escrowInfo, principal) {
+
+        try {
+            var payorWallet = await uhx.Repositories.walletRepository.getByUserAndNetworkId(escrowInfo.payorId, "1");
+            var payeeWallet = await uhx.Repositories.walletRepository.getByUserAndNetworkId(escrowInfo.payeeId, "1");
+            var result = await uhx.StellarClient.createEscrow(payeeWallet, payorWallet, escrowInfo.amount);
+
+        }
+        catch(e) {
+            uhx.log.error(`Error retrieving transaction: ${e.message}`);
+            while(e.code == exception.ErrorCodes.DATA_ERROR && e.cause) 
+                e = e.cause[0];
+            throw new exception.Exception("Error retrieving transaction", e.code || exception.ErrorCodes.UNKNOWN, e);
+
+        }
+    }
 }

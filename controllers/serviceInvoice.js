@@ -120,6 +120,7 @@ class ServiceInvoiceApiResource {
      *          - "write:wallet"
      */
     async post(req, res) {
+        var createEscrow = await uhx.TokenLogic.createEscrow(req.body, req.principal);
         var retval = await uhx.SecurityLogic.createServiceInvoice(req.body, req.principal);
         res.status(201).json(retval);
         return true;
