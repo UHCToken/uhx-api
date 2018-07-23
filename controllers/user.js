@@ -243,8 +243,14 @@ class UserApiResource {
 
         // Data with empty strings are returned, null data or ignore
         var nullData = {};
-        if(req.body && (req.body.tel === "" || req.body.tel === null))
-            nullData.tel = null;
+        if (req.body) {
+            if (req.body.tel === "" || req.body.tel === null)
+                nullData.tel = null;
+            if (req.body.givenName === "" || req.body.giveName === null)
+                nullData.givenName = null;
+            if (req.body.familyName === "" || req.body.familyName === null)
+                nullData.familyName = null;
+        }
 
         res.status(201).json(await uhx.SecurityLogic.updateUser(new model.User().copy(req.body), req.body.password, req.body.oldPassword, nullData, req.principal));
         return true;
@@ -290,7 +296,7 @@ class UserApiResource {
     async get(req, res) {
         var user = await uhx.Repositories.userRepository.get(req.params.uid);
         await user.loadWallets();
-        
+
         // Load balances from blockchain
         if (user._wallets)
             user._wallets = await uhx.TokenLogic.getAllBalancesForWallets(user._wallets);

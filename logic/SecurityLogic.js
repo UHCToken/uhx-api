@@ -538,13 +538,21 @@ module.exports = class SecurityLogic {
                     var existingUser = await uhx.Repositories.userRepository.get(user.id);
 
                     // Empty strings or nulls
-                    if (nullData && nullData.tel === null) {
-                        user.tel = null;
-                        user.telVerified = false;
-                        await uhx.Repositories.userRepository.deleteClaim(user.id, TFA_CLAIM);
-                        await uhx.Repositories.userRepository.deleteClaim(user.id, SMS_CONFIRM_CLAIM);
-                        if (existingUser.tfaMethod == '1')
-                            user.tfaMethod = '0';
+                    if (nullData) {
+                        if (nullData.tel === null) {
+                            user.tel = null;
+                            user.telVerified = false;
+                            await uhx.Repositories.userRepository.deleteClaim(user.id, TFA_CLAIM);
+                            await uhx.Repositories.userRepository.deleteClaim(user.id, SMS_CONFIRM_CLAIM);
+                            if (existingUser.tfaMethod == '1')
+                                user.tfaMethod = '0';
+                        }
+                        if (nullData.givenName === null) {
+                            user.givenName = "";
+                        }
+                        if (nullData.familyName === null) {
+                            user.familyName = "";
+                        }
                     }
 
 
@@ -644,9 +652,17 @@ module.exports = class SecurityLogic {
                 var existingUser = await uhx.Repositories.userRepository.get(user.id);
 
                 // Empty strings or nulls
-                if (nullData && nullData.tel === null) {
-                    user.tel = null;
-                    user.telVerified = false;
+                if (nullData) {
+                    if (nullData.tel === null) {
+                        user.tel = null;
+                        user.telVerified = false;
+                    }
+                    if (nullData.givenName === null) {
+                        user.givenName = "";
+                    }
+                    if (nullData.familyName === null) {
+                        user.familyName = "";
+                    }
                 }
 
                 if (user.telVerified == "false") {
@@ -655,6 +671,10 @@ module.exports = class SecurityLogic {
                     if (existingUser.tfaMethod == '1')
                         user.tfaMethod = '0';
                 }
+
+                // Scrub unmodifiable fields
+                delete (user.email);
+
                 // Validate the user
                 this.validateUser(user, newPassword);
 
