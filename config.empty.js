@@ -139,7 +139,9 @@ module.exports = {
          */
         sysgroups: {
             "administrators": "044894bd-084e-47bb-9428-dbd80277614a",
-            "users": "330d2fb4-ba61-4b48-a0a1-8162a4708e96"
+            "users": "330d2fb4-ba61-4b48-a0a1-8162a4708e96",
+            "providers": "4339ef73-25e7-43fd-9080-8f7eb55182eb",
+            "patients" : "285cb044-bf99-4409-b418-7edc5c012ded"
         },
         /**
          * @summary Configuration options for invitations

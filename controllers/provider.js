@@ -94,7 +94,7 @@ class ProviderApiResource {
      *      tags:
      *      - "provider"
      *      summary: "Registers a new provider in the UhX API"
-     *      description: "This method will register a new provider in the UhX API and create the necessary accounts and trust transactions"
+     *      description: "This method will register a new provider in the UhX API"
      *      consumes: 
      *      - "application/json"
      *      produces:
@@ -127,9 +127,15 @@ class ProviderApiResource {
      */
     async post(req, res) {
 
+        if (!req.body)
+            throw new exception.Exception("Missing body", exception.ErrorCodes.MISSING_PAYLOAD);
+
+        if (!req.body.userId)
+            throw new exception.Exception("Must have a userId", exception.ErrorCodes.MISSING_PROPERTY);
+
         var provider = new model.Provider().copy(req.body);
 
-        res.status(201).json(await uhx.Repositories.providerRepository.insert(provider, req.principal));
+        res.status(201).json(await uhx.UserLogic.addProvider(provider, req.principal));
 
         return true;
     }
@@ -185,7 +191,10 @@ class ProviderApiResource {
      *          - "read:user"
      */
     async put(req, res) {
-        res.status(201).json("not implemented");
+        // does the request have a password if so we want to ensure that get's passed
+        req.body.id = req.params.uid;
+
+        res.status(201).json(await uhx.UserLogic.updateProvider(new model.Provider().copy(req.body), req.principal));
         return true;
     }
 

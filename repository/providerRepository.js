@@ -56,7 +56,7 @@ module.exports = class ProviderRepository {
             if (!_txc) await dbc.connect();
             const rdr = await dbc.query("SELECT * FROM providers WHERE user_id = $1", [id]);
             if (rdr.rows.length == 0)
-                throw new exception.NotFoundException('provider', id);
+                return null;
             else
                 return new Provider().fromData(rdr.rows[0]);
         }
@@ -123,7 +123,7 @@ module.exports = class ProviderRepository {
      * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {Provider} The updated provider data from the database
      */
-    async update(provider, password, runAs, _txc) {
+    async update(provider, runAs, _txc) {
         if (!provider.id)
             throw new exception.Exception("Target object must carry an identifier", exception.ErrorCodes.ARGUMENT_EXCEPTION);
 

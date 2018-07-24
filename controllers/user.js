@@ -679,7 +679,7 @@ class UserApiResource {
      */
     async upload(req, res) {
         req.body.id = req.params.uid;
-        var result = await uhx.ObjectStorage.uploadProfileImage(req, res);
+        var result = await uhx.ObjectStorage.uploadProfileImage(req, res, 'profile');
         var status = result instanceof exception.Exception ? 500 : 201;
 
         res.status(status).json(result);
@@ -725,7 +725,7 @@ class UserApiResource {
  *          - "read:user"
  */
     async getProfilePicture(req, res) {
-        var image = await uhx.ObjectStorage.getProfileImage(req, res);
+        var image = await uhx.ObjectStorage.getProfileImage(req, res, 'profile');
         var status = image instanceof exception.Exception ? 404 : 201;
         if (status == 201)
             image.pipe(res);

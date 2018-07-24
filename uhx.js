@@ -22,6 +22,7 @@ const config = require('./config'),
     repositories = require('./repository/repository'),
     SecurityLogic = require('./logic/SecurityLogic'),
     TokenLogic = require('./logic/TokenLogic'),
+    UserLogic = require('./logic/UserLogic'),
     winston = require('winston'),
     Mailer = require('./integration/mail'),
     StellarClient = require("./integration/stellar"),
@@ -43,6 +44,7 @@ var repository = new repositories.UhcRepositories(config.db.server);
 // Exports section
 module.exports.SecurityLogic = new SecurityLogic();
 module.exports.TokenLogic = new TokenLogic();
+module.exports.UserLogic = new UserLogic();
 module.exports.Config = config;
 module.exports.Repositories = repository;
 module.exports.log = winston;

@@ -39,26 +39,22 @@ CREATE TABLE IF NOT EXISTS provider_addresses (
 );
 
 CREATE TABLE IF NOT EXISTS service_types (
-    id NUMERIC(3) NOT NULL,
-    type_name VARCHAR(128),
+    id UUID NOT NULL DEFAULT uuid_generate_v4(),
+    type_name VARCHAR(128) NOT NULL,
     description VARCHAR(256),
     CONSTRAINT pk_service_type PRIMARY KEY (id)
 );
 
 CREATE TABLE IF NOT EXISTS provider_types (
-    id uuid NOT NULL DEFAULT uuid_generate_v4(),
     provider_id UUID NOT NULL,
-    service_type NUMERIC(3) NOT NULL,
-    CONSTRAINT pk_provider_type PRIMARY KEY (id),
+    service_type UUID NOT NULL,
     CONSTRAINT fk_provider FOREIGN KEY (provider_id) REFERENCES providers(id),
     CONSTRAINT fk_provider_service_type FOREIGN KEY (service_type) REFERENCES service_types(id)
 );
 
 CREATE TABLE IF NOT EXISTS provider_address_types (
-    id uuid NOT NULL DEFAULT uuid_generate_v4(),
     provider_address_id UUID NOT NULL,
-    service_type NUMERIC(3) NOT NULL,
-    CONSTRAINT pk_provider_address_type PRIMARY KEY (id),
+    service_type UUID NOT NULL,
     CONSTRAINT fk_provider FOREIGN KEY (provider_address_id) REFERENCES provider_addresses(id),
     CONSTRAINT fk_provider_address_service_type FOREIGN KEY (service_type) REFERENCES service_types(id)
 );
@@ -80,7 +76,10 @@ CREATE TABLE IF NOT EXISTS provider_address_services (
     CONSTRAINT fk_provider_service_type FOREIGN KEY (service_type) REFERENCES service_types(id)
 );
 
-INSERT INTO service_types (id, type_name) VALUES 
-    (1, 'Family Doctor'),
-    (2, 'Chiropractor'),
-    (3, 'Dentist');
+INSERT INTO service_types (type_name) VALUES 
+    ('Family Doctor'),
+    ('Chiropractor'),
+    ('Dentist');
+
+INSERT INTO groups (id, name, created_by) VALUES ('4339ef73-25e7-43fd-9080-8f7eb55182eb', 'Providers', '3c673456-23b1-4263-9deb-df46770852c9');
+INSERT INTO groups (id, name, created_by) VALUES ('285cb044-bf99-4409-b418-7edc5c012ded', 'Patients', '3c673456-23b1-4263-9deb-df46770852c9');
