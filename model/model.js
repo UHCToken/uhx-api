@@ -22,6 +22,7 @@
     crypto = require('crypto'),
     security = require('../security'),
     User = require('./User'),
+    Provider = require('./Provider'),
     ModelUtil = require('./ModelUtil'),
     Application = require('./Application'),
     Session = require('./Session'),
@@ -66,6 +67,7 @@ const TransactionStatus = {
 module.exports.User = User;
 module.exports.Application = Application;
 module.exports.Session = Session;
+module.exports.Provider = Provider;
 module.exports.PermissionSet = PermissionSet;
 module.exports.PermissionSetInstance = PermissionSetInstance;
 module.exports.Wallet = Wallet

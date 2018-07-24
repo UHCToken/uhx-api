@@ -25,6 +25,7 @@
     oauth = require('./controllers/oauth'),
     purchase = require('./controllers/purchase'),
     user = require('./controllers/user'),
+    provider = require('./controllers/provider'),
     wallet = require('./controllers/wallet'),
     group = require('./controllers/group'),
     invoice = require('./controllers/invoice'),
@@ -71,6 +72,7 @@ if(uhx.Config.swagger.enabled) {
 // Add OAuth token service
 restApi.addResource(new oauth.OAuthTokenService());
 restApi.addResource(new user.UserApiResource());
+restApi.addResource(new provider.ProviderApiResource());
 restApi.addResource(new purchase.PurchaseApiResource());
 restApi.addResource(new invoice.InvoiceApiResource());
 restApi.addResource(new wallet.WalletApiResource());

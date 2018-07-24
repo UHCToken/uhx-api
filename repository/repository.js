@@ -29,6 +29,7 @@ const UserRepository = require('./userRepository'),
     ReportRepository = require('./reportRepository'),
     InvoiceRepository = require('./invoiceRepository'),
     BalanceRepository = require('./balanceRepository'),
+    ProviderRepository = require('./providerRepository'),
     pg = require('pg'),
     uhx = require('../uhx'),
     exception = require('../exception');
@@ -213,6 +214,17 @@ class UhcRepositories {
         if(!this._balanceRepository)
             this._balanceRepository = new BalanceRepository(this.connectionString);
         return this._balanceRepository;
+    }
+
+    /**
+     * @property
+     * @summary Gets the provider repository
+     * @type {ProviderRepository}
+     */
+    get providerRepository() {
+        if(!this._providerRepository)
+            this._providerRepository = new ProviderRepository(this.connectionString);
+        return this._providerRepository;
     }
 }
 

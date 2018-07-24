@@ -29,9 +29,10 @@ module.exports = class ObjectStorage {
      * @summary Uploads an image to the object storage
      * @param {Express.Request} req The request from the client
      * @param {Express.Response} res The response to the client
+     * @param {string} fn Override for the filename
      * @returns Upload status
      */
-    async uploadProfileImage(req, res) {
+    async uploadProfileImage(req, res, fn) {
         var s3config = uhx.Config.objectStorage; // Load storage config
         if (!req.file || req.file.name == "" || req.body.file == "undefined") { // No file supplied
             var result = new exception.Exception("Missing file payload", exception.ErrorCodes.MISSING_PAYLOAD);
@@ -52,7 +53,10 @@ module.exports = class ObjectStorage {
             } else if (file._files[0].stream.byteCount > uhx.Config.objectStorage.maxFileSize) { // File too big
                 var result = new exception.Exception("File size is too large", exception.ErrorCodes.NOT_SUPPORTED);
             } else {
-                var filename = `${req.params.uid}/profile.png`; // Save image as a png
+                if (fn)
+                    var filename = `${req.params.uid}/${fn}.png`;
+                else
+                    var filename = `${req.params.uid}/profile.png`; // Save image as a png
                 var options = extend({}, s3config, {
                     adapter: skipperS3,
                     headers: {
@@ -74,10 +78,15 @@ module.exports = class ObjectStorage {
                                 reject(result);
                             }
                             else {
-                                var user = await uhx.Repositories.userRepository.get(req.params.uid);
-                                user.profileImage = filename;
-                                await uhx.Repositories.userRepository.update(user);
-
+                                if (fn && fn == 'provider'){
+                                    var provider = await uhx.Repositories.providerRepository.get(req.params.uid);
+                                    provider.profileImage = filename;
+                                    await uhx.Repositories.providerRepository.update(provider);
+                                } else {
+                                    var user = await uhx.Repositories.userRepository.get(req.params.uid);
+                                    user.profileImage = filename;
+                                    await uhx.Repositories.userRepository.update(user);
+                                }
                                 console.log(`Image upload for ${req.params.uid} succeeded.`);
                                 result = {};
                                 result.message = `Image uploaded successfully.`;
@@ -102,13 +111,17 @@ module.exports = class ObjectStorage {
      * @summary Get a profile image by filename
      * @param {Express.Request} req The request from the client
      * @param {Express.Response} res The response to the client
+     * @param {string} fn Override for the profile type
      * @returns Image read stream
      */
-    async getProfileImage(req, res) {
+    async getProfileImage(req, res, fn) {
 
         var s3config = uhx.Config.objectStorage; // Storage config
         var adapter = skipperS3(s3config);
-        var user = await uhx.Repositories.userRepository.get(req.params.uid);
+        if (fn && fn == 'provider')
+            var user = await uhx.Repositories.providerRepository.get(req.params.uid);
+        else
+            var user = await uhx.Repositories.userRepository.get(req.params.uid);
 
         if (!user.profileImage)
             var result = new exception.Exception("No image found", exception.ErrorCodes.NOT_FOUND);
