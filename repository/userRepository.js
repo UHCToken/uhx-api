@@ -235,7 +235,7 @@ const pg = require('pg'),
         try {
             if(!_txc) await dbc.connect();
 
-            const rdr = await dbc.query("SELECT * FROM users WHERE name = $1 AND password = crypt($2, password)", [ username, password ]);
+            const rdr = await dbc.query("SELECT * FROM users WHERE LOWER(name) = $1 AND password = crypt($2, password)", [ username, password ]);
             if(rdr.rows.length == 0)
                 throw new exception.NotFoundException("users", username);
             else
@@ -259,7 +259,7 @@ const pg = require('pg'),
         try {
             if(!_txc) await dbc.connect();
 
-            const rdr = await dbc.query("SELECT * FROM users WHERE name = $1", [username]);
+            const rdr = await dbc.query("SELECT * FROM users WHERE LOWER(name) = $1", [username]);
             if(rdr.rows.length == 0)
                 throw new exception.NotFoundException("users", username);
             else

@@ -72,10 +72,7 @@ module.exports.GroupApiResource = class GroupApiResource {
                     "post": {
                         demand: security.PermissionType.WRITE,
                         method: this.addUser
-                    }
-                },
-                {
-                    "path": "group/:gid/user/:uid",
+                    },
                     "delete": {
                         demand: security.PermissionType.WRITE,
                         method: this.deleteUser
@@ -209,10 +206,10 @@ module.exports.GroupApiResource = class GroupApiResource {
     async deleteUser(req, res) {
         if(!req.params.gid)
             throw new exception.Exception("Missing group id parameter", exception.ErrorCodes.MISSING_PROPERTY);
-        if(!req.params.uid)
+        if(!req.body && !req.body.id)
             throw new exception.Exception("Missing user id parameter", exception.ErrorCodes.MISSING_PROPERTY);
         
-        res.status(201).json(await uhx.Repositories.groupRepository.removeUser(req.params.gid, user.id));
+        res.status(201).json(await uhx.Repositories.groupRepository.removeUser(req.params.gid, req.body.id));
         return true;
     }
 }

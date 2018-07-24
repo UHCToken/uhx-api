@@ -240,7 +240,19 @@ class UserApiResource {
     async put(req, res) {
         // does the request have a password if so we want to ensure that get's passed
         req.body.id = req.params.uid;
-        res.status(201).json(await uhx.SecurityLogic.updateUser(new model.User().copy(req.body), req.body.password, req.body.oldPassword, req.principal));
+
+        // Data with empty strings are returned, null data or ignore
+        var nullData = {};
+        if (req.body) {
+            if (req.body.tel === "" || req.body.tel === null)
+                nullData.tel = null;
+            if (req.body.givenName === "" || req.body.giveName === null)
+                nullData.givenName = null;
+            if (req.body.familyName === "" || req.body.familyName === null)
+                nullData.familyName = null;
+        }
+
+        res.status(201).json(await uhx.SecurityLogic.updateUser(new model.User().copy(req.body), req.body.password, req.body.oldPassword, nullData, req.principal));
         return true;
     }
 
@@ -284,7 +296,7 @@ class UserApiResource {
     async get(req, res) {
         var user = await uhx.Repositories.userRepository.get(req.params.uid);
         await user.loadWallets();
-        
+
         // Load balances from blockchain
         if (user._wallets)
             user._wallets = await uhx.TokenLogic.getAllBalancesForWallets(user._wallets);
@@ -477,7 +489,7 @@ class UserApiResource {
      *          - "execute:user"
     */
     async reset(req, res) {
-        await uhx.SecurityLogic.initiatePasswordReset(req.body.email, req.body.tel);
+        await uhx.SecurityLogic.initiatePasswordReset(req.body.email.toLowerCase(), req.body.tel);
         res.status(204).send();
         return true;
     }
@@ -808,6 +820,7 @@ class UserApiResource {
 
         var usr = await uhx.Repositories.userRepository.get(req.params.uid);
         usr.lockout = null;
+        usr.invalidLogins = 0;
         await uhx.Repositories.userRepository.update(usr, null, req.principal);
         res.status(204).send();
         return true;

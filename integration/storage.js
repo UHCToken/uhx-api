@@ -52,7 +52,7 @@ module.exports = class ObjectStorage {
             } else if (file._files[0].stream.byteCount > uhx.Config.objectStorage.maxFileSize) { // File too big
                 var result = new exception.Exception("File size is too large", exception.ErrorCodes.NOT_SUPPORTED);
             } else {
-                var filename = `${req.params.uid}.png`; // Save image as a png
+                var filename = `${req.params.uid}/profile.png`; // Save image as a png
                 var options = extend({}, s3config, {
                     adapter: skipperS3,
                     headers: {

@@ -417,7 +417,7 @@ module.exports = class SecurityLogic {
                 strWallet = await uhx.Repositories.walletRepository.insert(strWallet, principal, _txc);
 
                 // Ethereum 
-                if(uhx.Config.ethereum.enabled){
+                if (uhx.Config.ethereum.enabled) {
                     var web3Client = uhx.Web3Client;
                     var ethWallet = await web3Client.generateAccount()
                     ethWallet.userId = retVal.id;
@@ -431,7 +431,6 @@ module.exports = class SecurityLogic {
 
                 if (isInvited) {
                     var initiatorWallet = await uhx.Repositories.walletRepository.get(uhx.Config.stellar.initiator_wallet_id);
-                    await stellarClient.activateAccount(strWallet, "2", initiatorWallet)
                 }
 
                 // Add user
@@ -514,7 +513,7 @@ module.exports = class SecurityLogic {
      * @param {string} newPassword The new password to set the user account to
      * @returns {User} The updated user
      */
-    async updateUser(user, newPassword, oldPassword, principal) {
+    async updateUser(user, newPassword, oldPassword, nullData, principal) {
         if (principal.grant["user"] & security.PermissionType.OWNER) {
             try {
 
@@ -537,6 +536,25 @@ module.exports = class SecurityLogic {
 
                     // Get existing user
                     var existingUser = await uhx.Repositories.userRepository.get(user.id);
+
+                    // Empty strings or nulls
+                    if (nullData) {
+                        if (nullData.tel === null) {
+                            user.tel = null;
+                            user.telVerified = false;
+                            await uhx.Repositories.userRepository.deleteClaim(user.id, TFA_CLAIM);
+                            await uhx.Repositories.userRepository.deleteClaim(user.id, SMS_CONFIRM_CLAIM);
+                            if (existingUser.tfaMethod == '1')
+                                user.tfaMethod = '0';
+                        }
+                        if (nullData.givenName === null) {
+                            user.givenName = "";
+                        }
+                        if (nullData.familyName === null) {
+                            user.familyName = "";
+                        }
+                    }
+
 
                     // Was the user's e-mail address verified? 
                     if (newPassword && oldPassword) {
@@ -630,6 +648,33 @@ module.exports = class SecurityLogic {
             }
         } else if (principal.grant["user"] & security.PermissionType.LIST) {
             try {
+                // Get existing user
+                var existingUser = await uhx.Repositories.userRepository.get(user.id);
+
+                // Empty strings or nulls
+                if (nullData) {
+                    if (nullData.tel === null) {
+                        user.tel = null;
+                        user.telVerified = false;
+                    }
+                    if (nullData.givenName === null) {
+                        user.givenName = "";
+                    }
+                    if (nullData.familyName === null) {
+                        user.familyName = "";
+                    }
+                }
+
+                if (user.telVerified == "false") {
+                    await uhx.Repositories.userRepository.deleteClaim(user.id, TFA_CLAIM);
+                    await uhx.Repositories.userRepository.deleteClaim(user.id, SMS_CONFIRM_CLAIM);
+                    if (existingUser.tfaMethod == '1')
+                        user.tfaMethod = '0';
+                }
+
+                // Scrub unmodifiable fields
+                delete (user.email);
+
                 // Validate the user
                 this.validateUser(user, newPassword);
 
