@@ -134,8 +134,9 @@ class ProviderApiResource {
             throw new exception.Exception("Must have a userId", exception.ErrorCodes.MISSING_PROPERTY);
 
         var provider = new model.Provider().copy(req.body);
-
-        res.status(201).json(await uhx.UserLogic.addProvider(provider, req.principal));
+        var newProvider = await uhx.UserLogic.addProvider(provider, req.body.serviceTypes, req.principal);
+        await newProvider.loadProviderServiceTypes();
+        res.status(201).json(newProvider);
 
         return true;
     }
@@ -193,7 +194,8 @@ class ProviderApiResource {
     async put(req, res) {
         req.body.id = req.params.uid;
         var provider = await uhx.UserLogic.updateProvider(new model.Provider().copy(req.body), req.body.serviceTypes, req.principal);
-        await provider.loadProviderServiceTypes();
+        if (provider)
+            await provider.loadProviderServiceTypes();
         res.status(201).json(provider);
         return true;
     }

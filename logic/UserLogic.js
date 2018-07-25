@@ -46,9 +46,10 @@ module.exports = class UserLogic {
      * @method
      * @summary Adds a provider to the UhX API
      * @param {Provider} provider The provider to add
+     * @param {*} serviceTypes The service types of the provider
      * @param {SecurityPrincipal} principal The user who is making the request
      */
-    async addProvider(provider, principal) {
+    async addProvider(provider, serviceTypes, principal) {
 
         var providerExists = await uhx.Repositories.providerRepository.get(provider.userId);
         if (providerExists)
@@ -57,6 +58,8 @@ module.exports = class UserLogic {
         try {
             var retVal = await uhx.Repositories.providerRepository.insert(provider, principal);
             await uhx.Repositories.groupRepository.addUser(uhx.Config.security.sysgroups.providers, retVal.userId, principal);
+            if (serviceTypes)
+                await uhx.UserLogic.updateProviderServiceTypes(provider.id, serviceTypes, principal);
             return retVal;
         }
         catch (e) {
