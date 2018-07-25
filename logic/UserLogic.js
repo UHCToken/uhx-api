@@ -1,4 +1,3 @@
-
 // <Reference path="./model/model.js"/>
 'use strict';
 
@@ -70,11 +69,15 @@ module.exports = class UserLogic {
      * @method
      * @summary Updates the specified provider
      * @param {Provider} provider The provider to be updated
+     * @param {*} serviceTypes The service types of the provider
      * @returns {Provider} The updated provider
      */
-    async updateProvider(provider, principal) {
+    async updateProvider(provider, serviceTypes, principal) {
         if (principal.grant["user"] & security.PermissionType.OWNER) {
             try {
+
+                if (serviceTypes)
+                    await uhx.UserLogic.updateProviderServiceTypes(provider.id, serviceTypes, principal);
 
                 // Delete fields which can't be set by clients 
                 delete (provider.userId);
@@ -98,6 +101,9 @@ module.exports = class UserLogic {
         } else if (principal.grant["user"] & security.PermissionType.LIST) {
             try {
 
+                if (serviceTypes)
+                    await uhx.UserLogic.updateProviderServiceTypes(provider.id, serviceTypes, principal);
+
                 delete (provider.userId);
                 delete (provider.creationTime);
                 delete (provider.updatedTime);
@@ -111,6 +117,40 @@ module.exports = class UserLogic {
                 uhx.log.error("Error updating provider: " + ex.message);
                 throw new exception.Exception("Error updating provider", exception.ErrorCodes.UNKNOWN, ex);
             }
+        }
+    }
+
+    /**
+     * @method
+     * @summary Adds a service type
+     * @param {string} providerId The provider to add the service type to
+     * @param {Array} serviceTypes The service types to add to the provider
+     * @param {SecurityPrincipal} principal The user who is making the request
+     */
+    async updateProviderServiceTypes(providerId, serviceTypes, principal) {
+
+        
+        var existingServiceTypes = await uhx.Repositories.providerRepository.getProviderServiceTypes(providerId);
+           
+        try {
+            var exists = [];
+            for(var i in serviceTypes){
+                exists[i] = false;
+                for(var j in existingServiceTypes){
+                    if (serviceTypes[i].type_id == existingServiceTypes[j].type_id)
+                        exists[i] = true;
+                }
+                if(serviceTypes[i].action == 'insert' && !exists[i])
+                    await uhx.Repositories.providerRepository.insertServiceType(providerId, serviceTypes[i].type_id);
+                else if(serviceTypes[i].action == 'delete' && exists[i])
+                    await uhx.Repositories.providerRepository.deleteServiceType(providerId, serviceTypes[i].type_id);
+                
+            }
+            return true;
+        }
+        catch (e) {
+            uhx.log.error(`Error adding service type: ${e.message}`);
+            throw new exception.Exception("Error adding service type", e.code || exception.ErrorCodes.UNKNOWN, e);
         }
     }
 }

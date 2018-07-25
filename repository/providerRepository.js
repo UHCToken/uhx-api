@@ -54,7 +54,7 @@ module.exports = class ProviderRepository {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if (!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM providers WHERE user_id = $1", [id]);
+            const rdr = await dbc.query("SELECT * FROM providers WHERE user_id = $1 OR id = $1", [id]);
             if (rdr.rows.length == 0)
                 return null;
             else
@@ -181,7 +181,7 @@ module.exports = class ProviderRepository {
     /**
      * @method
      * @summary Gets the providers listed services types
-     * @param {Provider} providerId The provider Id
+     * @param {string} providerId The provider Id
      * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {*} The providers service types
      */
@@ -189,9 +189,9 @@ module.exports = class ProviderRepository {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if (!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT type_name, description FROM service_types JOIN provider_types ON provider_types.service_type = service_types.id WHERE provider_types.provider_id = $1", [providerId]);
+            const rdr = await dbc.query("SELECT type_name AS name, description, service_types.id AS type_id FROM service_types JOIN provider_types ON provider_types.service_type = service_types.id WHERE provider_types.provider_id = $1", [providerId]);
             if (rdr.rows.length == 0)
-                throw new exception.NotFoundException('provider', id);
+                return null;
             else {
                 var retVal = [];
                 for (var r in rdr.rows)
@@ -204,6 +204,68 @@ module.exports = class ProviderRepository {
         }
     }
 
+        /**
+     * @method
+     * @summary Insert the specified service type for a provider
+     * @param {string} providerId The provider to add the service type to
+     * @param {string} serviceTypeId The service type to add to the provider
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {Boolean} The status of the insert
+     */
+    async insertServiceType(providerId, serviceTypeId, _txc) {
+        if (!providerId || !serviceTypeId)
+            throw new exception.Exception("Target object must carry an identifier", exception.ErrorCodes.ARGUMENT_EXCEPTION);
+
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+            const rdr = await dbc.query("INSERT INTO provider_types (provider_id, service_type) VALUES ($1, $2) RETURNING *", [providerId, serviceTypeId]);
+
+            if (rdr.rows.length == 0)
+                throw new exception.Exception("Could not register provider types in data store", exception.ErrorCodes.DATA_ERROR);
+            else
+                return true;
+        }
+        catch (e) {
+            if (e.code == "23502")
+                throw new exception.Exception("Missing mandatory field", exception.ErrorCodes.DATA_ERROR, e);
+            if (e.code == "23505")
+                throw new exception.Exception("Provider type already exists", exception.ErrorCodes.DATA_ERROR, e);
+            throw e;
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Delete a service type for a provider
+     * @param {string} providerId The identity of the provider to delete the service type for
+     * @param {string} serviceTypeId The service type to delete for the provider
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {Boolean} The status of the delete
+     */
+    async deleteServiceType(providerId, serviceTypeId, _txc) {
+
+        if (!providerId || !serviceTypeId)
+            throw new exception.Exception("Target object must carry an identifier", exception.ErrorCodes.ARGUMENT_EXCEPTION);
+
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+
+            const rdr = await dbc.query("DELETE FROM provider_types WHERE provider_id = $1 AND service_type = $2 RETURNING *", [providerId, serviceTypeId]);
+            if (rdr.rows.length == 0)
+                throw new exception.Exception("Could not delete provider service type in data store", exception.ErrorCodes.DATA_ERROR);
+            else
+                return true;
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
+
+    }
 
     /**
      * @method

@@ -191,10 +191,10 @@ class ProviderApiResource {
      *          - "read:user"
      */
     async put(req, res) {
-        // does the request have a password if so we want to ensure that get's passed
         req.body.id = req.params.uid;
-
-        res.status(201).json(await uhx.UserLogic.updateProvider(new model.Provider().copy(req.body), req.principal));
+        var provider = await uhx.UserLogic.updateProvider(new model.Provider().copy(req.body), req.body.serviceTypes, req.principal);
+        await provider.loadProviderServiceTypes();
+        res.status(201).json(provider);
         return true;
     }
 
@@ -241,6 +241,7 @@ class ProviderApiResource {
         res.status(200).json(provider);
         return true;
     }
+
 
     /**
      * @method

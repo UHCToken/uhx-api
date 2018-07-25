@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS service_types (
 CREATE TABLE IF NOT EXISTS provider_types (
     provider_id UUID NOT NULL,
     service_type UUID NOT NULL,
+    CONSTRAINT pk_provider_service_type PRIMARY KEY (provider_id, service_type),
     CONSTRAINT fk_provider FOREIGN KEY (provider_id) REFERENCES providers(id),
     CONSTRAINT fk_provider_service_type FOREIGN KEY (service_type) REFERENCES service_types(id)
 );
@@ -55,6 +56,7 @@ CREATE TABLE IF NOT EXISTS provider_types (
 CREATE TABLE IF NOT EXISTS provider_address_types (
     provider_address_id UUID NOT NULL,
     service_type UUID NOT NULL,
+    CONSTRAINT pk_provider_address_service_type PRIMARY KEY (provider_address_id, service_type),
     CONSTRAINT fk_provider FOREIGN KEY (provider_address_id) REFERENCES provider_addresses(id),
     CONSTRAINT fk_provider_address_service_type FOREIGN KEY (service_type) REFERENCES service_types(id)
 );
