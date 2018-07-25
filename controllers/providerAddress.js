@@ -24,13 +24,13 @@ const uhx = require('../uhx'),
 
 /**
  * @class
- * @summary Represents a service type service
+ * @summary Represents a provider address service
  * @swagger
  * tags:
- *  - name: "service type"
- *    description: "The service type resource represents to fetch service type information for the provider and patient platform"
+ *  - name: "provideraddress"
+ *    description: "The providerAddress resource represents a single provider address"
  */
-class ServiceTypeApiResource {
+class ProviderAddressApiResource {
 
     /**
      * @constructor
@@ -48,29 +48,25 @@ class ServiceTypeApiResource {
             "permission_group": "user",
             "routes": [
                 {
-                    "path": "servicetype",
-                    "get": {
-                        "demand": security.PermissionType.WRITE,
-                        "method": this.getAll
-                    },
+                    "path": "provideraddress",
                     "post": {
                         "demand": security.PermissionType.WRITE,
                         "method": this.post
                     }
                 },
                 {
-                    "path": "servicetype/:uid",
+                    "path": "provideraddress/:uid",
                     "get": {
                         "demand": security.PermissionType.READ,
                         "method": this.get
                     },
+                    "get": {
+                        "demand": security.PermissionType.READ,
+                        "method": this.getAllForProvider
+                    },
                     "put": {
                         "demand": security.PermissionType.WRITE | security.PermissionType.READ,
                         "method": this.put
-                    },
-                    "delete": {
-                        "demand": security.PermissionType.WRITE | security.PermissionType.READ,
-                        "method": this.delete
                     }
                 }
             ]
@@ -79,27 +75,29 @@ class ServiceTypeApiResource {
 
     /**
      * @method
-     * @summary Gets all service types
+     * @summary Get all addresses for the provider
      * @param {Express.Reqeust} req The request from the client 
      * @param {Express.Response} res The response from the client
      * @swagger
-     * /servicetype:
+     * /provideraddress/{providerid}:
      *  get:
      *      tags:
-     *      - "servicetype"
-     *      summary: "Gets all service types"
-     *      description: "This method will fetch all service types"
+     *      - "provideraddress"
+     *      summary: "Gets all address for the provider specified"
+     *      description: "This method gets all addresses for a provider"
      *      produces:
      *      - "application/json"
+     *      parameters:
+     *      - name: "providerid"
+     *        in: "params"
+     *        description: "The providerid to get addresses for"
+     *        required: true
+     *        type: "string"
      *      responses:
      *          200: 
-     *             description: "The requested resource was fetched successfully"
+     *             description: "The requested resource was queried successfully"
      *             schema: 
-     *                  $ref: "#/definitions/ServiceTypes"
-     *          404:
-     *              description: "The specified service type cannot be found"
-     *              schema: 
-     *                  $ref: "#/definitions/Exception"
+     *                  $ref: "#/definitions/ProviderAddress"
      *          500:
      *              description: "An internal server error occurred"
      *              schema:
@@ -108,41 +106,43 @@ class ServiceTypeApiResource {
      *      - uhx_auth:
      *          - "read:user"
      */
-    async getAll(req, res) {
-        res.status(200).json(await uhx.Repositories.serviceTypeRepository.getAll());
+    async getAllForProvider(req, res) {
+
+        var addresses= await uhx.Repositories.providerAddressRepository.getAllForProvider(req.params.uid);
+        if (addresses){
+            for(var adr in addresses){
+                await addresses[adr].loadAddressServiceTypes();
+            }
+        }
+
+        res.status(200).json(addresses);
+
         return true;
     }
-
+    
     /**
      * @method
-     * @summary Creates a new service type
+     * @summary Creates a new provider address
      * @param {Express.Request} req The request from the client
      * @param {Express.Response} res The response to send back to the client
      * @swagger
-     * /servicetype:
+     * /provideraddress:
      *  post:
      *      tags:
-     *      - "servicetype"
-     *      summary: "Registers a new service type in the UhX API"
-     *      description: "This method will register a new service type in the UhX API"
+     *      - "provideraddress"
+     *      summary: "Registers a new provider address in the UhX API"
+     *      description: "This method will register a new provider address in the UhX API"
      *      consumes: 
      *      - "application/json"
      *      produces:
      *      - "application/json"
-     *      parameters:
-     *      - in: "body"
-     *        name: "body"
-     *        description: "The service type that is to be created"
-     *        required: true
-     *        schema:
-     *          $ref: "#/definitions/ServiceTypes"
      *      responses:
      *          201: 
      *             description: "The requested resource was created successfully"
      *             schema: 
-     *                  $ref: "#/definitions/Service Types"
+     *                  $ref: "#/definitions/ProviderAddress"
      *          422:
-     *              description: "The service type object sent by the client was rejected"
+     *              description: "The provider address object sent by the client was rejected"
      *              schema: 
      *                  $ref: "#/definitions/Exception"
      *          500:
@@ -160,53 +160,57 @@ class ServiceTypeApiResource {
         if (!req.body)
             throw new exception.Exception("Missing body", exception.ErrorCodes.MISSING_PAYLOAD);
 
-        if (!req.body.name)
-            throw new exception.Exception("Must have a name", exception.ErrorCodes.MISSING_PROPERTY);
+        if (!req.body.providerId)
+            throw new exception.Exception("Must have a providerId", exception.ErrorCodes.MISSING_PROPERTY);
 
+        var address = new model.ProviderAddress().copy(req.body);
+        var newAddress = await uhx.UserLogic.addProviderAddress(address, req.body.serviceTypes, req.principal);
+        if (newAddress)
+            await newAddress.loadAddressServiceTypes();
+        res.status(201).json(newAddress);
 
-        res.status(201).json(await uhx.Repositories.serviceTypeRepository.insert(req.body.name, req.body.description));
         return true;
     }
 
     /**
      * @method
-     * @summary Updates an existing service type
+     * @summary Updates an existing provider address
      * @param {Express.Request} req The request from the client
      * @param {Express.Response} res The response to the client
      * @swagger
-     * /servicetype/{servicetypeid}:
+     * /provideraddress/{addressid}:
      *  put:
      *      tags:
-     *      - "servicetype"
-     *      summary: "Updates an existing service type in the UhX API"
-     *      description: "This method will update an existing service type in the UhX API"
+     *      - "provideraddress"
+     *      summary: "Updates an existing provider address in the UhX API"
+     *      description: "This method will update an existing provider address in the UhX API"
      *      consumes: 
      *      - "application/json"
      *      produces:
      *      - "application/json"
      *      parameters:
-     *      - name: "servicetypeid"
+     *      - name: "addressid"
      *        in: "path"
-     *        description: "The service type ID of the service type being updated"
+     *        description: "The address ID of the provider address being updated"
      *        required: true
      *        type: "string"
      *      - in: "body"
      *        name: "body"
-     *        description: "The service type that is to be updated"
+     *        description: "The provider address that is to be updated"
      *        required: true
      *        schema:
-     *          $ref: "#/definitions/ServiceTypes"
+     *          $ref: "#/definitions/ProviderAddress"
      *      responses:
      *          201: 
      *             description: "The requested resource was updated successfully"
      *             schema: 
-     *                  $ref: "#/definitions/ServiceTypes"
+     *                  $ref: "#/definitions/ProviderAddress"
      *          404:
-     *              description: "The specified service type cannot be found"
+     *              description: "The specified provider cannot be found"
      *              schema: 
      *                  $ref: "#/definitions/Exception"
      *          422:
-     *              description: "The servicetype object sent by the client was rejected"
+     *              description: "The provider object sent by the client was rejected"
      *              schema: 
      *                  $ref: "#/definitions/Exception"
      *          500:
@@ -219,43 +223,42 @@ class ServiceTypeApiResource {
      *          - "read:user"
      */
     async put(req, res) {
-        if (!req.body)
-            throw new exception.Exception("Missing body", exception.ErrorCodes.MISSING_PAYLOAD);
 
-        if (!req.body.name)
-            throw new exception.Exception("Must have a name", exception.ErrorCodes.MISSING_PROPERTY);
-
-        res.status(200).json(await uhx.Repositories.serviceTypeRepository.update(req.params.uid, req.body.name, req.body.description));
+        req.body.id = req.params.uid;
+        var address = await uhx.UserLogic.updateProviderAddress(new model.ProviderAddress().copy(req.body), req.body.serviceTypes, req.principal);
+        if (address)
+            await address.loadAddressServiceTypes();
+        res.status(201).json(address);
         return true;
     }
 
     /**
      * @method
-     * @summary Get a single service type 
+     * @summary Get a single provider address
      * @param {Express.Reqeust} req The request from the client 
      * @param {Express.Response} res The response from the client
      * @swagger
-     * /servicetype/{servicetypeid}:
+     * /provideraddress/{addressid}:
      *  get:
      *      tags:
-     *      - "servicetype"
-     *      summary: "Gets an existing service type"
-     *      description: "This method will fetch an existing service type"
+     *      - "provideraddress"
+     *      summary: "Gets an existing provider address from the UhX member database"
+     *      description: "This method will fetch an existing provider address from the UhX member database"
      *      produces:
      *      - "application/json"
      *      parameters:
-     *      - name: "servicetypeid"
+     *      - name: "addressid"
      *        in: "path"
-     *        description: "The service type ID"
+     *        description: "The provider address ID"
      *        required: true
      *        type: "string"
      *      responses:
      *          200: 
      *             description: "The requested resource was fetched successfully"
      *             schema: 
-     *                  $ref: "#/definitions/ServiceTypes"
+     *                  $ref: "#/definitions/ProviderAddress"
      *          404:
-     *              description: "The specified service type cannot be found"
+     *              description: "The specified provider cannot be found"
      *              schema: 
      *                  $ref: "#/definitions/Exception"
      *          500:
@@ -267,53 +270,17 @@ class ServiceTypeApiResource {
      *          - "read:user"
      */
     async get(req, res) {
-        res.status(200).json(await uhx.Repositories.serviceTypeRepository.get(req.params.uid));
+
+        var address = await uhx.Repositories.providerAddressRepository.get(req.params.uid);
+        if (address)
+            await address.loadAddressServiceTypes();
+
+        res.status(200).json(address);
+
         return true;
     }
 
-    /**
-     * @method
-     * @summary Deactivates a service type
-     * @param {Express.Reqeust} req The request from the client 
-     * @param {Express.Response} res The response from the client
-     * @swagger
-     * /servicetype/{servicetypeid}:
-     *  delete:
-     *      tags:
-     *      - "servicetype"
-     *      summary: "Deactivates a service type in the database"
-     *      description: "This method will set the deactivation time of the specified service type so it will no longer appear in searches."
-     *      produces:
-     *      - "application/json"
-     *      parameters:
-     *      - name: "servicetypeid"
-     *        in: "path"
-     *        description: "The service type ID of the service type being deactivated"
-     *        required: true
-     *        type: "string"
-     *      responses:
-     *          201: 
-     *             description: "The requested resource was fetched successfully"
-     *             schema: 
-     *                  $ref: "#/definitions/ServiceTypes"
-     *          404:
-     *              description: "The specified service type cannot be found"
-     *              schema: 
-     *                  $ref: "#/definitions/Exception"
-     *          500:
-     *              description: "An internal server error occurred"
-     *              schema:
-     *                  $ref: "#/definitions/Exception"
-     *      security:
-     *      - uhx_auth:
-     *          - "write:user"
-     *          - "read:user"
-     */
-    async delete(req, res) {
-        res.status(201).json(await uhx.Repositories.serviceTypeRepository.delete(req.params.uid));
-        return true;
-    }
 }
 
 // Module exports
-module.exports.ServiceTypeApiResource = ServiceTypeApiResource;
+module.exports.ProviderAddressApiResource = ProviderAddressApiResource;

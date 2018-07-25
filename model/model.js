@@ -23,6 +23,8 @@
     security = require('../security'),
     User = require('./User'),
     Provider = require('./Provider'),
+    ProviderAddress = require('./ProviderAddress'),
+    ProviderService = require('./ProviderService'),
     ModelUtil = require('./ModelUtil'),
     Application = require('./Application'),
     Session = require('./Session'),
@@ -68,6 +70,8 @@ module.exports.User = User;
 module.exports.Application = Application;
 module.exports.Session = Session;
 module.exports.Provider = Provider;
+module.exports.ProviderAddress = ProviderAddress;
+module.exports.ProviderService = ProviderService;
 module.exports.PermissionSet = PermissionSet;
 module.exports.PermissionSetInstance = PermissionSetInstance;
 module.exports.Wallet = Wallet

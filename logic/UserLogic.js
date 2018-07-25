@@ -129,22 +129,110 @@ module.exports = class UserLogic {
      */
     async updateProviderServiceTypes(providerId, serviceTypes, principal) {
 
-        
+
         var existingServiceTypes = await uhx.Repositories.providerRepository.getProviderServiceTypes(providerId);
-           
+
         try {
             var exists = [];
-            for(var i in serviceTypes){
+            for (var i in serviceTypes) {
                 exists[i] = false;
-                for(var j in existingServiceTypes){
+                for (var j in existingServiceTypes) {
                     if (serviceTypes[i].type_id == existingServiceTypes[j].type_id)
                         exists[i] = true;
                 }
-                if(serviceTypes[i].action == 'insert' && !exists[i])
+                if (serviceTypes[i].action == 'insert' && !exists[i])
                     await uhx.Repositories.providerRepository.insertServiceType(providerId, serviceTypes[i].type_id);
-                else if(serviceTypes[i].action == 'delete' && exists[i])
+                else if (serviceTypes[i].action == 'delete' && exists[i])
                     await uhx.Repositories.providerRepository.deleteServiceType(providerId, serviceTypes[i].type_id);
-                
+
+            }
+            return true;
+        }
+        catch (e) {
+            uhx.log.error(`Error adding service type: ${e.message}`);
+            throw new exception.Exception("Error adding service type", e.code || exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
+
+    /**
+     * @method
+     * @summary Adds a provider address to the UhX API
+     * @param {ProviderAddress} address The provider address to add
+     * @param {*} serviceTypes The service types of the provider address
+     * @param {SecurityPrincipal} principal The user who is making the request
+     */
+    async addProviderAddress(address, serviceTypes, principal) {
+
+        var providerExists = await uhx.Repositories.providerAddressRepository.get(address.addressId);
+        if (providerExists)
+            throw new exception.Exception("This address exists", exception.ErrorCodes.ARGUMENT_EXCEPTION);
+
+        try {
+            var newAddress = await uhx.Repositories.providerAddressRepository.insert(address, principal);
+            if (serviceTypes)
+                await uhx.UserLogic.updateAddressServiceTypes(address.id, serviceTypes, principal);
+            return newAddress;
+        }
+        catch (e) {
+            uhx.log.error(`Error adding provider address: ${e.message}`);
+            throw new exception.Exception("Error adding provider address", e.code || exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
+
+    /**
+     * @method
+     * @summary Updates the specified provider address
+     * @param {ProviderAddress} address The provider address to be updated
+     * @param {*} serviceTypes The service types of the provider address
+     * @returns {ProviderAddress} The updated provider address
+     */
+    async updateProviderAddress(address, serviceTypes, principal) {
+
+        try {
+            if (serviceTypes)
+                await uhx.UserLogic.updateAddressServiceTypes(address.id, serviceTypes, principal);
+
+            // Delete fields which can't be set by clients 
+            delete (address.providerId);
+            delete (address.creationTime);
+            delete (address.updatedTime);
+            delete (address.deactivationTime);
+            delete (address.profileImage);
+
+            return await uhx.Repositories.providerAddressRepository.update(address);
+        }
+        catch (e) {
+            uhx.log.error("Error updating provider address: " + e.message);
+            throw new exception.Exception("Error updating provider address", exception.ErrorCodes.UNKNOWN, e);
+        }
+
+    }
+
+    /**
+     * @method
+     * @summary Adds a service type
+     * @param {string} addressId The provider address to add the service type to
+     * @param {Array} serviceTypes The service types to add to the provider address
+     * @param {SecurityPrincipal} principal The user who is making the request
+     */
+    async updateAddressServiceTypes(addressId, serviceTypes, principal) {
+
+
+        var existingServiceTypes = await uhx.Repositories.providerAddressRepository.getAddressServiceTypes(addressId);
+
+        try {
+            var exists = [];
+            for (var i in serviceTypes) {
+                exists[i] = false;
+                for (var j in existingServiceTypes) {
+                    if (serviceTypes[i].type_id == existingServiceTypes[j].type_id)
+                        exists[i] = true;
+                }
+                if (serviceTypes[i].action == 'insert' && !exists[i])
+                    await uhx.Repositories.providerAddressRepository.insertServiceType(addressId, serviceTypes[i].type_id);
+                else if (serviceTypes[i].action == 'delete' && exists[i])
+                    await uhx.Repositories.providerAddressRepository.deleteServiceType(addressId, serviceTypes[i].type_id);
+
             }
             return true;
         }

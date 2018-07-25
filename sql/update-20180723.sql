@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS service_types (
     id UUID NOT NULL DEFAULT uuid_generate_v4(),
     type_name VARCHAR(128) NOT NULL,
     description VARCHAR(256),
+    deactivation_time TIMESTAMPTZ,
     CONSTRAINT pk_service_type PRIMARY KEY (id)
 );
 

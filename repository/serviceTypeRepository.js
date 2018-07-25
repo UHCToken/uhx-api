@@ -163,8 +163,8 @@ module.exports = class ServiceTypeRepository {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if (!_txc) await dbc.connect();
-
-            const rdr = await dbc.query("DELETE FROM service_types WHERE id = $1 RETURNING *", [id]);
+            
+            const rdr = await dbc.query("UPDATE service_types SET deactivation_time = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *", [id]);
             if (rdr.rows.length == 0)
                 throw new exception.Exception("Could not delete the service type in data store", exception.ErrorCodes.DATA_ERROR);
             else

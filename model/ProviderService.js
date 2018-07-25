@@ -77,7 +77,7 @@ const uhx = require('../uhx'),
   *                 description: The time that the provider account did or will become deactivated
   *     
   */
- module.exports = class Provider extends ModelBase {
+ module.exports = class ProviderService extends ModelBase {
 
     /**
      * @constructor
@@ -124,8 +124,7 @@ const uhx = require('../uhx'),
             tel: this.tel,
             fax: this.fax,
             email: this.email,
-            profile_image: this.profileImage,
-            visible: this.visible
+            profile_image: this.profileImage
         };
 
         return retVal;
@@ -156,7 +155,7 @@ const uhx = require('../uhx'),
      * @summary Returns a summary object
      */
     summary() {
-        return new Provider().copy({
+        return new ProviderService().copy({
             id: this.id,
             name: this.name,
             email: this.email,

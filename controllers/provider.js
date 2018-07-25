@@ -146,7 +146,7 @@ class ProviderApiResource {
      * @param {Express.Request} req The request from the client
      * @param {Express.Response} res The response to the client
      * @swagger
-     * /provider/{userid}:
+     * /provider/{providerid}:
      *  put:
      *      tags:
      *      - "provider"
@@ -157,7 +157,7 @@ class ProviderApiResource {
      *      produces:
      *      - "application/json"
      *      parameters:
-     *      - name: "userid"
+     *      - name: "providerid"
      *        in: "path"
      *        description: "The user ID of the provider being updated"
      *        required: true
@@ -204,7 +204,7 @@ class ProviderApiResource {
      * @param {Express.Reqeust} req The request from the client 
      * @param {Express.Response} res The response from the client
      * @swagger
-     * /provider/{userid}:
+     * /provider/{providerid}:
      *  get:
      *      tags:
      *      - "provider"
@@ -213,9 +213,9 @@ class ProviderApiResource {
      *      produces:
      *      - "application/json"
      *      parameters:
-     *      - name: "userid"
+     *      - name: "providerid"
      *        in: "path"
-     *        description: "The user ID of the provider"
+     *        description: "The provider ID of the provider"
      *        required: true
      *        type: "string"
      *      responses:
@@ -237,7 +237,8 @@ class ProviderApiResource {
      */
     async get(req, res) {
         var provider = await uhx.Repositories.providerRepository.get(req.params.uid);
-        await provider.loadProviderServiceTypes();
+        if (provider)
+            await provider.loadProviderServiceTypes();
         res.status(200).json(provider);
         return true;
     }
