@@ -24,14 +24,12 @@ const uhx = require('../uhx'),
   * @class Provider
   * @summary Represents a provider instance
   * @property {string} id The identifier for the provider
-  * @property {string} userId The user id of the provider
-  * @property {string} name The name of the provider
-  * @property {string} description The textual information of the provider's profile
-  * @property {string} tel The provider's telephone 
-  * @property {string} fax The provider's fax number
-  * @property {string} email The provider's contact email
-  * @property {string} profileImage The provider's profile image
-  * @property {Boolean} visible The visibility status to be displayed in the provider directory
+  * @property {string} providerId The identifier of the provider
+  * @property {string} addressId The identifier of the provider address
+  * @property {string} serviceName The name of the service
+  * @property {string} description The description of the service
+  * @property {Float} cost The cost of the service
+  * @property {string} serviceType The service type identifier of the service
   * @property {Date} creationTime The time that the provider was created
   * @property {Date} updatedTime The time that the provider was updated
   * @property {Date} deactivatedTime The time that the provider was deactivated
@@ -42,39 +40,33 @@ const uhx = require('../uhx'),
   *             id: 
   *                 type: string
   *                 description: The unique identifier for the provider
-  *             userId:
+  *             providerId:
   *                 type: string
-  *                 description: The user id of the provider
-  *             name:
+  *                 description: The identifier of the provider
+  *             addressId:
   *                 type: string
-  *                 description: The name of the provider
+  *                 description: The address id of the provider address
+  *             serviceName:
+  *                 type: string
+  *                 description: The name of the service
   *             description:
   *                 type: string
-  *                 description: Descriptive text which the provider has set (their profile)
-  *             tel:
+  *                 description: The description of the service
+  *             cost:
+  *                 type: number
+  *                 description: The cost of the service
+  *             serviceType:
   *                 type: string
-  *                 description: The provider's contact telephone number
-  *             fax:
-  *                 type: string
-  *                 description: The provider's fax number
-  *             email: 
-  *                 type: string
-  *                 description: Identifies the e-mail address of the provider
-  *             profileImage:
-  *                 description: The filename for the profile image for the user
-  *                 type: string
-  *             visible:
-  *                 description: The visibility status to be displayed in the provider directory
-  *                 type: string
+  *                 description: The identifier of the type of service
   *             creationTime:
   *                 type: Date
-  *                 description: The time that this provider account was created
+  *                 description: The time that this service was created
   *             updatedTime:
   *                 type: Date
-  *                 description: The time that the provider account was last updated
+  *                 description: The time that the service was last updated
   *             deactivatedTime:
   *                 type: Date
-  *                 description: The time that the provider account did or will become deactivated
+  *                 description: The time that the service did or will become deactivated
   *     
   */
  module.exports = class ProviderService extends ModelBase {
@@ -93,24 +85,22 @@ const uhx = require('../uhx'),
 
     /**
      * Create object from database provider
-     * @param {*} dbProvider The provider instance from the database
+     * @param {*} dbService The provider instance from the database
      */
-    fromData(dbProvider) {
-        this.id = dbProvider.id;
-        this.userId = dbProvider.user_id;
-        this.name = dbProvider.name;
-        this.description = dbProvider.description;
-        this.tel = dbProvider.tel;
-        this.fax = dbProvider.fax;
-        this.email = dbProvider.email;
-        this.profileImage = dbProvider.profile_image;
-        this.visible = dbProvider.visible;
-        this.creationTime = dbProvider.creation_time;
-        this.updatedTime = dbProvider.updated_time;
-        this.deactivationTime = dbProvider.deactivation_time;
+    fromData(dbService) {
+        this.id = dbService.id;
+        this.providerId = dbService.provider_id;
+        this.addressId = dbService.address_id;
+        this.serviceName = dbService.service_name;
+        this.description = dbService.description;
+        this.cost = dbService.cost;
+        this.serviceType = dbService.service_type;
+        this.creationTime = dbService.creation_time;
+        this.updatedTime = dbService.updated_time;
+        this.deactivationTime = dbService.deactivation_time;
         return this;
     }
-
+    
     /**
      * @method
      * @summary Converts this instance of the Provider class to a data layer compatible one
@@ -118,26 +108,15 @@ const uhx = require('../uhx'),
     toData() {
         var retVal = {
             id : this.id,
-            user_id : this.userId,
-            name: this.name,
+            provider_id : this.providerId,
+            address_id : this.addressId,
+            service_name: this.serviceName,
             description: this.description,
-            tel: this.tel,
-            fax: this.fax,
-            email: this.email,
-            profile_image: this.profileImage
+            cost: this.cost,
+            service_type: this.serviceType
         };
 
         return retVal;
-    }
-
-    /**
-     * @method
-     * @summary Prefetch provider service types
-     */
-    async loadProviderServiceTypes(_txc) {
-        if(!this._psTypes)
-            this._psTypes = await uhx.Repositories.providerRepository.getProviderServiceTypes(this.id, _txc);
-        return this._psTypes;
     }
 
     /**
@@ -146,7 +125,6 @@ const uhx = require('../uhx'),
      */
     toJSON() {
         var retVal = this.stripHiddenFields();
-        retVal.serviceTypes = this._psTypes;
         return retVal;
     }
 
@@ -157,9 +135,11 @@ const uhx = require('../uhx'),
     summary() {
         return new ProviderService().copy({
             id: this.id,
-            name: this.name,
-            email: this.email,
-            userId: this.user_id
+            serviceName: this.service_name,
+            serviceType: this.service_type,
+            cost: this.cost,
+            addressId: this.address_id,
+            providerId: this.provider_id
         });
     }
 }

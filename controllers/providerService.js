@@ -48,14 +48,22 @@ class ProviderServiceApiResource {
             "permission_group": "user",
             "routes": [
                 {
-                    "path": "addressservice",
+                    "path": "addressservice/:addressid",
+                    "get": {
+                        "demand": security.PermissionType.READ,
+                        "method": this.getAll
+                    },
                     "post": {
                         "demand": security.PermissionType.WRITE,
-                        "method": this.post
+                        "method": this.addServices
+                    },
+                    "put": {
+                        "demand": security.PermissionType.WRITE,
+                        "method": this.updateServices
                     }
                 },
                 {
-                    "path": "addressservice/:uid",
+                    "path": "addressservice/service/:serviceid",
                     "get": {
                         "demand": security.PermissionType.READ,
                         "method": this.get
@@ -69,13 +77,50 @@ class ProviderServiceApiResource {
         };
     }
 
+
+    /**
+     * @method
+     * @summary Gets all provider address services for the provider address
+     * @param {Express.Reqeust} req The request from the client 
+     * @param {Express.Response} res The response from the client
+     * @swagger
+     * /addressservice/{addressid}:
+     *  get:
+     *      tags:
+     *      - "addressservice"
+     *      summary: "Gets all address services"
+     *      description: "This method will fetch all address services"
+     *      produces:
+     *      - "application/json"
+     *      responses:
+     *          200: 
+     *             description: "The requested resource was fetched successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/ProviderService"
+     *          404:
+     *              description: "The specified address service cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "list:user"
+     */
+    async getAll(req, res) {
+        throw new exception.NotImplementedException();
+        return true;
+    }
+
     /**
      * @method
      * @summary Creates a new provider address service
      * @param {Express.Request} req The request from the client
      * @param {Express.Response} res The response to send back to the client
      * @swagger
-     * /addressservice:
+     * /addressservice/{addressid}:
      *  post:
      *      tags:
      *      - "addressservice"
@@ -86,9 +131,14 @@ class ProviderServiceApiResource {
      *      produces:
      *      - "application/json"
      *      parameters:
+     *      - name: "addressid"
+     *        in: "path"
+     *        description: "The provider address ID"
+     *        required: true
+     *        type: "string"
      *      - in: "body"
      *        name: "body"
-     *        description: "The provider address servicethat is to be created"
+     *        description: "The provider address service that is to be created"
      *        required: true
      *        schema:
      *          $ref: "#/definitions/ProviderService"
@@ -111,8 +161,102 @@ class ProviderServiceApiResource {
      *      - app_auth:
      *          - "write:user"
      */
-    async post(req, res) {
+    async addServices(req, res) {
         throw new exception.NotImplementedException();
+        return true;
+    }
+
+    /**
+     * @method
+     * @summary Creates a new provider address service
+     * @param {Express.Request} req The request from the client
+     * @param {Express.Response} res The response to send back to the client
+     * @swagger
+     * /addressservice/{addressid}:
+     *  put:
+     *      tags:
+     *      - "addressservice"
+     *      summary: "Updates provider address services for an address in the UhX API"
+     *      description: "This method will update existing address services in the UhX API"
+     *      consumes: 
+     *      - "application/json"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "addressid"
+     *        in: "path"
+     *        description: "The provider address ID"
+     *        required: true
+     *        type: "string"
+     *      - in: "body"
+     *        name: "body"
+     *        description: "The provider address services to update"
+     *        required: true
+     *        schema:
+     *          $ref: "#/definitions/ProviderService"
+     *      responses:
+     *          201: 
+     *             description: "The requested resources were updated successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/ProviderService"
+     *          422:
+     *              description: "The provider object sent by the client was rejected"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "write:user"
+     *      - app_auth:
+     *          - "write:user"
+     */
+    async updateServices(req, res) {
+        throw new exception.NotImplementedException();
+        return true;
+    }
+
+    /**
+     * @method
+     * @summary Get a single provider address service
+     * @param {Express.Reqeust} req The request from the client 
+     * @param {Express.Response} res The response from the client
+     * @swagger
+     * /addressservice/{serviceid}:
+     *  get:
+     *      tags:
+     *      - "addressservice"
+     *      summary: "Gets an existing provider address service from the UhX member database"
+     *      description: "This method will fetch an existing provider address service from the UhX member database"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "serviceid"
+     *        in: "path"
+     *        description: "The service ID"
+     *        required: true
+     *        type: "string"
+     *      responses:
+     *          200: 
+     *             description: "The requested resource was fetched successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/ProviderService"
+     *          404:
+     *              description: "The specified provider address service cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "read:user"
+     */
+    async get(req, res) {
+        res.status(200).json(await uhx.Repositories.providerServiceRepository.get(req.params.serviceid));
         return true;
     }
 
@@ -167,52 +311,10 @@ class ProviderServiceApiResource {
      *          - "read:user"
      */
     async put(req, res) {
-        throw new exception.NotImplementedException();
+        req.body.id = req.params.serviceid;
+        res.status(200).json(await uhx.UserLogic.updateProviderService(new model.ProviderService().copy(req.body), req.principal));
         return true;
     }
-
-    /**
-     * @method
-     * @summary Get a single provider address service
-     * @param {Express.Reqeust} req The request from the client 
-     * @param {Express.Response} res The response from the client
-     * @swagger
-     * /addressservice/{serviceid}:
-     *  get:
-     *      tags:
-     *      - "addressservice"
-     *      summary: "Gets an existing provider address service from the UhX member database"
-     *      description: "This method will fetch an existing provider address service from the UhX member database"
-     *      produces:
-     *      - "application/json"
-     *      parameters:
-     *      - name: "serviceid"
-     *        in: "path"
-     *        description: "The service ID"
-     *        required: true
-     *        type: "string"
-     *      responses:
-     *          200: 
-     *             description: "The requested resource was fetched successfully"
-     *             schema: 
-     *                  $ref: "#/definitions/ProviderService"
-     *          404:
-     *              description: "The specified provider address service cannot be found"
-     *              schema: 
-     *                  $ref: "#/definitions/Exception"
-     *          500:
-     *              description: "An internal server error occurred"
-     *              schema:
-     *                  $ref: "#/definitions/Exception"
-     *      security:
-     *      - uhx_auth:
-     *          - "read:user"
-     */
-    async get(req, res) {
-        throw new exception.NotImplementedException();
-        return true;
-    }
-
 }
 
 // Module exports

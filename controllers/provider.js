@@ -52,10 +52,15 @@ class ProviderApiResource {
                     "post": {
                         "demand": security.PermissionType.WRITE,
                         "method": this.post
+                    },
+                    "path": "provider",
+                    "get": {
+                        "demand": security.PermissionType.LIST,
+                        "method": this.getAll
                     }
                 },
                 {
-                    "path": "provider/:uid",
+                    "path": "provider/:providerid",
                     "get": {
                         "demand": security.PermissionType.READ,
                         "method": this.get
@@ -66,14 +71,14 @@ class ProviderApiResource {
                     }
                 },
                 {
-                    "path": "provider/:uid/upload",
+                    "path": "provider/:providerid/upload",
                     "post": {
                         "demand": security.PermissionType.WRITE,
                         "method": this.upload
                     }
                 },
                 {
-                    "path": "provider/:uid/img",
+                    "path": "provider/:providerid/img",
                     "get": {
                         "demand": security.PermissionType.READ,
                         "method": this.getProfilePicture
@@ -143,6 +148,38 @@ class ProviderApiResource {
 
     /**
      * @method
+     * @summary Get all providers
+     * @param {Express.Reqeust} req The request from the client 
+     * @param {Express.Response} res The response from the client
+     * @swagger
+     * /provider:
+     *  get:
+     *      tags:
+     *      - "provider"
+     *      summary: "Gets all providers"
+     *      description: "This method gets all providers"
+     *      produces:
+     *      - "application/json"
+     *      responses:
+     *          200: 
+     *             description: "The requested resource was queried successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/Provider"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "list:user"
+     */
+    async getAll(req, res) {
+        res.status(200).json(await uhx.Repositories.providerRepository.getAllProviders());
+        return true;
+    }
+
+    /**
+     * @method
      * @summary Updates an existing provider
      * @param {Express.Request} req The request from the client
      * @param {Express.Response} res The response to the client
@@ -192,7 +229,7 @@ class ProviderApiResource {
      *          - "read:user"
      */
     async put(req, res) {
-        req.body.id = req.params.uid;
+        req.body.id = req.params.providerid;
         var provider = await uhx.UserLogic.updateProvider(new model.Provider().copy(req.body), req.body.serviceTypes, req.principal);
         if (provider)
             await provider.loadProviderServiceTypes();
@@ -238,9 +275,11 @@ class ProviderApiResource {
      *          - "read:user"
      */
     async get(req, res) {
-        var provider = await uhx.Repositories.providerRepository.get(req.params.uid);
-        if (provider)
+        var provider = await uhx.Repositories.providerRepository.get(req.params.providerid);
+        if (provider){
             await provider.loadProviderServiceTypes();
+            await provider.loadAddresses();
+        }
         res.status(200).json(provider);
         return true;
     }
@@ -296,7 +335,7 @@ class ProviderApiResource {
      *          - "write:user"
      */
     async upload(req, res) {
-        req.body.id = req.params.uid;
+        req.body.id = req.params.providerid;
         var result = await uhx.ObjectStorage.uploadProfileImage(req, res, 'provider');
         var status = result instanceof exception.Exception ? 500 : 201;
 
@@ -351,26 +390,6 @@ class ProviderApiResource {
             res.status(status).json(image);
 
         return true;
-    }
-    /**
-     * @method
-     * @summary Determines additional access control on the provider resource
-     * @param {security.Principal} principal The JWT principal data that has authorization information
-     * @param {Express.Request} req The HTTP request from the client
-     * @param {Express.Response} res The HTTP response to the client
-     * @returns {boolean} An indicator of whether the provider has access to the resource
-     */
-    async acl(principal, req, res) {
-
-        if (!(principal instanceof security.Principal)) {
-            uhx.log.error("ACL requires a security principal to be passed");
-            return false;
-        }
-
-        // if the token has OWNER set for USER permission then this provider must be SELF
-        return (principal.grant.provider & security.PermissionType.OWNER && req.params.uid == principal.session.providerId) // the permission on the principal is for OWNER only
-            ^ !(principal.grant.provider & security.PermissionType.OWNER); // XOR the owner grant flag is not set.
-
     }
 }
 

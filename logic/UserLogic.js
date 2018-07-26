@@ -40,6 +40,12 @@ module.exports = class UserLogic {
     constructor() {
         this.addProvider = this.addProvider.bind(this);
         this.updateProvider = this.updateProvider.bind(this);
+        this.updateProviderServiceTypes = this.updateProviderServiceTypes.bind(this);
+        this.addProviderAddress = this.addProviderAddress.bind(this);
+        this.updateProviderAddress = this.updateProviderAddress.bind(this);
+        this.updateAddressServiceTypes = this.updateAddressServiceTypes.bind(this);
+        this.addProviderService = this.addProviderService.bind(this);
+        this.updateProviderService = this.updateProviderService.bind(this);
     }
 
     /**
@@ -131,8 +137,6 @@ module.exports = class UserLogic {
      * @param {SecurityPrincipal} principal The user who is making the request
      */
     async updateProviderServiceTypes(providerId, serviceTypes, principal) {
-
-
         var existingServiceTypes = await uhx.Repositories.providerRepository.getProviderServiceTypes(providerId);
 
         try {
@@ -163,11 +167,12 @@ module.exports = class UserLogic {
      * @param {ProviderAddress} address The provider address to add
      * @param {*} serviceTypes The service types of the provider address
      * @param {SecurityPrincipal} principal The user who is making the request
+     * @returns {ProviderAddress} The inserted provider address
      */
     async addProviderAddress(address, serviceTypes, principal) {
 
-        var providerExists = await uhx.Repositories.providerAddressRepository.get(address.addressId);
-        if (providerExists)
+        var addressExists = await uhx.Repositories.providerAddressRepository.get(address.addressId);
+        if (addressExists)
             throw new exception.Exception("This address exists", exception.ErrorCodes.ARGUMENT_EXCEPTION);
 
         try {
@@ -208,7 +213,6 @@ module.exports = class UserLogic {
             uhx.log.error("Error updating provider address: " + e.message);
             throw new exception.Exception("Error updating provider address", exception.ErrorCodes.UNKNOWN, e);
         }
-
     }
 
     /**
@@ -219,8 +223,6 @@ module.exports = class UserLogic {
      * @param {SecurityPrincipal} principal The user who is making the request
      */
     async updateAddressServiceTypes(addressId, serviceTypes, principal) {
-
-
         var existingServiceTypes = await uhx.Repositories.providerAddressRepository.getAddressServiceTypes(addressId);
 
         try {
@@ -242,6 +244,47 @@ module.exports = class UserLogic {
         catch (e) {
             uhx.log.error(`Error adding service type: ${e.message}`);
             throw new exception.Exception("Error adding service type", e.code || exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
+
+    /**
+     * @method
+     * @summary Adds a provider address service to the UhX API
+     * @param {ProviderService} service The provider address service to add
+     * @param {SecurityPrincipal} principal The user who is making the request
+     * @returns {ProviderService} The inserted provider address service
+     */
+    async addProviderService(service, principal) {
+        try {
+            return await uhx.Repositories.providerServiceRepository.insert(service, principal);
+        }
+        catch (e) {
+            uhx.log.error(`Error adding service: ${e.message}`);
+            throw new exception.Exception("Error adding service", e.code || exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
+    
+    /**
+     * @method
+     * @summary Updates the specified provider address service
+     * @param {ProviderService} service The provider address service to be updated
+     * @returns {ProviderService} The updated provider address service
+     */
+    async updateProviderService(service, serviceTypes, principal) {
+        try {
+
+            // Delete fields which can't be set by clients 
+            delete (service.providerId);
+            delete (service.addressId);
+            delete (service.creationTime);
+            delete (service.updatedTime);
+            delete (service.deactivationTime);
+
+            return await uhx.Repositories.providerServiceRepository.update(service);
+        }
+        catch (e) {
+            uhx.log.error("Error updating service: " + e.message);
+            throw new exception.Exception("Error updating service", exception.ErrorCodes.UNKNOWN, e);
         }
     }
 }

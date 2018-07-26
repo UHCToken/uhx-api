@@ -109,7 +109,10 @@ class ServiceTypeApiResource {
      *          - "read:user"
      */
     async getAll(req, res) {
-        res.status(200).json(await uhx.Repositories.serviceTypeRepository.getAll());
+        if (req.principal.grant["user"] & security.PermissionType.OWNER)
+            res.status(200).json(await uhx.Repositories.serviceTypeRepository.getAll(false));
+        else //admin
+            res.status(200).json(await uhx.Repositories.serviceTypeRepository.getAll(true));
         return true;
     }
 

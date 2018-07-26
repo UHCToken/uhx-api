@@ -67,15 +67,17 @@ module.exports = class ServiceTypeRepository {
     /**
      * @method
      * @summary Retrieves all service types from the database
+     * @param {Boolean} showAll Shows all results including those that are deactivated
      * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {*} The retrieved service types
      */
-    async getAll(_txc) {
+    async getAll(showAll, _txc) {
 
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if (!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM service_types");
+            if(showAll) var rdr = await dbc.query("SELECT * FROM service_types");
+            else var rdr = await dbc.query("SELECT id, type_name AS name, description FROM service_types WHERE deactivation_time IS NULL");
             if (rdr.rows.length == 0)
                 return null;
             else {
@@ -163,7 +165,7 @@ module.exports = class ServiceTypeRepository {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if (!_txc) await dbc.connect();
-            
+
             const rdr = await dbc.query("UPDATE service_types SET deactivation_time = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *", [id]);
             if (rdr.rows.length == 0)
                 throw new exception.Exception("Could not delete the service type in data store", exception.ErrorCodes.DATA_ERROR);

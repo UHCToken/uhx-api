@@ -37,15 +37,21 @@ module.exports = class ProviderRepository {
     constructor(connectionString) {
         this._connectionString = connectionString;
         this.get = this.get.bind(this);
-        this.insert = this.insert.bind(this);
+        this.checkIfExists = this.checkIfExists .bind(this);
+        this.getAllProviders = this.getAllProviders.bind(this);
         this.update = this.update.bind(this);
+        this.insert = this.insert.bind(this);
+        this.getProviderServiceTypes = this.getProviderServiceTypes.bind(this);
+        this.insertServiceType = this.insertServiceType.bind(this);
+        this.deleteServiceType = this.deleteServiceType.bind(this);
         this.delete = this.delete.bind(this);
+        this.reactivate = this.reactivate.bind(this);
     }
 
     /**
      * @method
      * @summary Retrieve a specific provider from the database
-     * @param {uuid} id Gets the specified provider
+     * @param {string} id Gets the specified provider
      * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {Provider} The retrieved provider
      */
@@ -54,7 +60,7 @@ module.exports = class ProviderRepository {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if (!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM providers WHERE user_id = $1 OR id = $1", [id]);
+            const rdr = await dbc.query("SELECT * FROM providers WHERE deactivation_time IS NULL AND (user_id = $1 OR id = $1)", [id]);
             if (rdr.rows.length == 0)
                 return null;
             else
@@ -68,51 +74,53 @@ module.exports = class ProviderRepository {
 
     /**
      * @method
-     * @summary Query the database for the specified providers
-     * @param {*} filter The query template to use
-     * @param {number} offset When specified indicates the offset of the query
-     * @param {number} count When specified, indicates the number of records to return
+     * @summary Checks if a user has a provider profile
+     * @param {string} id Gets the specified provider
      * @param {Client} _txc The postgresql connection with an active transaction to run in
-     * @returns {Provider} The matching providers
+     * @returns {Boolean} The boolean of whether or not the profile exists
      */
-    async query(filter, offset, count, sort, _txc) {
+    async checkIfExists(id, _txc) {
+
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if (!_txc) await dbc.connect();
-
-            var dbFilter = filter.toData();
-            dbFilter.deactivation_time = filter.deactivationTime; // Filter for deactivation time?
-
-            if (sort) {
-                var sortExpr = {}, order = "asc";
-                // Is there a column : order?
-                if (sort.indexOf(":") > -1) {
-                    order = sort.split(":")[1];
-                    sort = sort.split(":")[0];
-                }
-                sortExpr[sort] = "__sort_control__";
-                var dbSort = new Provider().copy(sortExpr).toData();
-                for (var k in dbSort)
-                    if (dbSort[k] == "__sort_control__") {
-                        sort = { col: [k], order: order }
-                        break;
-                    }
-            }
-            else {
-                sort = { col: ["updated_time", "creation_time"], order: "desc" };
-            }
-
-            var sqlCmd = model.Utils.generateSelect(dbFilter, "providers", offset, count, sort);
-            const rdr = await dbc.query(sqlCmd.sql, sqlCmd.args);
-
-            var retVal = [];
-            for (var r in rdr.rows)
-                retVal.push(new Provider().fromData(rdr.rows[r]));
-            return retVal;
+            const rdr = await dbc.query("SELECT id FROM providers WHERE user_id = $1 OR id = $1", [id]);
+            if (rdr.rows.length == 0)
+                return false;
+            else
+                return true;
         }
         finally {
             if (!_txc) dbc.end();
         }
+
+    }
+
+    /**
+     * @method
+     * @summary Retrieve all providers
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {*} The retrieved providers
+     */
+    async getAllProviders(id, _txc) {
+
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+            const rdr = await dbc.query("SELECT * FROM providers");
+            if (rdr.rows.length == 0)
+                return null;
+            else {
+                var retVal = [];
+                for (var r in rdr.rows)
+                    retVal[r] = new Provider().fromData(rdr.rows[r]);
+                return retVal;
+            }
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
+
     }
 
     /**
@@ -204,14 +212,14 @@ module.exports = class ProviderRepository {
         }
     }
 
-        /**
-     * @method
-     * @summary Insert the specified service type for a provider
-     * @param {string} providerId The provider to add the service type to
-     * @param {string} serviceTypeId The service type to add to the provider
-     * @param {Client} _txc The postgresql connection with an active transaction to run in
-     * @returns {Boolean} The status of the insert
-     */
+    /**
+ * @method
+ * @summary Insert the specified service type for a provider
+ * @param {string} providerId The provider to add the service type to
+ * @param {string} serviceTypeId The service type to add to the provider
+ * @param {Client} _txc The postgresql connection with an active transaction to run in
+ * @returns {Boolean} The status of the insert
+ */
     async insertServiceType(providerId, serviceTypeId, _txc) {
         if (!providerId || !serviceTypeId)
             throw new exception.Exception("Target object must carry an identifier", exception.ErrorCodes.ARGUMENT_EXCEPTION);
@@ -270,23 +278,52 @@ module.exports = class ProviderRepository {
     /**
      * @method
      * @summary Delete / de-activate a provider in the system
-     * @param {string} providerId The identity of the provider to delete
+     * @param {string} id The identity of the provider to delete
      * @param {Principal} runAs The identity to run the operation as (for logging)
      * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {Provider} The deactivated provider instance
      */
-    async delete(providerId, runAs, _txc) {
+    async delete(id, runAs, _txc) {
 
-        if (!providerId)
+        if (!id)
             throw new exception.Exception("Target object must carry an identifier", exception.ErrorCodes.ARGUMENT_EXCEPTION);
 
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if (!_txc) await dbc.connect();
 
-            const rdr = await dbc.query("UPDATE providers SET deactivation_time = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *", [providerId]);
+            const rdr = await dbc.query("UPDATE providers SET deactivation_time = CURRENT_TIMESTAMP WHERE id = $1 OR user_id = $1 RETURNING *", [id]);
             if (rdr.rows.length == 0)
                 throw new exception.Exception("Could not DEACTIVATE provider in data store", exception.ErrorCodes.DATA_ERROR);
+            else
+                return new Provider().fromData(rdr.rows[0]);
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
+
+    }
+
+    /**
+     * @method
+     * @summary Reactivate a provider in the system
+     * @param {string} id The identity of the provider to reactivate
+     * @param {Principal} runAs The identity to run the operation as (for logging)
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {Provider} The deactivated provider instance
+     */
+    async reactivate(id, runAs, _txc) {
+
+        if (!id)
+            throw new exception.Exception("Target object must carry an identifier", exception.ErrorCodes.ARGUMENT_EXCEPTION);
+
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+
+            const rdr = await dbc.query("UPDATE providers SET deactivation_time = NULL WHERE id = $1 OR user_id = $1 RETURNING *", [id]);
+            if (rdr.rows.length == 0)
+                throw new exception.Exception("Could not REACTIVATE provider in data store", exception.ErrorCodes.DATA_ERROR);
             else
                 return new Provider().fromData(rdr.rows[0]);
         }

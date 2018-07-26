@@ -55,11 +55,14 @@ class ProviderAddressApiResource {
                     }
                 },
                 {
-                    "path": "provideraddress/:uid",
+                    "path": "provideraddress/:addressid",
                     "get": {
                         "demand": security.PermissionType.READ,
                         "method": this.get
-                    },
+                    }
+                },
+                {
+                    "path": "provideraddress/:providerid",
                     "get": {
                         "demand": security.PermissionType.READ,
                         "method": this.getAllForProvider
@@ -71,53 +74,6 @@ class ProviderAddressApiResource {
                 }
             ]
         };
-    }
-
-    /**
-     * @method
-     * @summary Get all addresses for the provider
-     * @param {Express.Reqeust} req The request from the client 
-     * @param {Express.Response} res The response from the client
-     * @swagger
-     * /provideraddress/{providerid}:
-     *  get:
-     *      tags:
-     *      - "provideraddress"
-     *      summary: "Gets all address for the provider specified"
-     *      description: "This method gets all addresses for a provider"
-     *      produces:
-     *      - "application/json"
-     *      parameters:
-     *      - name: "providerid"
-     *        in: "params"
-     *        description: "The providerid to get addresses for"
-     *        required: true
-     *        type: "string"
-     *      responses:
-     *          200: 
-     *             description: "The requested resource was queried successfully"
-     *             schema: 
-     *                  $ref: "#/definitions/ProviderAddress"
-     *          500:
-     *              description: "An internal server error occurred"
-     *              schema:
-     *                  $ref: "#/definitions/Exception"
-     *      security:
-     *      - uhx_auth:
-     *          - "read:user"
-     */
-    async getAllForProvider(req, res) {
-
-        var addresses= await uhx.Repositories.providerAddressRepository.getAllForProvider(req.params.uid);
-        if (addresses){
-            for(var adr in addresses){
-                await addresses[adr].loadAddressServiceTypes();
-            }
-        }
-
-        res.status(200).json(addresses);
-
-        return true;
     }
     
     /**
@@ -174,6 +130,101 @@ class ProviderAddressApiResource {
 
     /**
      * @method
+     * @summary Get a single provider address
+     * @param {Express.Reqeust} req The request from the client 
+     * @param {Express.Response} res The response from the client
+     * @swagger
+     * /provideraddress/{addressid}:
+     *  get:
+     *      tags:
+     *      - "provideraddress"
+     *      summary: "Gets an existing provider address from the UhX member database"
+     *      description: "This method will fetch an existing provider address from the UhX member database"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "addressid"
+     *        in: "path"
+     *        description: "The provider address ID"
+     *        required: true
+     *        type: "string"
+     *      responses:
+     *          200: 
+     *             description: "The requested resource was fetched successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/ProviderAddress"
+     *          404:
+     *              description: "The specified provider cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "read:user"
+     */
+    async get(req, res) {
+
+        var address = await uhx.Repositories.providerAddressRepository.get(req.params.addressid);
+        if (address)
+            await address.loadAddressServiceTypes();
+
+        res.status(200).json(address);
+
+        return true;
+    }
+
+    /**
+     * @method
+     * @summary Get all addresses for the provider
+     * @param {Express.Reqeust} req The request from the client 
+     * @param {Express.Response} res The response from the client
+     * @swagger
+     * /provideraddress/{providerid}:
+     *  get:
+     *      tags:
+     *      - "provideraddress"
+     *      summary: "Gets all address for the provider specified"
+     *      description: "This method gets all addresses for a provider"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "providerid"
+     *        in: "params"
+     *        description: "The providerid to get addresses for"
+     *        required: true
+     *        type: "string"
+     *      responses:
+     *          200: 
+     *             description: "The requested resource was queried successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/ProviderAddress"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "read:user"
+     */
+    async getAllForProvider(req, res) {
+
+        var addresses= await uhx.Repositories.providerAddressRepository.getAllForProvider(req.params.providerid);
+        if (addresses){
+            for(var adr in addresses){
+                await addresses[adr].loadAddressServiceTypes();
+            }
+        }
+
+        res.status(200).json(addresses);
+
+        return true;
+    }
+
+    /**
+     * @method
      * @summary Updates an existing provider address
      * @param {Express.Request} req The request from the client
      * @param {Express.Response} res The response to the client
@@ -224,7 +275,7 @@ class ProviderAddressApiResource {
      */
     async put(req, res) {
 
-        req.body.id = req.params.uid;
+        req.body.id = req.params.providerid;
         var address = await uhx.UserLogic.updateProviderAddress(new model.ProviderAddress().copy(req.body), req.body.serviceTypes, req.principal);
         if (address)
             await address.loadAddressServiceTypes();
@@ -232,53 +283,6 @@ class ProviderAddressApiResource {
         return true;
     }
 
-    /**
-     * @method
-     * @summary Get a single provider address
-     * @param {Express.Reqeust} req The request from the client 
-     * @param {Express.Response} res The response from the client
-     * @swagger
-     * /provideraddress/{addressid}:
-     *  get:
-     *      tags:
-     *      - "provideraddress"
-     *      summary: "Gets an existing provider address from the UhX member database"
-     *      description: "This method will fetch an existing provider address from the UhX member database"
-     *      produces:
-     *      - "application/json"
-     *      parameters:
-     *      - name: "addressid"
-     *        in: "path"
-     *        description: "The provider address ID"
-     *        required: true
-     *        type: "string"
-     *      responses:
-     *          200: 
-     *             description: "The requested resource was fetched successfully"
-     *             schema: 
-     *                  $ref: "#/definitions/ProviderAddress"
-     *          404:
-     *              description: "The specified provider cannot be found"
-     *              schema: 
-     *                  $ref: "#/definitions/Exception"
-     *          500:
-     *              description: "An internal server error occurred"
-     *              schema:
-     *                  $ref: "#/definitions/Exception"
-     *      security:
-     *      - uhx_auth:
-     *          - "read:user"
-     */
-    async get(req, res) {
-
-        var address = await uhx.Repositories.providerAddressRepository.get(req.params.uid);
-        if (address)
-            await address.loadAddressServiceTypes();
-
-        res.status(200).json(address);
-
-        return true;
-    }
 
 }
 

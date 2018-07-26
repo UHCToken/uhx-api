@@ -37,8 +37,12 @@ module.exports = class ProviderAddressRepository {
     constructor(connectionString) {
         this._connectionString = connectionString;
         this.get = this.get.bind(this);
-        this.insert = this.insert.bind(this);
+        this.getAllForProvider = this.getAllForProvider.bind(this);
         this.update = this.update.bind(this);
+        this.insert = this.insert.bind(this);
+        this.getAddressServiceTypes = this.getAddressServiceTypes.bind(this);
+        this.insertServiceType = this.insertServiceType.bind(this);
+        this.deleteServiceType = this.deleteServiceType.bind(this);
         this.delete = this.delete.bind(this);
     }
 
@@ -65,6 +69,7 @@ module.exports = class ProviderAddressRepository {
         }
 
     }
+
 
     /**
      * @method

@@ -143,11 +143,26 @@ const uhx = require('../uhx'),
 
     /**
      * @method
+     * @summary Prefetch provider service types
+     */
+    async loadAddresses(_txc) {
+        if(!this._addresses)
+            this._addresses = await uhx.Repositories.providerAddressRepository.getAllForProvider(this.id, _txc);
+            if (this._addresses){
+                for(var adr in this._addresses){
+                    await this._addresses[adr].loadAddressServiceTypes();
+                }
+            }
+        return this._addresses;
+    }
+    /**
+     * @method
      * @summary Serialize this instance to a JSON object
      */
     toJSON() {
         var retVal = this.stripHiddenFields();
         retVal.serviceTypes = this._psTypes;
+        retVal.addresses = this._addresses;
         return retVal;
     }
 
