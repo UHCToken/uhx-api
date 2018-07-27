@@ -8,14 +8,14 @@
             "type": "node",
             "request": "launch",
             "name": "Merge Config",
-            "program": "${workspaceFolder}\\config.empty.js",
+            "program": "${workspaceFolder}/config.empty.js",
             "args": "merge"
         },
         {
             "type": "node",
             "request": "launch",
             "name": "Launch Program",
-            "program": "${workspaceFolder}\\app.js",
+            "program": "${workspaceFolder}/app.js",
             "outputCapture": "std",
             "skipFiles": [
                 "${workspaceFolder}/node_modules/**/*.js",
