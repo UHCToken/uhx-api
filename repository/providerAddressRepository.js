@@ -96,7 +96,6 @@ module.exports = class ProviderAddressRepository {
         finally {
             if (!_txc) dbc.end();
         }
-
     }
 
     /**

@@ -151,10 +151,12 @@ const uhx = require('../uhx'),
             if (this._addresses){
                 for(var adr in this._addresses){
                     await this._addresses[adr].loadAddressServiceTypes();
+                    await this._addresses[adr].loadAddressServices();
                 }
             }
         return this._addresses;
     }
+
     /**
      * @method
      * @summary Serialize this instance to a JSON object

@@ -36,6 +36,7 @@ module.exports = class ServiceTypeRepository {
     constructor(connectionString) {
         this._connectionString = connectionString;
         this.get = this.get.bind(this);
+        this.getAll = this.getAll.bind(this);
         this.insert = this.insert.bind(this);
         this.update = this.update.bind(this);
         this.delete = this.delete.bind(this);

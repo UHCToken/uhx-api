@@ -48,6 +48,13 @@ class ProviderServiceApiResource {
             "permission_group": "user",
             "routes": [
                 {
+                    "path": "addressservice",
+                    "get": {
+                        "demand": security.PermissionType.READ,
+                        "method": this.query
+                    }
+                },
+                {
                     "path": "addressservice/:addressid",
                     "get": {
                         "demand": security.PermissionType.READ,
@@ -77,6 +84,41 @@ class ProviderServiceApiResource {
         };
     }
 
+    /**
+     * @method
+     * @summary Allows for a query of all provider address services with parameters
+     * @param {Express.Reqeust} req The request from the client 
+     * @param {Express.Response} res The response from the client
+     * @swagger
+     * /addressservice:
+     *  get:
+     *      tags:
+     *      - "addressservice"
+     *      summary: "Gets all address services with filters results"
+     *      description: "This method will fetch all address services and filter the results"
+     *      produces:
+     *      - "application/json"
+     *      responses:
+     *          200: 
+     *             description: "The requested resource was fetched successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/ProviderService"
+     *          404:
+     *              description: "The specified address service cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "list:user"
+     */
+    async query(req, res) {
+        throw new exception.NotImplementedException();
+        return true;
+    }
 
     /**
      * @method
@@ -107,10 +149,18 @@ class ProviderServiceApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "list:user"
+     *          - "read:user"
      */
     async getAll(req, res) {
-        throw new exception.NotImplementedException();
+        var services = await uhx.Repositories.providerServiceRepository.getAllForAddress(req.params.addressid);
+
+        if (services){
+            for(var s in services){
+                await services[s].loadServiceTypeDetails();
+            }
+        }
+
+        res.status(200).json(services);
         return true;
     }
 
@@ -256,7 +306,10 @@ class ProviderServiceApiResource {
      *          - "read:user"
      */
     async get(req, res) {
-        res.status(200).json(await uhx.Repositories.providerServiceRepository.get(req.params.serviceid));
+        var service = await uhx.Repositories.providerServiceRepository.get(req.params.serviceid);
+        if (service)
+            await service.loadServiceTypeDetails();
+        res.status(200).json(service);
         return true;
     }
 

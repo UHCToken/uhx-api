@@ -103,6 +103,17 @@ const uhx = require('../uhx'),
     
     /**
      * @method
+     * @summary Prefetch service type information
+     */
+    async loadServiceTypeDetails(_txc) {
+        if(!this._typeDetails)
+            this._typeDetails = await uhx.Repositories.serviceTypeRepository.get(this.serviceType, _txc);
+        return this._typeDetails;
+    }
+    
+
+    /**
+     * @method
      * @summary Converts this instance of the Provider class to a data layer compatible one
      */
     toData() {
@@ -125,6 +136,7 @@ const uhx = require('../uhx'),
      */
     toJSON() {
         var retVal = this.stripHiddenFields();
+        retVal.serviceTypeDetails = this._typeDetails;
         return retVal;
     }
 

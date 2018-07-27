@@ -65,6 +65,33 @@ module.exports = class ProviderServiceRepository {
         }
     }
 
+        /**
+     * @method
+     * @summary Retrieve all of an addresses services from the database
+     * @param {uuid} addressId Gets all of the specified addresses services
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {*} The retrieved addresses services
+     */
+    async getAllForAddress(addressId, _txc) {
+
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+            const rdr = await dbc.query("SELECT * FROM provider_address_services WHERE address_id = $1", [addressId]);
+            if (rdr.rows.length == 0)
+                return null;
+            else {
+                var retVal = [];
+                for (var r in rdr.rows)
+                    retVal[r] = new ProviderService().fromData(rdr.rows[r]);
+                return retVal;
+            }
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
+    }
+
     /**
      * @method
      * @summary Update the specified provider address service
