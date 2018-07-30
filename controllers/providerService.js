@@ -78,6 +78,10 @@ class ProviderServiceApiResource {
                     "put": {
                         "demand": security.PermissionType.WRITE | security.PermissionType.READ,
                         "method": this.put
+                    },
+                    "delete": {
+                        "demand": security.PermissionType.WRITE | security.PermissionType.READ,
+                        "method": this.delete
                     }
                 }
             ]
@@ -154,8 +158,8 @@ class ProviderServiceApiResource {
     async getAll(req, res) {
         var services = await uhx.Repositories.providerServiceRepository.getAllForAddress(req.params.addressid);
 
-        if (services){
-            for(var s in services){
+        if (services) {
+            for (var s in services) {
                 await services[s].loadServiceTypeDetails();
             }
         }
@@ -212,7 +216,21 @@ class ProviderServiceApiResource {
      *          - "write:user"
      */
     async addServices(req, res) {
-        throw new exception.NotImplementedException();
+        if (!req.body)
+            throw new exception.Exception("Missing body", exception.ErrorCodes.MISSING_PAYLOAD);
+
+        if (!Array.isArray(req.body))
+            req.body = [req.body];
+
+        var newServices = await uhx.UserLogic.addProviderServices(req.params.addressid, req.body.map(o => new model.ProviderService().copy(o)), req.principal);
+        if (newServices) {
+            var services = await uhx.Repositories.providerServiceRepository.getAllForAddress(req.params.addressid);
+            for (var s in services) {
+                await services[s].loadServiceTypeDetails();
+            }
+        }
+        res.status(201).json(services);
+
         return true;
     }
 
@@ -264,7 +282,23 @@ class ProviderServiceApiResource {
      *          - "write:user"
      */
     async updateServices(req, res) {
-        throw new exception.NotImplementedException();
+        if (!req.body)
+            throw new exception.Exception("Missing body", exception.ErrorCodes.MISSING_PAYLOAD);
+
+        if (!Array.isArray(req.body))
+            req.body = [req.body];
+
+        var editedServices = await uhx.UserLogic.editProviderServices(req.params.addressid, req.body.map(o => new model.ProviderService().copy(o)), req.body.map(o => o.action), req.principal);
+        if (editedServices) {
+            var services = await uhx.Repositories.providerServiceRepository.getAllForAddress(req.params.addressid);
+            if (services) {
+                for (var s in services) {
+                    await services[s].loadServiceTypeDetails();
+                }
+            }
+        }
+        res.status(201).json(services);
+
         return true;
     }
 
@@ -366,6 +400,62 @@ class ProviderServiceApiResource {
     async put(req, res) {
         req.body.id = req.params.serviceid;
         res.status(200).json(await uhx.UserLogic.updateProviderService(new model.ProviderService().copy(req.body), req.principal));
+        return true;
+    }
+
+    /**
+     * @method
+     * @summary Deactivates an existing provider address service
+     * @param {Express.Request} req The request from the client
+     * @param {Express.Response} res The response to the client
+     * @swagger
+     * /addressservice/{serviceid}:
+     *  put:
+     *      tags:
+     *      - "addressservice"
+     *      summary: "Deactivates an existing provider address service in the UhX API"
+     *      description: "This method will deactivate an existing provider address service in the UhX API"
+     *      consumes: 
+     *      - "application/json"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "serviceid"
+     *        in: "path"
+     *        description: "The service ID of the provider address service being deactivated"
+     *        required: true
+     *        type: "string"
+     *      - in: "body"
+     *        name: "body"
+     *        description: "The provider address service that is to be deactivated"
+     *        required: true
+     *        schema:
+     *          $ref: "#/definitions/ProviderService"
+     *      responses:
+     *          201: 
+     *             description: "The requested resource was deactivated successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/ProviderService"
+     *          404:
+     *              description: "The specified provider address service cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          422:
+     *              description: "The provider object sent by the client was rejected"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "write:user"
+     *          - "read:user"
+     */
+    async delete(req, res) {
+        req.body.id = req.params.serviceid;
+        res.status(200).json(await uhx.UserLogic.deleteProviderService(new model.ProviderService().copy(req.body), req.principal));
         return true;
     }
 }

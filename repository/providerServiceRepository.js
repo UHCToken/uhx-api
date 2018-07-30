@@ -77,7 +77,7 @@ module.exports = class ProviderServiceRepository {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if (!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM provider_address_services WHERE address_id = $1", [addressId]);
+            const rdr = await dbc.query("SELECT * FROM provider_address_services WHERE address_id = $1 AND deactivation_time IS NULL", [addressId]);
             if (rdr.rows.length == 0)
                 return null;
             else {
@@ -96,11 +96,10 @@ module.exports = class ProviderServiceRepository {
      * @method
      * @summary Update the specified provider address service
      * @param {ProviderService} service The instance of the provider address service that is to be updated
-     * @param {Principal} runAs The principal that is updating this provider 
      * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {ProviderService} The updated provider address service data from the database
      */
-    async update(service, runAs, _txc) {
+    async update(service, _txc) {
         if (!service.id)
             throw new exception.Exception("Target object must carry an identifier", exception.ErrorCodes.ARGUMENT_EXCEPTION);
 
@@ -127,11 +126,10 @@ module.exports = class ProviderServiceRepository {
      * @method
      * @summary Insert the specified provider address service
      * @param {ProviderService} service The instance of the provider address service that is to be inserted
-     * @param {Principal} runAs The principal that is inserting this provider address service
      * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {ProviderService} The inserted provider address service
      */
-    async insert(service, runAs, _txc) {
+    async insert(service, _txc) {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if (!_txc) await dbc.connect();
@@ -159,11 +157,10 @@ module.exports = class ProviderServiceRepository {
      * @method
      * @summary Delete / de-activate a provider address service in the system
      * @param {string} serviceId The identity of the provider address service to delete
-     * @param {Principal} runAs The identity to run the operation as (for logging)
      * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {ProviderService} The deactivated provider instance
      */
-    async delete(serviceId, runAs, _txc) {
+    async delete(serviceId, _txc) {
 
         if (!serviceId)
             throw new exception.Exception("Target object must carry an identifier", exception.ErrorCodes.ARGUMENT_EXCEPTION);

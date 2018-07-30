@@ -44,8 +44,11 @@ module.exports = class UserLogic {
         this.addProviderAddress = this.addProviderAddress.bind(this);
         this.updateProviderAddress = this.updateProviderAddress.bind(this);
         this.updateAddressServiceTypes = this.updateAddressServiceTypes.bind(this);
+        this.addProviderServices = this.addProviderServices.bind(this);
+        this.editProviderServices = this.editProviderServices.bind(this);
         this.addProviderService = this.addProviderService.bind(this);
         this.updateProviderService = this.updateProviderService.bind(this);
+        this.deleteProviderService = this.deleteProviderService.bind(this);
     }
 
     /**
@@ -175,6 +178,10 @@ module.exports = class UserLogic {
         if (addressExists)
             throw new exception.Exception("This address exists", exception.ErrorCodes.ARGUMENT_EXCEPTION);
 
+        delete (address.creationTime);
+        delete (address.updatedTime);
+        delete (address.deactivationTime);
+
         try {
             var newAddress = await uhx.Repositories.providerAddressRepository.insert(address, principal);
             if (serviceTypes)
@@ -249,30 +256,116 @@ module.exports = class UserLogic {
 
     /**
      * @method
-     * @summary Adds a provider address service to the UhX API
-     * @param {ProviderService} service The provider address service to add
+     * @summary Adds provider address services to the UhX API
+     * @param {string} addressId The provider address id to add services for
+     * @param {*} services The provider address services to add
      * @param {SecurityPrincipal} principal The user who is making the request
+     * @returns {*} The inserted provider address services
+     */
+    async addProviderServices(addressId, services, principal) {
+        var retVal = [];
+        var address = await uhx.Repositories.providerAddressRepository.get(addressId);
+        if (!address)
+            throw new exception.Exception("Address not found", exception.ErrorCodes.NOT_FOUND);
+
+        return await uhx.Repositories.transaction(async (_txc) => {
+            for (var s in services) {
+                services[s].addressId = address.id;
+                try {
+                    retVal.push(await uhx.UserLogic.addProviderService(services[s], principal, _txc));
+                }
+                catch (e) {
+                    uhx.log.error(`Error adding services: ${e.message}`);
+                    throw new exception.Exception("Error adding services", e.code || exception.ErrorCodes.UNKNOWN, e);
+                }
+            }
+            return retVal;
+        });
+    }
+
+    /**
+     * @method
+     * @summary Adds provider address services to the UhX API
+     * @param {string} addressId The provider address id to edit services for
+     * @param {*} services The provider address services to edit
+     * @param {string} action The action to run for the edit
+     * @param {SecurityPrincipal} principal The user who is making the request
+     * @returns {*} The inserted provider address services
+     */
+    async editProviderServices(addressId, services, action, principal) {
+        var retVal = [];
+        var address = await uhx.Repositories.providerAddressRepository.get(addressId);
+        if (!address)
+            throw new exception.Exception("Address not found", exception.ErrorCodes.NOT_FOUND);
+
+        return await uhx.Repositories.transaction(async (_txc) => {
+
+            for (var s in services) {
+                services[s].addressId = address.id;
+                try {
+                    if (action[s] == 'insert')
+                        retVal.push(await uhx.UserLogic.addProviderService(services[s], principal, _txc));
+                    else if (action[s] == 'update')
+                        retVal.push(await uhx.UserLogic.updateProviderService(services[s], principal, _txc));
+                    else if (action[s] == 'delete')
+                        retVal.push(await uhx.UserLogic.deleteProviderService(services[s], principal, _txc));
+                }
+                catch (e) {
+                    uhx.log.error(`Error adding services: ${e.message}`);
+                    throw new exception.Exception("Error adding services", e.code || exception.ErrorCodes.UNKNOWN, e);
+                }
+            }
+            return retVal;
+        });
+    }
+
+    /**
+     * @method
+     * @summary Adds a provider address service to the UhX API
+     * @param {ProviderService} service The provider address services to add
      * @returns {ProviderService} The inserted provider address service
      */
-    async addProviderService(service, principal) {
+    async addProviderService(service, principal, _txc) {
+
+        if (!service.addressId)
+            throw new exception.Exception("Must have an addressId", exception.ErrorCodes.MISSING_PROPERTY);
+
+        if (!service.serviceType)
+            throw new exception.Exception("Must have a serviceType", exception.ErrorCodes.MISSING_PROPERTY);
+
+        if (!service.providerId) {
+            var address = await uhx.Repositories.providerAddressRepository.get(service.addressId);
+            service.providerId = address.providerId;
+        }
+
+        if (!(await uhx.Repositories.serviceTypeRepository.get(service.serviceType)))
+            throw new exception.Exception("Service type not found", exception.ErrorCodes.NOT_FOUND);
+
+        // Delete values set automatically
+        delete (service.creationTime);
+        delete (service.updatedTime);
+        delete (service.deactivationTime);
+
         try {
-            return await uhx.Repositories.providerServiceRepository.insert(service, principal);
+            return await uhx.Repositories.providerServiceRepository.insert(service, _txc);
         }
         catch (e) {
             uhx.log.error(`Error adding service: ${e.message}`);
             throw new exception.Exception("Error adding service", e.code || exception.ErrorCodes.UNKNOWN, e);
         }
     }
-    
+
     /**
      * @method
      * @summary Updates the specified provider address service
      * @param {ProviderService} service The provider address service to be updated
      * @returns {ProviderService} The updated provider address service
      */
-    async updateProviderService(service, serviceTypes, principal) {
-        try {
+    async updateProviderService(service, principal, _txc) {
+        if (!(await uhx.Repositories.providerServiceRepository.get(service.id)))
+            throw new exception.Exception("Service not found", exception.ErrorCodes.NOT_FOUND);
 
+        try {
             // Delete fields which can't be set by clients 
             delete (service.providerId);
             delete (service.addressId);
@@ -280,11 +373,31 @@ module.exports = class UserLogic {
             delete (service.updatedTime);
             delete (service.deactivationTime);
 
-            return await uhx.Repositories.providerServiceRepository.update(service);
+            return await uhx.Repositories.providerServiceRepository.update(service, _txc);
         }
         catch (e) {
             uhx.log.error("Error updating service: " + e.message);
             throw new exception.Exception("Error updating service", exception.ErrorCodes.UNKNOWN, e);
         }
     }
+
+    /**
+     * @method
+     * @summary Deletes the specified provider address service
+     * @param {ProviderService} service The provider address service to be deleted
+     * @returns {Boolean} The status of the deletion
+     */
+    async deleteProviderService(service, principal, _txc) {
+        if (!(await uhx.Repositories.providerServiceRepository.get(service.id)))
+            throw new exception.Exception("Service not found", exception.ErrorCodes.NOT_FOUND);
+
+        try {
+            return await uhx.Repositories.providerServiceRepository.delete(service.id, _txc);
+        }
+        catch (e) {
+            uhx.log.error("Error deleting service: " + e.message);
+            throw new exception.Exception("Error deleting service", exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
+
 }

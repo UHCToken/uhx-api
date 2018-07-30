@@ -62,7 +62,7 @@ class ProviderAddressApiResource {
                     }
                 },
                 {
-                    "path": "provideraddress/:providerid",
+                    "path": "provideraddress/provider/:providerid",
                     "get": {
                         "demand": security.PermissionType.READ,
                         "method": this.getAllForProvider
@@ -168,8 +168,10 @@ class ProviderAddressApiResource {
     async get(req, res) {
 
         var address = await uhx.Repositories.providerAddressRepository.get(req.params.addressid);
-        if (address)
+        if (address){
             await address.loadAddressServiceTypes();
+            await address.loadAddressServices();
+        }
 
         res.status(200).json(address);
 
@@ -211,10 +213,11 @@ class ProviderAddressApiResource {
      */
     async getAllForProvider(req, res) {
 
-        var addresses= await uhx.Repositories.providerAddressRepository.getAllForProvider(req.params.providerid);
+        var addresses = await uhx.Repositories.providerAddressRepository.getAllForProvider(req.params.providerid);
         if (addresses){
             for(var adr in addresses){
                 await addresses[adr].loadAddressServiceTypes();
+                await addresses[adr].loadAddressServices();
             }
         }
 
