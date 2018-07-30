@@ -164,7 +164,7 @@ module.exports = class ProviderAddressRepository {
     /**
      * @method
      * @summary Gets the providers listed services types
-     * @param {string} addressId The provider Id
+     * @param {string} addressId The address Id
      * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {*} The providers service types
      */
@@ -180,6 +180,30 @@ module.exports = class ProviderAddressRepository {
                 for (var r in rdr.rows)
                     retVal[r] = rdr.rows[r];
                 return retVal;
+            }
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Checks if an address has a specified service type
+     * @param {string} addressId The address id
+     * @param {string} typeId The service type id
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {*} The providers service types
+     */
+    async serviceTypeExists(addressId, typeId, _txc) {
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+            const rdr = await dbc.query("SELECT * FROM provider_addresses WHERE id = $1 AND id IN (SELECT provider_address_id FROM provider_address_types WHERE service_type = $2)", [addressId, typeId]);
+            if (rdr.rows.length == 0)
+                return false;
+            else {
+                return true;
             }
         }
         finally {

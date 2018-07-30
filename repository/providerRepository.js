@@ -37,7 +37,7 @@ module.exports = class ProviderRepository {
     constructor(connectionString) {
         this._connectionString = connectionString;
         this.get = this.get.bind(this);
-        this.checkIfExists = this.checkIfExists .bind(this);
+        this.checkIfExists = this.checkIfExists.bind(this);
         this.getAllProviders = this.getAllProviders.bind(this);
         this.update = this.update.bind(this);
         this.insert = this.insert.bind(this);
@@ -94,6 +94,30 @@ module.exports = class ProviderRepository {
             if (!_txc) dbc.end();
         }
 
+    }
+
+    /**
+     * @method
+     * @summary Checks if a provider has a specified service type
+     * @param {string} providerId The provider id
+     * @param {string} typeId The service type id
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {*} The providers service types
+     */
+    async serviceTypeExists(providerId, typeId, _txc) {
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+            const rdr = await dbc.query("SELECT * FROM providers WHERE id = $1 AND id IN (SELECT provider_id FROM provider_types WHERE service_type = $2)", [providerId, typeId]);
+            if (rdr.rows.length == 0)
+                return false;
+            else {
+                return true;
+            }
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
     }
 
     /**

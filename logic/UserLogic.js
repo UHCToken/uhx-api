@@ -93,9 +93,6 @@ module.exports = class UserLogic {
 
                 // Delete fields which can't be set by clients 
                 delete (provider.userId);
-                delete (provider.creationTime);
-                delete (provider.updatedTime);
-                delete (provider.deactivationTime);
                 delete (provider.profileImage);
 
                 // TODO: Verify fields
@@ -110,16 +107,13 @@ module.exports = class UserLogic {
                 uhx.log.error("Error updating provider: " + e.message);
                 throw new exception.Exception("Error updating provider", exception.ErrorCodes.UNKNOWN, e);
             }
-        } else if (principal.grant["user"] & security.PermissionType.LIST) {
+        } else { // Admin
             try {
 
                 if (serviceTypes)
                     await uhx.UserLogic.updateProviderServiceTypes(provider.id, serviceTypes, principal);
 
                 delete (provider.userId);
-                delete (provider.creationTime);
-                delete (provider.updatedTime);
-                delete (provider.deactivationTime);
 
                 return await uhx.Repositories.transaction(async (_txc) => {
 
@@ -143,24 +137,24 @@ module.exports = class UserLogic {
         var existingServiceTypes = await uhx.Repositories.providerRepository.getProviderServiceTypes(providerId);
 
         try {
-            var exists = [];
             for (var i in serviceTypes) {
-                exists[i] = false;
-                for (var j in existingServiceTypes) {
-                    if (serviceTypes[i].type_id == existingServiceTypes[j].type_id)
-                        exists[i] = true;
-                }
-                if (serviceTypes[i].action == 'insert' && !exists[i])
+                var exists = await uhx.Repositories.providerRepository.serviceTypeExists(providerId, serviceTypes[i].type_id);
+                if (serviceTypes[i].action == 'insert' && !exists)
                     await uhx.Repositories.providerRepository.insertServiceType(providerId, serviceTypes[i].type_id);
-                else if (serviceTypes[i].action == 'delete' && exists[i])
+                else if (serviceTypes[i].action == 'delete' && exists) {
                     await uhx.Repositories.providerRepository.deleteServiceType(providerId, serviceTypes[i].type_id);
+                    var addresses = await uhx.Repositories.providerAddressRepository.getAllForProvider(providerId);
+                    for (var a in addresses) {
+                        await uhx.UserLogic.updateAddressServiceTypes(addresses[a].id, [serviceTypes[i]], principal);
+                    }
+                }
 
             }
             return true;
         }
         catch (e) {
-            uhx.log.error(`Error adding service type: ${e.message}`);
-            throw new exception.Exception("Error adding service type", e.code || exception.ErrorCodes.UNKNOWN, e);
+            uhx.log.error(`Error updating service type: ${e.message}`);
+            throw new exception.Exception("Error updating service type", e.code || exception.ErrorCodes.UNKNOWN, e);
         }
     }
 
@@ -202,23 +196,29 @@ module.exports = class UserLogic {
      * @returns {ProviderAddress} The updated provider address
      */
     async updateProviderAddress(address, serviceTypes, principal) {
+        if (serviceTypes)
+            await uhx.UserLogic.updateAddressServiceTypes(address.id, serviceTypes, principal);
 
-        try {
-            if (serviceTypes)
-                await uhx.UserLogic.updateAddressServiceTypes(address.id, serviceTypes, principal);
+        // Delete fields which can't be set by clients 
+        delete (address.providerId);
 
-            // Delete fields which can't be set by clients 
-            delete (address.providerId);
-            delete (address.creationTime);
-            delete (address.updatedTime);
-            delete (address.deactivationTime);
-            delete (address.profileImage);
+        if (principal.grant["user"] & security.PermissionType.OWNER) {
+            try {
+                return await uhx.Repositories.providerAddressRepository.update(address);
+            }
+            catch (e) {
+                uhx.log.error("Error updating provider address: " + e.message);
+                throw new exception.Exception("Error updating provider address", exception.ErrorCodes.UNKNOWN, e);
+            }
+        } else { // Admin logic
+            try {
 
-            return await uhx.Repositories.providerAddressRepository.update(address);
-        }
-        catch (e) {
-            uhx.log.error("Error updating provider address: " + e.message);
-            throw new exception.Exception("Error updating provider address", exception.ErrorCodes.UNKNOWN, e);
+                return await uhx.Repositories.providerAddressRepository.update(address);
+            }
+            catch (e) {
+                uhx.log.error("Error updating provider address: " + e.message);
+                throw new exception.Exception("Error updating provider address", exception.ErrorCodes.UNKNOWN, e);
+            }
         }
     }
 
@@ -230,27 +230,22 @@ module.exports = class UserLogic {
      * @param {SecurityPrincipal} principal The user who is making the request
      */
     async updateAddressServiceTypes(addressId, serviceTypes, principal) {
-        var existingServiceTypes = await uhx.Repositories.providerAddressRepository.getAddressServiceTypes(addressId);
+        //var existingServiceTypes = await uhx.Repositories.providerAddressRepository.getAddressServiceTypes(addressId);
 
         try {
-            var exists = [];
             for (var i in serviceTypes) {
-                exists[i] = false;
-                for (var j in existingServiceTypes) {
-                    if (serviceTypes[i].type_id == existingServiceTypes[j].type_id)
-                        exists[i] = true;
-                }
-                if (serviceTypes[i].action == 'insert' && !exists[i])
+                var exists = await uhx.Repositories.providerAddressRepository.serviceTypeExists(addressId, serviceTypes[i].type_id);
+                if (serviceTypes[i].action == 'insert' && !exists)
                     await uhx.Repositories.providerAddressRepository.insertServiceType(addressId, serviceTypes[i].type_id);
-                else if (serviceTypes[i].action == 'delete' && exists[i])
+                else if (serviceTypes[i].action == 'delete' && exists)
                     await uhx.Repositories.providerAddressRepository.deleteServiceType(addressId, serviceTypes[i].type_id);
 
             }
             return true;
         }
         catch (e) {
-            uhx.log.error(`Error adding service type: ${e.message}`);
-            throw new exception.Exception("Error adding service type", e.code || exception.ErrorCodes.UNKNOWN, e);
+            uhx.log.error(`Error updating service type: ${e.message}`);
+            throw new exception.Exception("Error updating service type", e.code || exception.ErrorCodes.UNKNOWN, e);
         }
     }
 

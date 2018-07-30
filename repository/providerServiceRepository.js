@@ -65,7 +65,31 @@ module.exports = class ProviderServiceRepository {
         }
     }
 
-        /**
+    /**
+     * @method
+     * @summary Checks if an the service's address has the corresponding service type
+     * @param {string} serviceId The service Id
+     * @param {string} addressId The address Id
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {*} The providers service types
+     */
+    async serviceTypeExists(serviceId, addressId, _txc) {
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+            const rdr = await dbc.query("SELECT * FROM provider_address_services WHERE id = $1 AND service_type IN (SELECT service_type FROM provider_address_types WHERE provider_address_id = $2)", [serviceId, addressId]);
+            if (rdr.rows.length == 0)
+                return false;
+            else {
+                return true;
+            }
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
+    }
+
+    /**
      * @method
      * @summary Retrieve all of an addresses services from the database
      * @param {uuid} addressId Gets all of the specified addresses services

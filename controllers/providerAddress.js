@@ -59,6 +59,10 @@ class ProviderAddressApiResource {
                     "get": {
                         "demand": security.PermissionType.READ,
                         "method": this.get
+                    },
+                    "put": {
+                        "demand": security.PermissionType.WRITE | security.PermissionType.READ,
+                        "method": this.put
                     }
                 },
                 {
@@ -66,10 +70,6 @@ class ProviderAddressApiResource {
                     "get": {
                         "demand": security.PermissionType.READ,
                         "method": this.getAllForProvider
-                    },
-                    "put": {
-                        "demand": security.PermissionType.WRITE | security.PermissionType.READ,
-                        "method": this.put
                     }
                 }
             ]
@@ -278,7 +278,7 @@ class ProviderAddressApiResource {
      */
     async put(req, res) {
 
-        req.body.id = req.params.providerid;
+        req.body.id = req.params.addressid;
         var address = await uhx.UserLogic.updateProviderAddress(new model.ProviderAddress().copy(req.body), req.body.serviceTypes, req.principal);
         if (address)
             await address.loadAddressServiceTypes();
