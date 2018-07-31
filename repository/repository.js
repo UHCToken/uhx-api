@@ -33,6 +33,9 @@ const UserRepository = require('./userRepository'),
     ProviderAddressRepository = require('./providerAddressRepository'),
     ProviderServiceRepository = require('./providerServiceRepository'),
     ServiceTypeRepository = require('./serviceTypeRepository'),
+CarePlanRepository = require('./carePlanRepository'),
+    CareServiceRepository = require('./careServiceRepository'),
+    CareRelationshipRepository = require('./careRelationshipRepository'),
     pg = require('pg'),
     uhx = require('../uhx'),
     exception = require('../exception');
@@ -134,23 +137,34 @@ class UhcRepositories {
         /**
      * @property
      * @summary Gets the service invoice repository
-     * @type {ServiceInvoiceRepository}
+     * @type {CarePlanRepository}
      */
-    get serviceInvoiceRepository() {
-        if(!this._serviceInvoiceRepository)
-            this._serviceInvoiceRepository = new ServiceInvoiceRepository(this.connectionString);
-        return this._serviceInvoiceRepository;
+    get carePlanRepository() {
+        if(!this._carePlanRepository)
+            this._carePlanRepository = new CarePlanRepository(this.connectionString);
+        return this._carePlanRepository;
     }
 
     /**
      * @property
-     * @summary Gets the service invoice repository
-     * @type {ServiceRepository}
+     * @summary Gets the care service invoice repository
+     * @type {CareServiceRepository}
      */
-    get serviceRepository() {
-        if(!this._serviceRepository)
-            this._serviceRepository = new ServiceRepository(this.connectionString);
-        return this._serviceRepository;
+    get careServiceRepository() {
+        if(!this._careServiceRepository)
+            this._careServiceRepository = new CareServiceRepository(this.connectionString);
+        return this._careServiceRepository;
+    }
+
+    /**
+     * @property
+     * @summary Gets the care relationship repository
+     * @type {CareRelationshipRepository}
+     */
+    get careRelationshipRepository() {
+        if(!this._careRelationshipRepository)
+            this._careRelationshipRepository = new CareRelationshipRepository(this.connectionString);
+        return this._careRelationshipRepository;
     }
 
 
