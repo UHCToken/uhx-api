@@ -72,10 +72,7 @@ module.exports.GroupApiResource = class GroupApiResource {
                     "post": {
                         demand: security.PermissionType.WRITE,
                         method: this.addUser
-                    }
-                },
-                {
-                    "path": "group/:gid/user/:uid",
+                    },
                     "delete": {
                         demand: security.PermissionType.WRITE,
                         method: this.deleteUser
@@ -196,6 +193,11 @@ module.exports.GroupApiResource = class GroupApiResource {
         if(!req.body.id) 
             throw new exception.Exception("User object is missing ID", exception.ErrorCodes.MISSING_PROPERTY);
 
+        if(req.params.gid == uhx.Config.security.sysgroups.providers){
+            var providerExists = await uhx.Repositories.providerRepository.checkIfExists(req.body.id);
+            if (providerExists)
+                await uhx.Repositories.providerRepository.reactivate(req.body.id);
+        }
         res.status(200).json(await uhx.Repositories.groupRepository.addUser(req.params.gid, req.body.id));
         return true;
     }
@@ -209,10 +211,12 @@ module.exports.GroupApiResource = class GroupApiResource {
     async deleteUser(req, res) {
         if(!req.params.gid)
             throw new exception.Exception("Missing group id parameter", exception.ErrorCodes.MISSING_PROPERTY);
-        if(!req.params.uid)
+        if(!req.body && !req.body.id)
             throw new exception.Exception("Missing user id parameter", exception.ErrorCodes.MISSING_PROPERTY);
-        
-        res.status(201).json(await uhx.Repositories.groupRepository.removeUser(req.params.gid, user.id));
+
+        if(req.params.gid == uhx.Config.security.sysgroups.providers)
+            await uhx.Repositories.providerRepository.delete(req.body.id);
+        res.status(201).json(await uhx.Repositories.groupRepository.removeUser(req.params.gid, req.body.id));
         return true;
     }
 }

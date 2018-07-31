@@ -252,7 +252,7 @@ module.exports = class GroupRepository {
         try {
             if(!_txc) await dbc.connect();
 
-            const rdr = await dbc.query("SELECT users.* FROM user_group WHERE group_id = $1 OFFSET $2 LIMIT $3", [groupId, filter._offset || 0, filter._count || 100]);
+            const rdr = await dbc.query("SELECT users.* FROM user_group JOIN users ON user_group.user_id = users.id WHERE group_id = $1 OFFSET $2 LIMIT $3", [groupId, filter._offset || 0, filter._count || 100]);
             var retVal = [];
             for(var r in rdr.rows)
                 retVal.push(new User().fromData(rdr.rows[r]));
@@ -311,13 +311,13 @@ module.exports = class GroupRepository {
             throw new exception.Exception("groupId is required", exception.ErrorCodes.ARGUMENT_EXCEPTION);
         if(!userId)
             throw new exception.Exception("userId is required", exception.ErrorCodes.ARGUMENT_EXCEPTION);
-        if(!runAs || !(runAs instanceof security.Principal))
+        /*if(!runAs || !(runAs instanceof security.Principal))
             throw new exception.Exception("runAs must be principal and must be supplied", exception.ErrorCodes.ARGUMENT_EXCEPTION);
-
+        */
         var dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
-            var result = await dbc.query("DELETE FROM user_group  WHERE user_id = $1 AND group_id = $2 RETURNING *", [userId, groupId]);
+            var result = await dbc.query("DELETE FROM user_group WHERE user_id = $1 AND group_id = $2 RETURNING *", [userId, groupId]);
             return result.rows.length > 0;
         }
         finally {

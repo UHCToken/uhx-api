@@ -143,7 +143,9 @@ module.exports = {
          */
         sysgroups: {
             "administrators": "044894bd-084e-47bb-9428-dbd80277614a",
-            "users": "330d2fb4-ba61-4b48-a0a1-8162a4708e96"
+            "users": "330d2fb4-ba61-4b48-a0a1-8162a4708e96",
+            "providers": "4339ef73-25e7-43fd-9080-8f7eb55182eb",
+            "patients" : "285cb044-bf99-4409-b418-7edc5c012ded"
         },
         /**
          * @summary Configuration options for invitations
@@ -209,7 +211,7 @@ module.exports = {
             name: 'Web3Client',
             balanceFn: 'getBalance',
             createFn: 'generateAccount',
-         },
+        },
         /**
          * @summary Flag for using ethereum
          */
@@ -236,7 +238,7 @@ module.exports = {
             balanceFn: 'getBalance',
             createFn: 'generateAccount',
             network: 'testnet'
-         },
+        },
         /**
          * @summary Flag for using bitcoin
          */
@@ -270,6 +272,10 @@ module.exports = {
         */
         updateTimer: 14400000,
         /**
+        * @summary How often to resend a reminder email prior to expiry
+        */
+        reminderTime: 604800000,
+        /**
         * @summary The amount of time before an invoice is marked to be removed
         */
         expiryTime: 1209600000,
@@ -286,6 +292,31 @@ module.exports = {
             */
             creationLimit: 3
         }
+    },
+    /**
+     * @summary File storage configuration
+     */
+    objectStorage: {
+        /**
+         * @summary Access key id
+         */
+        key: "XXXXXXXXXXXXXXXXXXXXXXXXX",
+        /**
+         * @summary Secret key
+         */
+        secret: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        /**
+         * @summary Storage bucket
+         */
+        bucket: "mybucketname",
+        /**
+         * @summary Storage endpoint
+         */
+        endpoint: "s3.tor01.objectstorage.softlayer.net",
+        /**
+         * @summary Maximum file size in bytes
+         */
+        maxFileSize: 1048576
     },
     /**
      * @summary Swagger configuration
@@ -322,13 +353,15 @@ module.exports = {
         from: "no-reply@domain.com",
         templates: {
             invitation: "./templates/invitation",
+            resendInvitation: "./templates/resendInvitation",
             welcome: "./templates/welcome",
             confirmation: "./templates/confirm",
             contactChange: "./templates/contactChange",
             resetPassword: "./templates/resetPassword",
             tfa: "./templates/tfa",
             tfaChange: "./templates/tfaChanged",
-            passwordChange: "./templates/passwordChanged"
+            passwordChange: "./templates/passwordChanged",
+            greenMoneyReminder: "./templates/greenMoneyReminder"
         }
     },
     logging: {

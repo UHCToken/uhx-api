@@ -20,7 +20,6 @@
 const uhx = require('../uhx'),
     exception = require('../exception'),
     security = require('../security'),
-    GreenMoney = require("../integration/greenmoney"),
     model = require('../model/model');
 
 /**
@@ -106,8 +105,28 @@ class UserApiResource {
                         "demand": security.PermissionType.WRITE,
                         "method": this.confirm
                     }
+                },
+                {
+                    "path": "user/:uid/upload",
+                    "post": {
+                        "demand": security.PermissionType.WRITE,
+                        "method": this.upload
+                    }
+                },
+                {
+                    "path": "user/:uid/img",
+                    "get": {
+                        "demand": security.PermissionType.READ,
+                        "method": this.getProfilePicture
+                    }
+                },
+                {
+                    "path": "user/:uid/group",
+                    "get": {
+                        "demand": security.PermissionType.READ,
+                        "method": this.getGroups
+                    }
                 }
-
             ]
         };
     }
@@ -174,6 +193,7 @@ class UserApiResource {
 
         return true;
     }
+
     /**
      * @method
      * @summary Updates an existing user
@@ -225,12 +245,24 @@ class UserApiResource {
      *          - "read:user"
      */
     async put(req, res) {
-
         // does the request have a password if so we want to ensure that get's passed
         req.body.id = req.params.uid;
-        res.status(201).json(await uhx.SecurityLogic.updateUser(new model.User().copy(req.body), req.body.password));
+
+        // Data with empty strings are returned, null data or ignore
+        var nullData = {};
+        if (req.body) {
+            if (req.body.tel === "" || req.body.tel === null)
+                nullData.tel = null;
+            if (req.body.givenName === "" || req.body.giveName === null)
+                nullData.givenName = null;
+            if (req.body.familyName === "" || req.body.familyName === null)
+                nullData.familyName = null;
+        }
+
+        res.status(201).json(await uhx.SecurityLogic.updateUser(new model.User().copy(req.body), req.body.password, req.body.oldPassword, nullData, req.principal));
         return true;
     }
+
     /**
      * @method
      * @summary Get a single user 
@@ -271,7 +303,7 @@ class UserApiResource {
     async get(req, res) {
         var user = await uhx.Repositories.userRepository.get(req.params.uid);
         await user.loadWallets();
-        
+
         // Load balances from blockchain
         if (user._wallets)
             user._wallets = await uhx.TokenLogic.getAllBalancesForWallets(user._wallets);
@@ -300,6 +332,7 @@ class UserApiResource {
         res.status(200).json(user);
         return true;
     }
+
     /**
      * @method
      * @summary Get all users from the UhX database (optional search parameters)
@@ -463,7 +496,7 @@ class UserApiResource {
      *          - "execute:user"
     */
     async reset(req, res) {
-        await uhx.SecurityLogic.initiatePasswordReset(req.body.email, req.body.tel);
+        await uhx.SecurityLogic.initiatePasswordReset(req.body.email.toLowerCase(), req.body.tel);
         res.status(204).send();
         return true;
     }
@@ -604,6 +637,155 @@ class UserApiResource {
 
     /**
      * @method
+     * @summary Uploads an image for the user
+     * @param {Express.Request} req The request from the client
+     * @param {Express.Response} res The response to the client
+     * @swagger
+     * /user/{userid}/upload:
+     *  post:
+     *      tags:
+     *      - "user"
+     *      summary: "Uploads an image for the user"
+     *      description: "This method will allow the user to upload an image into object storage"
+     *      consumes: 
+     *      - "application/json"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "userid"
+     *        in: "path"
+     *        description: "The ID of the user adding an image"
+     *        required: true
+     *        type: "string"
+     *      - in: "body"
+     *        name: "body"
+     *        description: "The file to upload"
+     *        required: true
+     *        schema:
+     *          $ref: "#/definitions/User"
+     *      responses:
+     *          201: 
+     *             description: "The requested resource was updated successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/User"
+     *          404:
+     *              description: "The specified user cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          422:
+     *              description: "The user object sent by the client was rejected"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "write:user"
+     */
+    async upload(req, res) {
+        req.body.id = req.params.uid;
+        var result = await uhx.ObjectStorage.uploadProfileImage(req, res, 'profile');
+        var status = result instanceof exception.Exception ? 500 : 201;
+
+        res.status(status).json(result);
+
+        return true;
+    }
+
+    /**
+     * @method
+     * @summary Get a single users profile picture
+     * @param {Express.Reqeust} req The request from the client 
+     * @param {Express.Response} res The response from the client
+     * @swagger
+     * /user/{userid}/img:
+     *  get:
+     *      tags:
+     *      - "user"
+     *      summary: "Gets the profile picture for a specified user"
+     *      description: "This method will fetch the profile image for a specific user"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "userid"
+     *        in: "path"
+     *        description: "The ID of the user for the profile image"
+     *        required: true
+     *        type: "string"
+     *      responses:
+     *          200: 
+     *             description: "The requested resource was fetched successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/User"
+     *          404:
+     *              description: "The specified user cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "read:user"
+     */
+    async getProfilePicture(req, res) {
+        var image = await uhx.ObjectStorage.getProfileImage(req, res, 'profile');
+        var status = image instanceof exception.Exception ? 404 : 201;
+        if (status == 201)
+            image.pipe(res);
+        else
+            res.status(status).json(image);
+
+        return true;
+    }
+
+    /**
+     * @method
+     * @summary Get a single users groups
+     * @param {Express.Reqeust} req The request from the client 
+     * @param {Express.Response} res The response from the client
+     * @swagger
+     * /user/{userid}/groups:
+     *  get:
+     *      tags:
+     *      - "user"
+     *      summary: "Gets the groups for a specified user"
+     *      description: "This method will fetch the groups for a specific user"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "userid"
+     *        in: "path"
+     *        description: "The ID of the user to lookup groups for"
+     *        required: true
+     *        type: "string"
+     *      responses:
+     *          200: 
+     *             description: "The requested resource was fetched successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/User"
+     *          404:
+     *              description: "The specified user cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "read:user"
+     */
+    async getGroups(req, res) {
+        res.status(200).json(await uhx.Repositories.groupRepository.getByUserId(req.params.uid));
+        return true;
+    }
+
+    /**
+     * @method
      * @summary Locks a user account
      * @param {Express.Request} req The HTTP request
      * @param {Express.Response} res The HTTP response
@@ -687,6 +869,7 @@ class UserApiResource {
 
         var usr = await uhx.Repositories.userRepository.get(req.params.uid);
         usr.lockout = null;
+        usr.invalidLogins = 0;
         await uhx.Repositories.userRepository.update(usr, null, req.principal);
         res.status(204).send();
         return true;

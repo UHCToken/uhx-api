@@ -25,6 +25,10 @@
     oauth = require('./controllers/oauth'),
     purchase = require('./controllers/purchase'),
     user = require('./controllers/user'),
+    provider = require('./controllers/provider'),
+    providerAddress = require('./controllers/providerAddress'),
+    providerService = require('./controllers/providerService'),
+    serviceType = require('./controllers/serviceType'),
     wallet = require('./controllers/wallet'),
     group = require('./controllers/group'),
     invoice = require('./controllers/invoice'),
@@ -40,7 +44,8 @@
     toobusy = require('toobusy-js'),
     https = require('https'),
     helmet = require('helmet'),
-    http = require('http');
+    http = require('http'),
+    skipper = require("skipper");
     
     toobusy.maxLag(10000);
 // Startup application
@@ -54,6 +59,7 @@ app.use(function(req, res, next) {
         next();
 });
 app.use(helmet());
+app.use(skipper());
 
 // Construct REST API
 var restApi = new api.RestApi(uhx.Config.api.base, app);
@@ -70,6 +76,10 @@ if(uhx.Config.swagger.enabled) {
 // Add OAuth token service
 restApi.addResource(new oauth.OAuthTokenService());
 restApi.addResource(new user.UserApiResource());
+restApi.addResource(new provider.ProviderApiResource());
+restApi.addResource(new providerAddress.ProviderAddressApiResource());
+restApi.addResource(new providerService.ProviderServiceApiResource());
+restApi.addResource(new serviceType.ServiceTypeApiResource());
 restApi.addResource(new purchase.PurchaseApiResource());
 restApi.addResource(new invoice.InvoiceApiResource());
 restApi.addResource(new wallet.WalletApiResource());

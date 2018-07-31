@@ -29,6 +29,8 @@
     "poolio": "^0.2.54016",
     "request": "^2.87.0",
     "request-promise": "^4.2.2",
+    "skipper": "^0.8.5",
+    "skipper-s3": "^0.5.11",
     "stellar-sdk": "^0.8.1",
     "stripe": "^5.9.0",
     "swagger-jsdoc": "^1.9.7",

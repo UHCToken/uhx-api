@@ -44,7 +44,7 @@ module.exports = class GreenMoney {
     */
     async createInvoice(userId, amount, principal) {
         try {
-            if (principal._session.userId == userId && principal.grant["wallet"] && security.PermissionType.OWNER) {
+            if (principal._session.userId == userId && principal.grant["invoice"] && security.PermissionType.OWNER) {
 
                 var user = await uhx.Repositories.userRepository.get(userId);
 
@@ -70,7 +70,7 @@ module.exports = class GreenMoney {
                 retVal.payor = user;
                 retVal.amount = amount;
 
-                return new Promise((fulfill, reject) => {
+                return await new Promise((fulfill, reject) => {
                     request(url,
                         function (err, res, body) {
                             if (err) {
@@ -93,7 +93,6 @@ module.exports = class GreenMoney {
                                     reject(new exception.Exception("Error creating invoice. Green Money Error", exception.ErrorCodes.COM_FAILURE));
                                     return retVal;
                                 }
-                                
                                 // Preparing invoice
                                 var invoice = new Invoice();
                                 invoice.amount = {};
@@ -102,6 +101,7 @@ module.exports = class GreenMoney {
                                 invoice.amount = amount;
                                 invoice.creation_time = new Date();
                                 invoice.expiry = new Date(new Date().getTime() + uhx.Config.greenMoney.expiryTime);
+                                invoice.reminderDate = new Date(new Date().getTime() + uhx.Config.greenMoney.reminderTime);
                                 invoice.status_code = '3';
                                 invoice.status_desc = 'NOT STARTED';
                                 invoice.payor_id = userId;
@@ -139,10 +139,10 @@ module.exports = class GreenMoney {
                 + '&Invoice_ID=' + invoiceId
                 + '&x_delim_data=true&x_delim_char=,';
         else
-            new exception.Exception("Invalid invoice Id", exception.ErrorCodes.ERR_NOTFOUND, err);
+            new exception.Exception("Invalid invoice Id", exception.ErrorCodes.ERR_NOTFOUND);
 
         // Promise 
-        return new Promise((fulfill, reject) => {
+        return await new Promise((fulfill, reject) => {
             request(url,
                 function (err, res, body) {
                     var retVal = [];
@@ -196,6 +196,9 @@ module.exports = class GreenMoney {
             case "4":
                 invoice.status_desc = 'EXPIRED';
                 break;
+            case "5":
+                invoice.status_desc = 'CANCELLED';
+                break;
             default:
                 res.status(500).json(new exception.Exception("Error updating invoice.", exception.ErrorCodes.UNKNOWN));
                 break;
@@ -212,7 +215,7 @@ module.exports = class GreenMoney {
     */
     async getInvoicesForUser(userId, principal) {
         try {
-            if (principal._session.userId == userId && principal.grant["wallet"] && security.PermissionType.OWNER) {
+            if ((principal._session.userId == userId && principal.grant["invoice"] && security.PermissionType.OWNER) || (principal.grant["user"] & security.PermissionType.LIST)) {
                 // Gets all invoices from database
                 var invoices = await uhx.Repositories.invoiceRepository.getAllForUser(userId);
 
@@ -235,20 +238,36 @@ module.exports = class GreenMoney {
     */
     async checkForUpdates(invoices) {
         var updated = 0;
+        var reminders = 0;
         for (var i = 0; i < invoices.length; i++) {
             if (invoices[i].status_code != "0" && invoices[i].status_code != "2") {
                 invoices[i].payment_status = await uhx.GreenMoney.checkInvoice(invoices[i].invoiceId);
                 if (invoices[i].payment_status[0].paymentResult != invoices[i].status_code || invoices[i].expiry < new Date()) {
                     if (invoices[i].expiry < new Date() && (invoices[i].status_code != "4" || invoices[i].payment_status[0].paymentResult == "3"))
                         invoices[i].payment_status[0].paymentResult = "4";
+                    if (invoices[i].status_code == "5" && (invoices[i].payment_status[0].paymentResult == "3" || invoices[i].payment_status[0].paymentResult == "4"))
+                        invoices[i].payment_status[0].paymentResult = "5";
                     await uhx.GreenMoney.updateInvoice(invoices[i]);
                     updated = updated + 1;
                 }
             }
+            if ((!invoices[i].reminderDate || invoices[i].reminderDate < new Date()) && (invoices[i].status_code == "3")) {
+                var user = await uhx.Repositories.userRepository.get(invoices[i].payorId);
+                var reminder = await uhx.Mailer.sendEmail({
+                    to: user.name,
+                    from: uhx.Config.mail.from,
+                    template: uhx.Config.mail.templates.greenMoneyReminder,
+                    subject: "You have a pending invoice for UhX USD Credit"
+                }, { user: user, invoice: invoices[i] });
+                invoices[i].reminderDate = new Date(new Date().getTime() + uhx.Config.greenMoney.reminderTime);
+                await uhx.Repositories.invoiceRepository.update(invoices[i]);
+                reminders = reminders + 1;
+            }
         }
-        console.log(`${updated} invoice(s) updated.`)
+        console.log(`${updated} invoice(s) updated. ${reminders} reminder email(s) sent.`)
         return (invoices);
     }
+
     /**
     * @method
     * @summary Gets all invoices
@@ -278,6 +297,120 @@ module.exports = class GreenMoney {
         catch (ex) {
             return new exception.Exception("Error updating invoices.", exception.ErrorCodes.UNKNOWN, ex);
             console.log("An error occurred while updating all invoices: " + ex);
+        }
+    }
+
+    /**
+    * @method
+    * @summary Resends an invoice email from Green Money
+    * @param {Number} userId The userId to lookup
+    * @param {Number} invoiceId The invoiceId to resend an email for
+    * @param {SecurityPrincipal} principal The security principal
+    */
+    async resendInvoice(userId, invoiceId, principal) {
+        try {
+            var invoices = await uhx.GreenMoney.getInvoicesForUser(userId, principal);
+            var invoiceOwner = false;
+            if (invoices.length > 0) {
+
+                for (var i in invoices) {
+                    if (invoices[i].status_code == "3" || invoices[i].status_code == "4") {
+                        if (invoices[i].invoiceId == invoiceId) {
+                            invoiceOwner = true;
+                        }
+                    }
+                }
+            } else
+                new exception.Exception("Invalid invoice Id", exception.ErrorCodes.ERR_NOTFOUND);
+
+            if ((principal._session.userId == userId && principal.grant["invoice"] && security.PermissionType.OWNER && invoiceOwner == true) || (principal.grant["user"] & security.PermissionType.LIST)) {
+
+                if (invoiceId) {
+                    var url = `https://greenbyphone.com/echeck/Invoice.aspx?GreenInvoice_ID=${parseFloat(invoiceId)}`;
+                    url = url;
+                }
+                else
+                    new exception.Exception("Invalid invoice Id", exception.ErrorCodes.ERR_NOTFOUND);
+
+                var options = {
+                    url: url,
+                    headers: {
+                        'Cookie': 'ASP.NET_SessionId=0uv1ldt3ckh04f3xkbhukawz;'
+                    }
+                };
+                // Promise 
+                return await new Promise((fulfill, reject) => {
+                    request(options,
+                        function (err, res, body) {
+                            var retVal = {};
+                            if (err) {
+                                uhx.log.error(`HTTP ERR: ${err}`)
+                                reject(new exception.Exception("Error contacting GreenMoney", exception.ErrorCodes.COM_FAILURE, err));
+                            }
+                            else if (res.statusCode == 200) {
+                                if (res.body.search("Your new invoice link is already on it's way to your email address") > 0) {
+                                    retVal.code = "Success";
+                                    retVal.msg = "Invoice email resent successfully";
+                                    fulfill(retVal);
+                                }
+                                else
+                                    reject(new exception.Exception("Error resending invoice.", exception.ErrorCodes.COM_FAILURE, err));
+                            }
+                            else
+                                reject(new exception.Exception("Error resending invoice.", exception.ErrorCodes.COM_FAILURE, err));
+                        })
+                });
+                return retVal;
+            } else {
+                return new exception.Exception("Invalid security permissions.", exception.ErrorCodes.SECURITY_ERROR);
+            }
+        }
+        catch (ex) {
+            return new exception.Exception("Error resending invoice.", exception.ErrorCodes.UNKNOWN, ex);
+        }
+    }
+
+    /**
+    * @method
+    * @summary Cancels an invoice
+    * @param {Number} userId The userId to lookup
+    * @param {Number} invoiceId The invoiceId to resend an email for
+    * @param {SecurityPrincipal} principal The security principal
+    */
+    async cancelInvoice(userId, invoiceId, principal) {
+        try {
+            var invoices = await uhx.GreenMoney.getInvoicesForUser(userId, principal);
+            var invoiceIndex = -1;
+            if (invoices.length > 0) {
+                for (var i in invoices) {
+                    if (invoices[i].status_code == "3" || invoices[i].status_code == "4") {
+                        if (invoices[i].invoiceId == invoiceId) {
+                            invoiceIndex = i;
+                        }
+                    }
+                }
+            } else
+                new exception.Exception("Invalid invoice Id", exception.ErrorCodes.ERR_NOTFOUND);
+
+            if ((principal._session.userId == userId && principal.grant["invoice"] && security.PermissionType.OWNER && invoiceIndex > -1) || (principal.grant["user"] & security.PermissionType.LIST)) {
+
+                try {
+                    invoices[invoiceIndex].payment_status[0].paymentResult = "5";
+                    await uhx.GreenMoney.updateInvoice(invoices[invoiceIndex]);
+                    var retVal = {};
+                    retVal.code = "Success";
+                    retVal.msg = `Invoice ${invoices[invoiceIndex].invoiceId} was cancelled.`;
+                    return retVal;
+                } catch (ex) {
+                    return new exception.Exception("Error cancelling invoice.", exception.ErrorCodes.UNKNOWN, ex);
+                }
+
+            } else {
+                return new exception.Exception("Invalid security permissions.", exception.ErrorCodes.SECURITY_ERROR);
+            }
+        }
+        catch (ex) {
+            return new exception.Exception("Error cancelling invoice.", exception.ErrorCodes.UNKNOWN, ex);
         }
     }
 

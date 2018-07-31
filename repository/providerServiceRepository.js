@@ -19,15 +19,15 @@
 
 const pg = require('pg'),
     exception = require('../exception'),
-    model = require('../model/model'),
-    Invoice = require("../model/Invoice"),
-    security = require('../security');
+    ProviderService = require('../model/ProviderService'),
+    security = require('../security'),
+    model = require('../model/model');
 
 /**
- * @class InvoiceRepository
- * @summary Represents the invoice repository logic
+ * @class ProviderRepository
+ * @summary Represents the provider repository logic
  */
-module.exports = class InvoiceRepository {
+module.exports = class ProviderServiceRepository {
 
     /**
      * @constructor
@@ -37,52 +37,28 @@ module.exports = class InvoiceRepository {
     constructor(connectionString) {
         this._connectionString = connectionString;
         this.get = this.get.bind(this);
-        this.getAllForUser = this.getAllForUser.bind(this);
+        this.update = this.update.bind(this);
+        this.insert = this.insert.bind(this);
+        this.delete = this.delete.bind(this);
     }
 
     /**
      * @method
-     * @summary Retrieve a specific invoice from the database
-     * @param {uuid} id Gets the specified invoice
+     * @summary Retrieve a specific provider address service from the database
+     * @param {uuid} id Gets the specified provider address service
      * @param {Client} _txc The postgresql connection with an active transaction to run in
-     * @returns {Invoices} The fetched invoices
-     */
-    async getAll(_txc) {
-
-        const dbc = _txc || new pg.Client(this._connectionString);
-        try {
-            if (!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM invoices");
-            if (rdr.rows.length == 0)
-                throw new exception.NotFoundException('invoice');
-            else {
-                var retVal = [];
-                for (var r in rdr.rows)
-                    retVal.push(new Invoice().fromData(rdr.rows[r]));
-                return retVal;
-            }
-        }
-        finally {
-            if (!_txc) dbc.end();
-        }
-    }
-
-    /**
-     * @method
-     * @summary Retrieves all invoices
-     * @param {Client} _txc The postgresql connection with an active transaction to run in
-     * @returns {Invoices} The fetched invoice
+     * @returns {ProviderService} The retrieved provider address service
      */
     async get(id, _txc) {
 
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if (!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM invoices WHERE invoices.id = $1", [id]);
+            const rdr = await dbc.query("SELECT * FROM provider_address_services WHERE id = $1", [id]);
             if (rdr.rows.length == 0)
-                throw new exception.NotFoundException('invoice', id);
+                return null;
             else
-                return new model.Invoice().fromData(rdr.rows[0]);
+                return new ProviderService().fromData(rdr.rows[0]);
         }
         finally {
             if (!_txc) dbc.end();
@@ -91,54 +67,78 @@ module.exports = class InvoiceRepository {
 
     /**
      * @method
-     * @summary Retrieves all invoices from the database for the user
-     * @param {string} userId Gets the all invoices for the userId
+     * @summary Checks if an the service's address has the corresponding service type
+     * @param {string} serviceId The service Id
+     * @param {string} addressId The address Id
      * @param {Client} _txc The postgresql connection with an active transaction to run in
-     * @returns {Invoice} The fetched invoices
+     * @returns {*} The providers service types
      */
-    async getAllForUser(userId, _txc) {
+    async serviceTypeExists(serviceId, addressId, _txc) {
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+            const rdr = await dbc.query("SELECT * FROM provider_address_services WHERE id = $1 AND service_type IN (SELECT service_type FROM provider_address_types WHERE provider_address_id = $2)", [serviceId, addressId]);
+            if (rdr.rows.length == 0)
+                return false;
+            else {
+                return true;
+            }
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Retrieve all of an addresses services from the database
+     * @param {uuid} addressId Gets all of the specified addresses services
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {*} The retrieved addresses services
+     */
+    async getAllForAddress(addressId, _txc) {
 
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if (!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM invoices WHERE payor_id = $1", [userId]);
+            const rdr = await dbc.query("SELECT * FROM provider_address_services WHERE address_id = $1 AND deactivation_time IS NULL", [addressId]);
             if (rdr.rows.length == 0)
-                throw new exception.NotFoundException('invoices', userId);
+                return null;
             else {
                 var retVal = [];
                 for (var r in rdr.rows)
-                    retVal.push(new Invoice().fromData(rdr.rows[r]));
+                    retVal[r] = new ProviderService().fromData(rdr.rows[r]);
                 return retVal;
             }
         }
         finally {
             if (!_txc) dbc.end();
         }
-
     }
 
     /**
      * @method
-     * @summary Update the specified invoice
-     * @param {Invoice} invoice The instance of the invoice that is to be updated
+     * @summary Update the specified provider address service
+     * @param {ProviderService} service The instance of the provider address service that is to be updated
      * @param {Client} _txc The postgresql connection with an active transaction to run in
-     * @returns {Invoice} The updated invoice data from the database
+     * @returns {ProviderService} The updated provider address service data from the database
      */
-    async update(invoice, _txc) {
-
-        if (!invoice.id)
+    async update(service, _txc) {
+        if (!service.id)
             throw new exception.Exception("Target object must carry an identifier", exception.ErrorCodes.ARGUMENT_EXCEPTION);
 
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if (!_txc) await dbc.connect();
 
-            var updateCmd = model.Utils.generateUpdate(invoice, 'invoices');
+            var dbService = service.toData();
+
+            var updateCmd = model.Utils.generateUpdate(dbService, 'provider_address_services', 'updated_time');
             const rdr = await dbc.query(updateCmd.sql, updateCmd.args);
             if (rdr.rows.length == 0)
-                throw new exception.Exception("Could not update invoice in data store", exception.ErrorCodes.DATA_ERROR);
+                throw new exception.Exception("Could not update provider in data store", exception.ErrorCodes.DATA_ERROR);
             else
-                return invoice.fromData(rdr.rows[0]);
+                return service.fromData(rdr.rows[0]);
         }
         finally {
             if (!_txc) dbc.end();
@@ -148,23 +148,29 @@ module.exports = class InvoiceRepository {
 
     /**
      * @method
-     * @summary Insert  the specified invoice
-     * @param {Invoice} invoice The instance of the invoice that is to be inserted
+     * @summary Insert the specified provider address service
+     * @param {ProviderService} service The instance of the provider address service that is to be inserted
      * @param {Client} _txc The postgresql connection with an active transaction to run in
-     * @returns {Invoice} The inserted invoice
+     * @returns {ProviderService} The inserted provider address service
      */
-    async insert(invoice, _txc) {
+    async insert(service, _txc) {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if (!_txc) await dbc.connect();
-            var dbInvoice = invoice.toData();
-            delete (dbInvoice.id);
-            var updateCmd = model.Utils.generateInsert(dbInvoice, 'invoices');
+
+            var dbService = service.toData();
+            delete (dbService.id);
+            var updateCmd = model.Utils.generateInsert(dbService, 'provider_address_services');
             const rdr = await dbc.query(updateCmd.sql, updateCmd.args);
             if (rdr.rows.length == 0)
-                throw new exception.Exception("Could not register invoice in data store", exception.ErrorCodes.DATA_ERROR);
+                throw new exception.Exception("Could not register provider in data store", exception.ErrorCodes.DATA_ERROR);
             else
-                return invoice.fromData(rdr.rows[0]);
+                return service.fromData(rdr.rows[0]);
+        }
+        catch (e) {
+            if (e.code == "23502")
+                throw new exception.Exception("Missing mandatory field", exception.ErrorCodes.DATA_ERROR, e);
+            throw e;
         }
         finally {
             if (!_txc) dbc.end();
@@ -173,26 +179,25 @@ module.exports = class InvoiceRepository {
 
     /**
      * @method
-     * @summary Delete / de-activate a invoice in the system
-     * @param {string} invoiceId The identity of the invoice to delete
-     * @param {Principal} runAs The identity to run the operation as (for logging)
+     * @summary Delete / de-activate a provider address service in the system
+     * @param {string} serviceId The identity of the provider address service to delete
      * @param {Client} _txc The postgresql connection with an active transaction to run in
-     * @returns {Invoice} The deactivated invoice
+     * @returns {ProviderService} The deactivated provider instance
      */
-    async delete(invoiceId, runAs, _txc) {
+    async delete(serviceId, _txc) {
 
-        if (!invoiceId)
+        if (!serviceId)
             throw new exception.Exception("Target object must carry an identifier", exception.ErrorCodes.ARGUMENT_EXCEPTION);
 
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if (!_txc) await dbc.connect();
 
-            const rdr = await dbc.query("UPDATE invoices SET deactivation_time = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *", [invoiceId]);
+            const rdr = await dbc.query("UPDATE provider_address_services SET deactivation_time = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *", [serviceId]);
             if (rdr.rows.length == 0)
-                throw new exception.Exception("Could not deactivate invoice in data store", exception.ErrorCodes.DATA_ERROR);
+                throw new exception.Exception("Could not DEACTIVATE provider in data store", exception.ErrorCodes.DATA_ERROR);
             else
-                return new model.Invoice().fromData(rdr.rows[0]);
+                return new ProviderService().fromData(rdr.rows[0]);
         }
         finally {
             if (!_txc) dbc.end();
