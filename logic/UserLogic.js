@@ -168,7 +168,7 @@ module.exports = class UserLogic {
      */
     async addProviderAddress(address, serviceTypes, principal) {
 
-        var addressExists = await uhx.Repositories.providerAddressRepository.get(address.addressId);
+        var addressExists = await uhx.Repositories.providerAddressRepository.get(address.id);
         if (addressExists)
             throw new exception.Exception("This address exists", exception.ErrorCodes.ARGUMENT_EXCEPTION);
 
@@ -230,8 +230,6 @@ module.exports = class UserLogic {
      * @param {SecurityPrincipal} principal The user who is making the request
      */
     async updateAddressServiceTypes(addressId, serviceTypes, principal) {
-        //var existingServiceTypes = await uhx.Repositories.providerAddressRepository.getAddressServiceTypes(addressId);
-
         try {
             for (var i in serviceTypes) {
                 var exists = await uhx.Repositories.providerAddressRepository.serviceTypeExists(addressId, serviceTypes[i].type_id);
@@ -246,6 +244,27 @@ module.exports = class UserLogic {
         catch (e) {
             uhx.log.error(`Error updating service type: ${e.message}`);
             throw new exception.Exception("Error updating service type", e.code || exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
+
+
+
+    /**
+     * @method
+     * @summary Deletes the specified provider address
+     * @param {ProviderAddress} address The provider address to be deleted
+     * @returns {Boolean} The status of the deletion
+     */
+    async deleteProviderAddress(address, principal, _txc) {
+        if (!(await uhx.Repositories.providerAddressRepository.get(address.id)))
+            throw new exception.Exception("Address not found", exception.ErrorCodes.NOT_FOUND);
+
+        try {
+            return await uhx.Repositories.providerAddressRepository.delete(address.id, _txc);
+        }
+        catch (e) {
+            uhx.log.error("Error deleting address: " + e.message);
+            throw new exception.Exception("Error deleting address", exception.ErrorCodes.UNKNOWN, e);
         }
     }
 

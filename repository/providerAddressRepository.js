@@ -58,7 +58,7 @@ module.exports = class ProviderAddressRepository {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if (!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM provider_addresses WHERE id = $1", [id]);
+            const rdr = await dbc.query("SELECT * FROM provider_addresses WHERE deactivation_time IS NULL AND id = $1", [id]);
             if (rdr.rows.length == 0)
                 return null;
             else
@@ -83,7 +83,7 @@ module.exports = class ProviderAddressRepository {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if (!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM provider_addresses WHERE provider_id = $1", [providerId]);
+            const rdr = await dbc.query("SELECT * FROM provider_addresses WHERE deactivation_time IS NULL AND provider_id = $1", [providerId]);
             if (rdr.rows.length == 0)
                 return null;
             else {
@@ -295,7 +295,7 @@ module.exports = class ProviderAddressRepository {
             if (rdr.rows.length == 0)
                 throw new exception.Exception("Could not DEACTIVATE provider address in data store", exception.ErrorCodes.DATA_ERROR);
             else
-                return new Provider().fromData(rdr.rows[0]);
+                return new ProviderAddress().fromData(rdr.rows[0]);
         }
         finally {
             if (!_txc) dbc.end();

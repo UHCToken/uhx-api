@@ -63,6 +63,10 @@ class ProviderAddressApiResource {
                     "put": {
                         "demand": security.PermissionType.WRITE | security.PermissionType.READ,
                         "method": this.put
+                    },
+                    "delete": {
+                        "demand": security.PermissionType.WRITE | security.PermissionType.READ,
+                        "method": this.delete
                     }
                 },
                 {
@@ -286,6 +290,61 @@ class ProviderAddressApiResource {
         return true;
     }
 
+    /**
+     * @method
+     * @summary Deactivates an existing provider address
+     * @param {Express.Request} req The request from the client
+     * @param {Express.Response} res The response to the client
+     * @swagger
+     * /provideraddress/{addressid}:
+     *  delete:
+     *      tags:
+     *      - "provideraddress"
+     *      summary: "Deactivates an existing provider address in the UhX API"
+     *      description: "This method will deactivate an existing provider address in the UhX API"
+     *      consumes: 
+     *      - "application/json"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "addressid"
+     *        in: "path"
+     *        description: "The ID of the provider address being deactivated"
+     *        required: true
+     *        type: "string"
+     *      - in: "body"
+     *        name: "body"
+     *        description: "The provider address that is to be deactivated"
+     *        required: true
+     *        schema:
+     *          $ref: "#/definitions/ProviderAddress"
+     *      responses:
+     *          201: 
+     *             description: "The requested resource was deactivated successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/ProviderAddress"
+     *          404:
+     *              description: "The specified provider address cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          422:
+     *              description: "The provider object sent by the client was rejected"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "write:user"
+     *          - "read:user"
+     */
+    async delete(req, res) {
+        req.body.id = req.params.addressid;
+        res.status(200).json(await uhx.UserLogic.deleteProviderAddress(new model.ProviderAddress().copy(req.body), req.principal));
+        return true;
+    }
 
 }
 
