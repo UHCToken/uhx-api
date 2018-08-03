@@ -123,6 +123,9 @@ class ProviderAddressApiResource {
         if (!req.body.providerId)
             throw new exception.Exception("Must have a providerId", exception.ErrorCodes.MISSING_PROPERTY);
 
+        if (!req.body.addressName)
+            throw new exception.Exception("Must have an addressName", exception.ErrorCodes.MISSING_PROPERTY);
+
         var address = new model.ProviderAddress().copy(req.body);
         var newAddress = await uhx.UserLogic.addProviderAddress(address, req.body.serviceTypes, req.principal);
         if (newAddress)

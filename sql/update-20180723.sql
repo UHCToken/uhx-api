@@ -4,7 +4,7 @@
 CREATE TABLE IF NOT EXISTS providers (
     id uuid NOT NULL DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL,
-    name VARCHAR(256),
+    name VARCHAR(256) NOT NULL,
     description VARCHAR(256),
     tel VARCHAR(256),
     fax VARCHAR(256),
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS providers (
 
 CREATE TABLE IF NOT EXISTS provider_addresses (
     id uuid NOT NULL DEFAULT uuid_generate_v4(),
-    address_name VARCHAR(256),
+    address_name VARCHAR(256) NOT NULL,
     tel VARCHAR(256),
     fax VARCHAR(256),
     street VARCHAR(256),
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS provider_addresses (
     city VARCHAR(256),
     state_prov VARCHAR(16),
     country VARCHAR(2),
-    postal_zip VARCHAR(16),
+    postal_zip VARCHAR(16) NOT NULL,
     provider_id UUID NOT NULL,
     visible BOOLEAN DEFAULT TRUE,
     creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -67,8 +67,8 @@ CREATE TABLE IF NOT EXISTS provider_address_services (
     provider_id UUID NOT NULL,
     address_id UUID NOT NULL,
     service_type UUID NOT NULL,
-    service_name VARCHAR(128),
-    description VARCHAR(256),
+    service_name VARCHAR(128) NOT NULL,
+    description VARCHAR(256) NOT NULL,
     cost NUMERIC(20, 7) NOT NULL,
     creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_time TIMESTAMPTZ,

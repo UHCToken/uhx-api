@@ -45,6 +45,7 @@ module.exports = class UserLogic {
         this.updateProviderAddress = this.updateProviderAddress.bind(this);
         this.updateAddressServiceTypes = this.updateAddressServiceTypes.bind(this);
         this.addProviderServices = this.addProviderServices.bind(this);
+        this.getAllServices = this.getAllServices.bind(this);
         this.editProviderServices = this.editProviderServices.bind(this);
         this.addProviderService = this.addProviderService.bind(this);
         this.updateProviderService = this.updateProviderService.bind(this);
@@ -251,9 +252,9 @@ module.exports = class UserLogic {
 
     /**
      * @method
-     * @summary Deletes the specified provider address
-     * @param {ProviderAddress} address The provider address to be deleted
-     * @returns {Boolean} The status of the deletion
+     * @summary Deactivates the specified provider address
+     * @param {ProviderAddress} address The provider address to be deactivated
+     * @returns {ProviderAddress} The provider address that was deactivated
      */
     async deleteProviderAddress(address, principal, _txc) {
         if (!(await uhx.Repositories.providerAddressRepository.get(address.id)))
@@ -285,6 +286,7 @@ module.exports = class UserLogic {
         return await uhx.Repositories.transaction(async (_txc) => {
             for (var s in services) {
                 services[s].addressId = address.id;
+
                 try {
                     retVal.push(await uhx.UserLogic.addProviderService(services[s], principal, _txc));
                 }
@@ -295,6 +297,28 @@ module.exports = class UserLogic {
             }
             return retVal;
         });
+    }
+
+    /**
+     * @method
+     * @summary Gets all the services for an address in the UhX API
+     * @param {string} addressId The provider address id to get services for
+     * @param {SecurityPrincipal} principal The user who is making the request
+     * @returns {*} The services for the provider address
+     */
+    async getAllServices(addressId, principal) {
+        var address = await uhx.Repositories.providerAddressRepository.get(addressId);
+        if (!address)
+            throw new exception.Exception("Address not found", exception.ErrorCodes.NOT_FOUND);
+
+        var services = await uhx.Repositories.providerServiceRepository.getAllForAddress(addressId);
+        for (var s in services) {
+            if (await uhx.Repositories.providerServiceRepository.serviceTypeExists(services[s].id, services[s].addressId))
+                await services[s].loadServiceTypeDetails();
+            else
+                delete (services[s]);
+        }
+        return services;
     }
 
     /**
@@ -344,8 +368,8 @@ module.exports = class UserLogic {
         if (!service.addressId)
             throw new exception.Exception("Must have an addressId", exception.ErrorCodes.MISSING_PROPERTY);
 
-        if (!service.serviceType)
-            throw new exception.Exception("Must have a serviceType", exception.ErrorCodes.MISSING_PROPERTY);
+        if (!service.serviceName || !service.description || !service.cost || !service.serviceType)
+            throw new exception.Exception("Missing one or more properties", exception.ErrorCodes.MISSING_PROPERTY);
 
         if (!service.providerId) {
             var address = await uhx.Repositories.providerAddressRepository.get(service.addressId);

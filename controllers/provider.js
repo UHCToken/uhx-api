@@ -71,14 +71,14 @@ class ProviderApiResource {
                     }
                 },
                 {
-                    "path": "provider/:providerid/upload",
+                    "path": "provider/:uid/upload",
                     "post": {
                         "demand": security.PermissionType.WRITE,
                         "method": this.upload
                     }
                 },
                 {
-                    "path": "provider/:providerid/img",
+                    "path": "provider/:uid/img",
                     "get": {
                         "demand": security.PermissionType.READ,
                         "method": this.getProfilePicture
@@ -137,6 +137,9 @@ class ProviderApiResource {
 
         if (!req.body.userId)
             throw new exception.Exception("Must have a userId", exception.ErrorCodes.MISSING_PROPERTY);
+
+        if (!req.body.name)
+            throw new exception.Exception("Must have a name", exception.ErrorCodes.MISSING_PROPERTY);
 
         var provider = new model.Provider().copy(req.body);
         var newProvider = await uhx.UserLogic.addProvider(provider, req.body.serviceTypes, req.principal);
@@ -230,6 +233,7 @@ class ProviderApiResource {
      */
     async put(req, res) {
         req.body.id = req.params.providerid;
+
         var provider = await uhx.UserLogic.updateProvider(new model.Provider().copy(req.body), req.body.serviceTypes, req.principal);
         if (provider)
             await provider.loadProviderServiceTypes();
@@ -276,7 +280,7 @@ class ProviderApiResource {
      */
     async get(req, res) {
         var provider = await uhx.Repositories.providerRepository.get(req.params.providerid);
-        if (provider){
+        if (provider) {
             await provider.loadProviderServiceTypes();
             await provider.loadAddresses();
         }
@@ -335,7 +339,6 @@ class ProviderApiResource {
      *          - "write:user"
      */
     async upload(req, res) {
-        req.body.id = req.params.providerid;
         var result = await uhx.ObjectStorage.uploadProfileImage(req, res, 'provider');
         var status = result instanceof exception.Exception ? 500 : 201;
 
@@ -350,7 +353,7 @@ class ProviderApiResource {
  * @param {Express.Reqeust} req The request from the client 
  * @param {Express.Response} res The response from the client
  * @swagger
- * /provider/{providerid}/img:
+ * /provider/{userid}/img:
  *  get:
  *      tags:
  *      - "provider"
@@ -359,7 +362,7 @@ class ProviderApiResource {
  *      produces:
  *      - "application/json"
  *      parameters:
- *      - name: "providerid"
+ *      - name: "userid"
  *        in: "path"
  *        description: "The ID of the provider for the profile image"
  *        required: true
