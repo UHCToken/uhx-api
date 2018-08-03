@@ -38,6 +38,7 @@ module.exports = class ProviderRepository {
         this._connectionString = connectionString;
         this.get = this.get.bind(this);
         this.checkIfExists = this.checkIfExists.bind(this);
+        this.serviceTypeExists = this.serviceTypeExists.bind(this);
         this.getAllProviders = this.getAllProviders.bind(this);
         this.update = this.update.bind(this);
         this.insert = this.insert.bind(this);

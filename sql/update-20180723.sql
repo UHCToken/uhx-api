@@ -18,6 +18,32 @@ CREATE TABLE IF NOT EXISTS providers (
     CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
+CREATE TABLE IF NOT EXISTS patients (
+    id uuid NOT NULL DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL,
+    given_name VARCHAR(256),
+    family_name VARCHAR(256),
+    tel VARCHAR(256),
+    fax VARCHAR(256),
+    email VARCHAR(256),
+    profile_image VARCHAR(75),
+    gender VARCHAR(24),
+    dob DATE,
+    history VARCHAR(2000),
+    sensitivities VARCHAR(2000),
+    street VARCHAR(256),
+    unit_suite VARCHAR(128),
+    city VARCHAR(256),
+    state_prov VARCHAR(16),
+    country VARCHAR(2),
+    postal_zip VARCHAR(16),
+    creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_time TIMESTAMPTZ,
+    deactivation_time TIMESTAMPTZ,
+    CONSTRAINT pk_patient PRIMARY KEY (id),
+    CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
 CREATE TABLE IF NOT EXISTS provider_addresses (
     id uuid NOT NULL DEFAULT uuid_generate_v4(),
     address_name VARCHAR(256) NOT NULL,
@@ -78,6 +104,7 @@ CREATE TABLE IF NOT EXISTS provider_address_services (
     CONSTRAINT fk_provider_address FOREIGN KEY (address_id) REFERENCES provider_addresses(id),
     CONSTRAINT fk_provider_service_type FOREIGN KEY (service_type) REFERENCES service_types(id)
 );
+
 
 INSERT INTO service_types (type_name) VALUES 
     ('Family Doctor'),

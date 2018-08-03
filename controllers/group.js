@@ -198,6 +198,13 @@ module.exports.GroupApiResource = class GroupApiResource {
             if (providerExists)
                 await uhx.Repositories.providerRepository.reactivate(req.body.id);
         }
+
+        if(req.params.gid == uhx.Config.security.sysgroups.patients){
+            var patientExists = await uhx.Repositories.patientRepository.checkIfExists(req.body.id);
+            if (patientExists)
+                await uhx.Repositories.patientRepository.reactivate(req.body.id);
+        }
+
         res.status(200).json(await uhx.Repositories.groupRepository.addUser(req.params.gid, req.body.id));
         return true;
     }
@@ -216,6 +223,9 @@ module.exports.GroupApiResource = class GroupApiResource {
 
         if(req.params.gid == uhx.Config.security.sysgroups.providers)
             await uhx.Repositories.providerRepository.delete(req.body.id);
+        
+        if(req.params.gid == uhx.Config.security.sysgroups.patients)
+            await uhx.Repositories.patientRepository.delete(req.body.id);
         res.status(201).json(await uhx.Repositories.groupRepository.removeUser(req.params.gid, req.body.id));
         return true;
     }

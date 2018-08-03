@@ -29,6 +29,7 @@ const UserRepository = require('./userRepository'),
     ReportRepository = require('./reportRepository'),
     InvoiceRepository = require('./invoiceRepository'),
     BalanceRepository = require('./balanceRepository'),
+    PatientRepository = require('./patientRepository'),
     ProviderRepository = require('./providerRepository'),
     ProviderAddressRepository = require('./providerAddressRepository'),
     ProviderServiceRepository = require('./providerServiceRepository'),
@@ -217,6 +218,17 @@ class UhcRepositories {
         if (!this._balanceRepository)
             this._balanceRepository = new BalanceRepository(this.connectionString);
         return this._balanceRepository;
+    }
+
+    /**
+     * @property
+     * @summary Gets the patient repository
+     * @type {PatientRepository}
+     */
+    get patientRepository() {
+        if (!this._patientRepository)
+            this._patientRepository = new PatientRepository(this.connectionString);
+        return this._patientRepository;
     }
 
     /**

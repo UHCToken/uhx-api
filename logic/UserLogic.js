@@ -23,6 +23,7 @@ const uhx = require('../uhx'),
     security = require('../security'),
     model = require('../model/model'),
     Provider = require('../model/Provider'),
+    Patient = require('../model/Patient'),
     User = require('../model/User');
 
 const uuidRegex = /[A-F0-9]{8}-(?:[A-F0-9]{4}\-){3}[A-F0-9]{12}/i;
@@ -50,6 +51,8 @@ module.exports = class UserLogic {
         this.addProviderService = this.addProviderService.bind(this);
         this.updateProviderService = this.updateProviderService.bind(this);
         this.deleteProviderService = this.deleteProviderService.bind(this);
+        this.addPatient = this.addPatient.bind(this);
+        this.updatePatient = this.updatePatient.bind(this);
     }
 
     /**
@@ -438,4 +441,53 @@ module.exports = class UserLogic {
         }
     }
 
+    /**
+     * @method
+     * @summary Adds a patient to the UhX API
+     * @param {Patient} patient The patient to add
+     * @param {SecurityPrincipal} principal The user who is making the request
+     */
+    async addPatient(patient, principal) {
+
+        var patientExists = await uhx.Repositories.patientRepository.get(patient.userId);
+        if (patientExists)
+            throw new exception.Exception("User has a patient profile", exception.ErrorCodes.ARGUMENT_EXCEPTION);
+
+        try {
+            var retVal = await uhx.Repositories.patientRepository.insert(patient, principal);
+            await uhx.Repositories.groupRepository.addUser(uhx.Config.security.sysgroups.patients, retVal.userId, principal);
+            return retVal;
+        }
+        catch (e) {
+            uhx.log.error(`Error adding patient: ${e.message}`);
+            throw new exception.Exception("Error adding patient", e.code || exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
+
+    /**
+     * @method
+     * @summary Updates the specified patient
+     * @param {Patient} patient The patient to be updated
+     * @returns {Patient} The updated patient
+     */
+    async updatePatient(patient, principal) {
+
+        try {
+
+            // Delete fields which can't be set by clients 
+            delete (patient.userId);
+            delete (patient.profileImage);
+
+            return await uhx.Repositories.transaction(async (_txc) => {
+                // Update the patient
+                return await uhx.Repositories.patientRepository.update(patient, null, _txc);
+
+            });
+        }
+        catch (e) {
+            uhx.log.error("Error updating patient: " + e.message);
+            throw new exception.Exception("Error updating patient", exception.ErrorCodes.UNKNOWN, e);
+        }
+
+    }
 }
