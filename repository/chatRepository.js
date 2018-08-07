@@ -1,3 +1,4 @@
+/// <Reference path="../model/model.js"/>
 'use strict';
 
 /**
@@ -17,17 +18,24 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
-const Message = require('../model/Message');
+const pg = require('pg'),
+  exception = require('../exception'),
+  Group = require('../model/Group'),
+  User = require('../model/User'),
+  model = require('../model/model'),
+  security = require('../security');
 
- /**
- * @class
- * @summary Service for messaging feature
- * @swagger
- * tags:
- *  - name: "messaging"
- *    description: "A resource to enable users to message back and forth"
-  */
- class MessageService {
+module.exports = class ChatRepository {
 
-  constructor() {}
- }
+  constructor(connectionString) {
+    this._connectionString = connectionString;
+  }
+
+  // Get a chatroom w/ message history
+
+  // Create a new chatroom
+
+  // Create a new Message
+
+
+}

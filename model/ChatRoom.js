@@ -21,25 +21,25 @@ const ModelBase = require('./ModelBase');
 
 /**
  * @class
- * @summary represents a message 
+ * @summary represents a message header
  * @swagger
  * definitions:
- *  Message:
+ *  MessageHeader:
  *    properties:
  *      id:
  *        type: string
- *        description: unique identifier for message
- *      dateSent:
- *        type: Date
- *        description: Date/Time for when message was sent
- *      viewedStatus:
+ *        description: unique identifier for messageHeader
+ *      namespace:
  *        type: string
- *        description: specifies whether a message has been read or is unread
- *      body
+ *        description: chat namespace
+ *      title:
  *        type: string
- *        description: text content of the message
+ *        description: chat title
+ *      members
+ *        type: string
+ *        description: chat members
  */
-module.exports = class Message extends ModelBase {
+module.exports = class ChatRoom extends ModelBase {
   
   /**
    * @constructor
@@ -56,10 +56,10 @@ module.exports = class Message extends ModelBase {
    * @param {*} dbMessage the message
    */
   fromData(dbMessage) {
-    this.id = this.dbMessage.id;
-    this.dateSent = this.dbMessage.dateSent;
-    this.viewedStatus = this.dbMessage.viewedStatus;
-    this.body = this.dbMessage.body;
+    this.id = dbMessage.id;
+    this.namespace = dbMessage.namespace;
+    this.title = dbMessage.title;
+    this.members = dbMessage.members;
     return this;
   }
 
@@ -70,9 +70,9 @@ module.exports = class Message extends ModelBase {
   toData() {
     return {
       id: this.id,
-      dateSent: this.dateSent,
-      viewedStatus: this.viewedStatus,
-      body: this.body
+      namespace: this.namespace,
+      title: this.title,
+      members: this.members
     }
   }
 }

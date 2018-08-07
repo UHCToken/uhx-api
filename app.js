@@ -41,7 +41,7 @@
     helmet = require('helmet'),
     http = require('http'),
     skipper = require("skipper"),
-    io = require('socket.io')(http);
+    chat = require('./controllers/chat');
     
     toobusy.maxLag(10000);
 // Startup application
@@ -97,24 +97,7 @@ else {
     https.createServer(uhx.Config.api.tls, app).listen(uhx.Config.api.port);
 }
 
-// TODO: Socket stuff for chat, refactor out of here to own service!
-io.listen(8080);
-io.on('connection', (socket) => {
-    console.log('-------------------connected and stuff--------------------');
-
-    socket.on('SEND_MESSAGE', function(data){
-        console.log('received message')
-        console.log(data);
-        io.emit('RECEIVE_MESSAGE', data);
-    })
-
-    socket.on('disconnect', () => {
-        console.log('user disconnected')
-        // socket.removeAllListeners('send message');
-        // socket.removeAllListeners('disconnect');
-        // io.removeAllListeners('connection');
-    })
-});
-// socket.listen(uhx.Config.api.port);
+// Init messaging
+// messageService.initMessageSocket();
 
 uhx.log.info(`UhX API started on ${uhx.Config.api.scheme} port ${uhx.Config.api.port}`);

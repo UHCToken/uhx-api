@@ -21,28 +21,31 @@ const ModelBase = require('./ModelBase');
 
 /**
  * @class
- * @summary represents a message header
+ * @summary represents a message in a chat room
  * @swagger
  * definitions:
- *  MessageHeader:
+ *  ChatMessage:
  *    properties:
  *      id:
  *        type: string
- *        description: unique identifier for messageHeader
- *      fromUser:
+ *        description: unique identifier for message
+ *      chatRoomId:
+ *        type: string
+ *        description: ID of chatroom the message is associated with
+ *      author:
+ *        type: string
+ *        description: author of the message
+ *      dateSent:
  *        type: Date
- *        description: User sending the message
- *      fromUserID:
+ *        description: Date/Time for when message was sent
+ *      viewedStatus:
  *        type: string
- *        description: ID of user sending the message
- *      toUser
+ *        description: specifies whether a message has been read or is unread
+ *      body
  *        type: string
- *        description: user receiving the message
- *      toUserID
- *        type: string
- *        description: ID of user receiving the message
+ *        description: text content of the message
  */
-module.exports = class MessageHeader extends ModelBase {
+module.exports = class ChatMessage extends ModelBase {
   
   /**
    * @constructor
@@ -59,11 +62,12 @@ module.exports = class MessageHeader extends ModelBase {
    * @param {*} dbMessage the message
    */
   fromData(dbMessage) {
-    this.id = this.dbMessage.id;
-    this.fromUser = this.dbMessage.fromUser;
-    this.fromUserID = this.dbMessage.fromUserID;
-    this.toUser = this.dbMessage.toUser;
-    this.toUserID = this.dbMessage.toUserID;
+    this.id = dbMessage.id;
+    this.chatRoomId = dbMessage.chatRoomId;
+    this.author = dbMessage.author;
+    this.dateSent = dbMessage.dateSent;
+    this.viewedStatus = dbMessage.viewedStatus;
+    this.body = dbMessage.body;
     return this;
   }
 
@@ -74,10 +78,11 @@ module.exports = class MessageHeader extends ModelBase {
   toData() {
     return {
       id: this.id,
-      fromUser: this.fromUser,
-      fromUserID: this.fromUserID,
-      toUser: this.toUser,
-      toUserID: this.toUserID
+      chatRoomId: this.chatRoomId,
+      author: this.author,
+      dateSent: this.dateSent,
+      viewedStatus: this.viewedStatus,
+      body: this.body
     }
   }
 }
