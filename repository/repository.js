@@ -29,6 +29,7 @@ const UserRepository = require('./userRepository'),
     ReportRepository = require('./reportRepository'),
     InvoiceRepository = require('./invoiceRepository'),
     BalanceRepository = require('./balanceRepository'),
+    Chat = require('../controllers/chat'),
     pg = require('pg'),
     uhx = require('../uhx'),
     exception = require('../exception');
@@ -47,6 +48,9 @@ class UhcRepositories {
     constructor(connectionString) {
         this.connectionString = connectionString;
         this.transaction = this.transaction.bind(this);
+
+        //Init web socket listening
+        this.chat = new Chat(this.connectionString);
     }
 
     /**

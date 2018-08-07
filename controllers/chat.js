@@ -21,6 +21,7 @@ const ChatMessage = require('../model/ChatMessage'),
   ChatRoom = require('../model/ChatRoom'),
   http = require('http'),
   io = require('socket.io')(http),
+  uhx = require('../uhx'),
   pg = require('pg');
 
 /**
@@ -28,14 +29,16 @@ const ChatMessage = require('../model/ChatMessage'),
  */
 module.exports = class Chat {
 
-  constructor() {
+  constructor(connectionString) {
+    this._connectionString = connectionString;
+    
+    //Web sockets listening...
     io.listen(8080);
-    initMessageSocket();
+    this.initSockets()
   }
 
 
-  initMessageSocket = () => {
-    // socket.listen(uhx.Config.api.port);
+  initSockets() {
     io.on('connection', (socket) => {
       console.log('-------------------connected and stuff--------------------');
       socket.on('SEND_MESSAGE', function(data){
@@ -64,7 +67,7 @@ module.exports = class Chat {
         console.log(chatRoom);
         console.log(chatMessage);
         
-        //TODO: Database callf
+        //TODO: Database call
 
         //Emit
         io.emit('RECEIVE_MESSAGE', data);
@@ -79,6 +82,37 @@ module.exports = class Chat {
       })
     });
   }
-  
+
+  //Create a chatroom
+  async createChatRoom(chatRoom) {
+    const dbc = new pg.Client(this._connectionString);
+
+    try {
+      await dbc.query(`INSERT INTO chat_room (c_id, c_namespace, c_title, c_members) VALUES (${chatRoom.id},${chatRoom.namespace},${chatRoom.title},${chatRoom.members}) RETURNING *`);
+    }
+    catch(err){console.log(err)}
+    finally {
+      dbc.end();
+    }
+  }
+
+  //Get Existing chatroom
+  async getChatRoom(chatRoomId) {
+
+  }
+
+  //Create Individual Message
+  async createChatMessage(chatRoomId, chatMessage) {
+    const dbc = new pg.Client(this._connectionString);
+
+    try {
+
+    }
+    catch (err) {console.log(error)}
+    finally {
+      dbc.end();
+    }
+  }
+
 }
  

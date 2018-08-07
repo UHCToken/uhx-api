@@ -40,8 +40,7 @@
     https = require('https'),
     helmet = require('helmet'),
     http = require('http'),
-    skipper = require("skipper"),
-    chat = require('./controllers/chat');
+    skipper = require("skipper");
     
     toobusy.maxLag(10000);
 // Startup application
@@ -96,8 +95,5 @@ if(uhx.Config.api.scheme == "http") {
 else {
     https.createServer(uhx.Config.api.tls, app).listen(uhx.Config.api.port);
 }
-
-// Init messaging
-// messageService.initMessageSocket();
 
 uhx.log.info(`UhX API started on ${uhx.Config.api.scheme} port ${uhx.Config.api.port}`);
