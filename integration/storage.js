@@ -33,7 +33,7 @@ module.exports = class ObjectStorage {
      */
     async uploadProfileImage(req, res) {
         var s3config = uhx.Config.objectStorage; // Load storage config
-        if (!req.file || req.file.name == "" || req.body.file == "undefined") { // No file supplied
+        if (!req.file || req.file.name == "" || req.body.file) { // No file supplied
             var result = new exception.Exception("Missing file payload", exception.ErrorCodes.MISSING_PAYLOAD);
         } else {
             try {
