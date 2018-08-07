@@ -49,6 +49,10 @@ class ProviderAddressApiResource {
             "routes": [
                 {
                     "path": "provideraddress",
+                    "get": {
+                        "demand": security.PermissionType.READ,
+                        "method": this.query
+                    },
                     "post": {
                         "demand": security.PermissionType.WRITE,
                         "method": this.post
@@ -80,6 +84,44 @@ class ProviderAddressApiResource {
         };
     }
     
+    /**
+     * @method
+     * @summary Allows for a query of all provider addresses with filters
+     * @param {Express.Reqeust} req The request from the client 
+     * @param {Express.Response} res The response from the client
+     * @swagger
+     * /provideraddress:
+     *  get:
+     *      tags:
+     *      - "provideraddress"
+     *      summary: "Gets filted address results"
+     *      description: "This method will fetch all addresses and filter the results"
+     *      produces:
+     *      - "application/json"
+     *      responses:
+     *          200: 
+     *             description: "The requested resource was fetched successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/ProviderAddress"
+     *          404:
+     *              description: "The specified address cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "read:user"
+     */
+    async query(req, res) {
+
+        var results = await uhx.Repositories.providerAddressRepository.query(req.query.postalZip);
+        res.status(201).json(results);
+        return true;
+    }
+
     /**
      * @method
      * @summary Creates a new provider address

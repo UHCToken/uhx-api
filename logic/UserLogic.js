@@ -176,9 +176,18 @@ module.exports = class UserLogic {
         if (addressExists)
             throw new exception.Exception("This address exists", exception.ErrorCodes.ARGUMENT_EXCEPTION);
 
-        delete (address.creationTime);
-        delete (address.updatedTime);
-        delete (address.deactivationTime);
+        var providerExists = await uhx.Repositories.providerRepository.checkIfExists(address.providerId);
+        if (!providerExists)
+            throw new exception.Exception("Provider Id does not exist", exception.ErrorCodes.ARGUMENT_EXCEPTION);
+
+        delete (address.latitude);
+        delete (address.longitude);
+
+        // Get the latitude and longitude
+        var geometry = await uhx.GoogleMaps.getLatLon(address);
+        address.latitude = geometry.lat;
+        address.longitude = geometry.lon;
+        address.placeId = geometry.placeId;
 
         try {
             var newAddress = await uhx.Repositories.providerAddressRepository.insert(address, principal);
@@ -200,11 +209,34 @@ module.exports = class UserLogic {
      * @returns {ProviderAddress} The updated provider address
      */
     async updateProviderAddress(address, serviceTypes, principal) {
+
+        var oldAddress = await uhx.Repositories.providerAddressRepository.get(address.id);
+        if (!oldAddress)
+            throw new exception.Exception("This address does not exist", exception.ErrorCodes.ARGUMENT_EXCEPTION);
+
         if (serviceTypes)
             await uhx.UserLogic.updateAddressServiceTypes(address.id, serviceTypes, principal);
 
         // Delete fields which can't be set by clients 
         delete (address.providerId);
+        delete (address.latitude);
+        delete (address.longitude);
+
+        if ((address.street && (address.street != oldAddress.street)) || (address.city && (address.city != oldAddress.city)) || (address.stateProv && (address.stateProv != oldAddress.stateProv)) || (address.country && (address.country != oldAddress.country)) || (address.postalZip && (address.postalZip != oldAddress.postalZip))) {
+            // Load new/old address data
+            var newAddress = {};
+            newAddress.street = address.street || oldAddress.street;
+            newAddress.city = address.city || oldAddress.city;
+            newAddress.stateProv = address.stateProv || oldAddress.stateProv;
+            newAddress.country = address.country || oldAddress.country;
+            newAddress.postalZip = address.postalZip || oldAddress.postalZip;
+
+            // Get the latitude and longitude
+            var geometry = await uhx.GoogleMaps.getLatLon(newAddress);
+            address.latitude = geometry.lat;
+            address.longitude = geometry.lon;
+            address.placeId = geometry.placeId;
+        }
 
         if (principal.grant["user"] & security.PermissionType.OWNER) {
             try {

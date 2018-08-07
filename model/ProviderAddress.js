@@ -119,7 +119,9 @@ module.exports = class ProviderAddress extends ModelBase {
         this.stateProv = dbAddress.state_prov;
         this.country = dbAddress.country;
         this.postalZip = dbAddress.postal_zip;
-        this.unitSuite = dbAddress.unit_suite;
+        this.latitude = dbAddress.latitude;
+        this.longitude = dbAddress.longitude;
+        this.placeId = dbAddress.place_id;
         this.visible = dbAddress.visible;
         this.creationTime = dbAddress.creation_time;
         this.updatedTime = dbAddress.updated_time;
@@ -144,7 +146,10 @@ module.exports = class ProviderAddress extends ModelBase {
             state_prov: this.stateProv,
             country: this.country,
             postal_zip: this.postalZip,
-            visible: this.visible
+            visible: this.visible,
+            latitude: this.latitude,
+            longitude: this.longitude,
+            place_id: this.placeId
         };
 
         return retVal;

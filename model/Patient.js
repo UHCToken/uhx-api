@@ -152,11 +152,11 @@ const uhx = require('../uhx'),
         this.sensitivities = dbPatient.sensitivities;
         this.address = {
             street: dbPatient.street,
-            unitOrSuite: dbPatient.unit_suite,
+            unitSuite: dbPatient.unit_suite,
             city: dbPatient.city,
-            stateOrProvince: dbPatient.state_prov,
+            stateProv: dbPatient.state_prov,
             country: dbPatient.country,
-            postalOrZip: dbPatient.postal_zip
+            postalZip: dbPatient.postal_zip
         },
         this.creationTime = dbPatient.creation_time;
         this.updatedTime = dbPatient.updated_time;
@@ -186,11 +186,11 @@ const uhx = require('../uhx'),
 
         if(this.address) {
             retVal.street = this.address.street;
-            retVal.unit_suite = this.address.unitOrSuite;
+            retVal.unit_suite = this.address.unitSuite;
             retVal.city = this.address.city;
-            retVal.state_prov = this.address.stateOrProvince;
+            retVal.state_prov = this.address.stateProve;
             retVal.country = this.address.country;
-            retVal.postal_zip = this.address.postalOrZip;
+            retVal.postal_zip = this.address.postalZip;
         }
 
         return retVal;

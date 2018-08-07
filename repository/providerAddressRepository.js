@@ -38,6 +38,7 @@ module.exports = class ProviderAddressRepository {
         this._connectionString = connectionString;
         this.get = this.get.bind(this);
         this.getAllForProvider = this.getAllForProvider.bind(this);
+        this.query = this.query.bind(this);
         this.update = this.update.bind(this);
         this.insert = this.insert.bind(this);
         this.getAddressServiceTypes = this.getAddressServiceTypes.bind(this);
@@ -70,7 +71,6 @@ module.exports = class ProviderAddressRepository {
 
     }
 
-
     /**
      * @method
      * @summary Retrieve all of a provider's addresses from the database
@@ -95,6 +95,32 @@ module.exports = class ProviderAddressRepository {
         }
         finally {
             if (!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Query the database for the specified addresses
+     * @param {*} filter The query template to use
+     * @returns {*} The matching addresses
+     */
+    async query(filter, _txc) {
+        const dbc =  _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+            // TODO: Filter
+            const rdr = await dbc.query("SELECT * FROM provider_addresses");
+            if (rdr.rows.length == 0)
+                return null;
+            else {
+                var retVal = [];
+                for (var r in rdr.rows)
+                    retVal[r] = rdr.rows[r];
+                return retVal;
+            }
+        }
+        finally {
+            if(!_txc) dbc.end();
         }
     }
 
