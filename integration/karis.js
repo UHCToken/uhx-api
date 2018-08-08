@@ -21,6 +21,7 @@ const request = require("request"),
     exception = require("../exception"),
     security = require('../security'),
     schedule = require('node-schedule'),
+    subscriptionRepository = require('../repository/subscriptionRepository'),
     uhx = require("../uhx");
 
 module.exports = class Karis {
@@ -43,7 +44,7 @@ module.exports = class Karis {
      */
     async sendDailyLog() {
         try {
-
+            const subscribers = this.subscriptionRepository.getSubscribersForDailyReport()
 
         } catch(ex) {
 

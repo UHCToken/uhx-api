@@ -30,6 +30,7 @@
     MonetaryAmount = require('./MonetaryAmount'),
     Transaction = require('./Transaction'),
     Wallet = require('./Wallet'),
+    Subscription = require('./Subscription'),
     Balance = require('./Balance'),
     Invoice = require('./Invoice');
 
@@ -70,8 +71,8 @@ module.exports.PermissionSet = PermissionSet;
 module.exports.PermissionSetInstance = PermissionSetInstance;
 module.exports.Wallet = Wallet
 module.exports.Utils = new ModelUtil();
-module.exports.Wallet = Wallet;
 module.exports.Invoice = Invoice;
+module.exports.Subscription = Subscription;
 module.exports.Balance = Balance;
 module.exports.MonetaryAmount = MonetaryAmount;
 module.exports.Transaction = Transaction;

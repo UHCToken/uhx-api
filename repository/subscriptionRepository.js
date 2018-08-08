@@ -44,17 +44,48 @@ const pg = require('pg'),
      * @summary Retrieve a specific subscription from the database
      * @param {uuid} id Gets the specified session
      * @param {Client} _txc The postgresql connection with an active transaction to run in
-     * @returns {Application} The fetched application
+     * @returns {Subscription} The fetched subscription
      */
     async get(id, _txc) {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
             const rdr = await dbc.query("SELECT * FROM subscriptions WHERE id = $1", [id]);
-            if(rdr.rows.length == 0)
+            if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', id);
             else
-                return new model.Application().fromData(rdr.rows[0]);
+                return new model.Subscription().fromData(rdr.rows[0]);
+        }
+        finally {
+            if(!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Retrieve a set of subscribers from the database that have current subscriptions for today
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {Subscription} The fetched subscriptions
+     */
+    async getSubscribersForDailyReport(_txc) {
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 1);
+
+            if(!_txc) await dbc.connect();
+            const rdr = await dbc.query("SELECT * FROM subscriptions WHERE effective_date >= " + today + " AND termination_date < " + today + "OR NULL");
+            if(rdr.rows.length === 0)
+                throw new exception.NotFoundException('subscriptions', 'No Subscriptions found.');
+            else {
+                const subscriptions = [];
+
+                for (let i = 0; i < rdr.rows.length; i++) {
+                    subscriptions.push(new model.Subscription().fromData(rdr.rows[i]))
+                }
+
+                return subscriptions;
+            }
         }
         finally {
             if(!_txc) dbc.end();
