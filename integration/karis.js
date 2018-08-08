@@ -22,11 +22,20 @@ const request = require("request"),
     security = require('../security'),
     schedule = require('node-schedule'),
     subscriptionRepository = require('../repository/subscriptionRepository'),
+    userRepository = require('../repository/userRepository'),
     uhx = require("../uhx");
+    model = require('../model/model');
+    config = require('../config');
 
 module.exports = class Karis {
 
     constructor() {
+        Number.prototype.pad = function(size) {
+            const s = String(this);
+            while (s.length < (size || 2)) {s = "0" + s;}
+            return s;
+        }
+
         // Starts a schedule to send daily logs to Karis every day at 9 pm
         schedule.scheduleJob('* * 19 * *', () => {
             this.sendDailyLog();
@@ -44,8 +53,27 @@ module.exports = class Karis {
      */
     async sendDailyLog() {
         try {
-            const subscribers = this.subscriptionRepository.getSubscribersForDailyReport()
+            const subscriptions = await subscriptionRepository.getSubscriptionsForDailyReport();
 
+            if (!subscriptions) {
+                // No subscriptions found
+            } else {
+                reports = [];
+
+                for (let i = 0; i < subscriptions.length; i++) {
+                    const subscription = subscriptions[i];
+                    const user = await userRepository.get(subscription.userId);
+
+                    reports.push(new model.Karis().fromData(user, subscription));
+                }
+
+                const now = new Date();
+                const clientCode = config.karis.clientCode;
+                const fileDateDisplay = (now.getMonth() + 1).pad() + now.getDate().pad() + now.getFullYear;
+                const filename = clientCode + "_" + fileDateDisplay;
+
+                this.sendKarisReport(reports, filename);
+            }
         } catch(ex) {
 
         }
@@ -58,9 +86,38 @@ module.exports = class Karis {
     async sendMonthlyCensus() {
         try {
 
+            const subscriptions = await subscriptionRepository.getSubscriptionsForMonthlyReport();
 
+            if (!subscriptions) {
+                // No subscriptions found
+            } else {
+                reports = [];
+
+                for (let i = 0; i < subscriptions.length; i++) {
+                    const subscription = subscriptions[i];
+                    const user = await userRepository.get(subscription.userId);
+
+                    reports.push(new model.Karis().fromData(user, subscription));
+                }
+
+                const fileDateDisplay = (now.getMonth() + 1).pad() + now.getDate().pad() + now.getFullYear;
+                const filename = "UNIVERSALHEALTHCOINCENSUS_" + fileDateDisplay;
+
+                this.sendKarisReport(reports, filename);
+            }
         } catch(ex) {
 
         }
+    }
+
+    /**
+     * @method
+     * @summary Sends the list of reports to Karis
+     * @param {Karis} reports A collection of Karis reports to be sent to daily or monthly reports
+     * @param {string} filename The name of the file to be saved within Karis
+     */
+    sendKarisReport(reports, filename) {
+        csvFilename = filename + ".csv";
+
     }
 }

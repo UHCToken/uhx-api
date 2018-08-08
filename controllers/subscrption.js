@@ -102,22 +102,9 @@ class WalletApiResource {
     async get(req, res) {
         var subscriptions = await uhx.Repositories.subscriptionRepository.get(req.params.uid);
 
-        var retVal = {};
+        var retVal = subscriptions;
       
-    
-     
-
-
-
         res.status(200).json(retVal);
         return true
     }
-
-
-
-
-
-
-
-
 }

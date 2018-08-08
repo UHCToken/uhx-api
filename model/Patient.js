@@ -31,10 +31,10 @@ const uhx = require('../uhx'),
   * @property {string} fax The patient's fax number
   * @property {string} email The patient's contact email
   * @property {string} profileImage The patient's profile image
-  * @property {string} gender The patient's profile image
-  * @property {string} dob The patient's profile image
-  * @property {string} history The patient's profile image
-  * @property {string} sensitivities The patient's profile image
+  * @property {string} gender The patient's gender
+  * @property {string} dob The patient's dtae of birth
+  * @property {string} history The patient's history
+  * @property {string} sensitivities The patient's sensitivities
   * @property {Object} address The patient's address information
   * @property {string} address.street The patient's street address
   * @property {string} address.unitOrSuite The unit or suit information for the patient

@@ -36,25 +36,36 @@ const pg = require('pg'),
     constructor(connectionString) {
         this._connectionString = connectionString;
         this.get = this.get.bind(this);
-        this.getByNameSecret = this.getByNameSecret.bind(this);
+        this.getSubscriptionsForDailyReport = this.getSubscriptionsForDailyReport.bind(this);
+        this.getSubscriptionsForMonthlyReport = this.getSubscriptionsForMonthlyReport.bind(this);
     }
 
     /**
      * @method
-     * @summary Retrieve a specific subscription from the database
-     * @param {uuid} id Gets the specified session
+     * @summary Retrieve a specific subscription from the database for a user
+     * @param {uuid} id Gets the specified users subscriptions
      * @param {Client} _txc The postgresql connection with an active transaction to run in
-     * @returns {Subscription} The fetched subscription
+     * @returns {Subscription} The fetched subscriptions for the user
      */
-    async get(id, _txc) {
+    async get(userId, _txc) {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 1);
+
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM subscriptions WHERE id = $1", [id]);
+            const rdr = await dbc.query("SELECT * FROM subscriptions WHERE user_id = $1 AND termination_date < $2 OR NULL", [userId, today]);
             if(rdr.rows.length === 0)
-                throw new exception.NotFoundException('subscriptions', id);
-            else
-                return new model.Subscription().fromData(rdr.rows[0]);
+                throw new exception.NotFoundException('subscriptions', userId);
+            else {
+                const subscriptions = [];
+
+                for (let i = 0; i < rdr.rows.length; i++) {
+                    subscriptions.push(new model.Subscription().fromData(rdr.rows[i]))
+                }
+
+                return subscriptions;
+            }
         }
         finally {
             if(!_txc) dbc.end();
@@ -67,14 +78,42 @@ const pg = require('pg'),
      * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {Subscription} The fetched subscriptions
      */
-    async getSubscribersForDailyReport(_txc) {
+    async getSubscriptionsForDailyReport(_txc) {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             const now = new Date();
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 1);
 
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM subscriptions WHERE effective_date >= " + today + " AND termination_date < " + today + "OR NULL");
+            const rdr = await dbc.query("SELECT * FROM subscriptions WHERE effective_date >= $1 AND termination_date < $1 OR NULL", [today]);
+            if(rdr.rows.length === 0)
+                throw new exception.NotFoundException('subscriptions', 'No Subscriptions found.');
+            else {
+                const subscriptions = [];
+
+                for (let i = 0; i < rdr.rows.length; i++) {
+                    subscriptions.push(new model.Subscription().fromData(rdr.rows[i]))
+                }
+
+                return subscriptions;
+            }
+        }
+        finally {
+            if(!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Retrieve a set of subscribers from the database that an active membership for the previous month
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {Subscription} The fetched subscriptions
+     */
+    async getSubscriptionsForMonthlyReport(_txc) {
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+            const rdr = await dbc.query("SELECT * FROM subscriptions WHERE termination_date IS NULL OR termination_date < $1", [new Date()]);
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', 'No Subscriptions found.');
             else {

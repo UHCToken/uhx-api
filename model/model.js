@@ -29,12 +29,14 @@
     ModelUtil = require('./ModelUtil'),
     Application = require('./Application'),
     Session = require('./Session'),
+    Karis = require('./Karis'),
     PermissionSet = require('./PermissionSet'),
     PermissionSetInstance = require('./PermissionSetInstance'),
     MonetaryAmount = require('./MonetaryAmount'),
     Transaction = require('./Transaction'),
     Wallet = require('./Wallet'),
     Subscription = require('./Subscription'),
+    Karis = require('./Karis'),
     Balance = require('./Balance'),
     Invoice = require('./Invoice');
 
@@ -81,6 +83,7 @@ module.exports.Wallet = Wallet
 module.exports.Utils = new ModelUtil();
 module.exports.Invoice = Invoice;
 module.exports.Subscription = Subscription;
+module.exports.Karis = Karis;
 module.exports.Balance = Balance;
 module.exports.MonetaryAmount = MonetaryAmount;
 module.exports.Transaction = Transaction;

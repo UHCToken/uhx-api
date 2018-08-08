@@ -21,15 +21,40 @@ const ModelBase = require('./ModelBase'),
     uhx = require('../uhx');
 
 /**
- * @class
+ * @class Subscription
  * @summary Represents a users subscription to a service
+ * @property {string} id The identifier for the subscription
+ * @property {string} userId The user id of the patient
+ * @property {string} offeringId The offering id of the subscription
+ * @property {Date} startingDate The date the subscription begins
+ * @property {Date} terminationDate The date the subscription will end
+ * @property {Date} nextBillingDate The date of the next billing period
+ * @property {number} monthsRemaining The number of months remaining for the given subscription
  * @swagger
  * definitions:
  *  Subscription:
  *      properties:
- *          id:
+ *          id: 
  *              type: string
  *              description: The unique identifier for the subscription
+ *          userId:
+ *              type: string
+ *              description: The user id of the patient
+ *          offeringId:
+ *              type: string
+ *              description: The id of the group of services this subscription is subscribed to
+ *          startingDate:
+ *              type: Date
+ *              description: The date the subscription began
+ *          terminationDate:
+ *              type: Date
+ *              description: The date the subscription ends
+ *          nextBillingDate:
+ *              type: Date
+ *              description: The date of the next billing period
+ *          monthsRemaining:
+ *              type: number
+ *              description: The number of months remaining for the given subscription
  */
 module.exports = class Subscription extends ModelBase {
 
@@ -40,6 +65,7 @@ module.exports = class Subscription extends ModelBase {
         super();
         this.fromData = this.fromData.bind(this);
         this.toData = this.toData.bind(this);
+        this.toJSON = this.toJSON.bind(this);
     }
 
     /**
@@ -52,8 +78,10 @@ module.exports = class Subscription extends ModelBase {
         this.id = dbSubscription.id;
         this.userId = dbSubscription.user_id;
         this.offeringId = dbSubscription.offering_id;
-        this.effectiveDate = dbSubscription.effective_date;
+        this.startingDate = dbSubscription.starting_date;
         this.terminationDate = dbSubscription.termination_date;
+        this.nextBillingDate = dbSubscription.next_billing_date;
+        this.monthsRemaining = dbSubscription.months_remaining;
         return this;
     }
 
@@ -66,8 +94,10 @@ module.exports = class Subscription extends ModelBase {
             id : this.id,
             user_id : this.userId,
             offering_id = this.offeringId,
-            effective_date = this.effectiveDate,
-            termination_date = this. terminationDate
+            starting_date = this.startingDate,
+            termination_date = this.terminationDate,
+            next_billing_date = this.nextBillingDate,
+            months_remaining = this.monthsRemaining
         };
     }
 
@@ -80,8 +110,10 @@ module.exports = class Subscription extends ModelBase {
             id : this.id,
             userId : this.user_id,
             offeringId = this.offering_id,
-            effectiveDate = this.effective_date,
-            terminationDate = this. termination_date
+            startingDate = this.starting_date,
+            terminationDate = this.termination_date,
+            nextBillingDate = this.next_billing_date,
+            monthsRemaining = this.months_remaining
         }
     }
 }
