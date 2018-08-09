@@ -20,22 +20,112 @@
 
 const pg = require('pg'),
   exception = require('../exception'),
-  Group = require('../model/Group'),
-  User = require('../model/User'),
+  ChatRoom = require('../model/ChatRoom'),
+  ChatMessage = require('../model/ChatMessage'),
   model = require('../model/model'),
   security = require('../security');
 
+/**
+ * @class
+ * @summary Represents a data access class to the chat tables
+ */  
 module.exports = class ChatRepository {
 
+  /**
+   * @constructor
+   * @summary Creates a new instance of the chat repository
+   * @param {string} connectionString The connection string to the database to interact with
+   */
   constructor(connectionString) {
     this._connectionString = connectionString;
+    this.createChatRoom = this.createChatRoom.bind(this);
+    this.getChatRooms = this.getChatRooms.bind(this);
+    this.createChatMessage = this.createChatMessage.bind(this);
+    this.getChatMessages = this.getChatMessages.bind(this);
   }
 
-  // Get a chatroom w/ message history
+  /**
+   * @method
+   * @summary creates an individual chat room
+   * @param {string} chatRoom The chatroom to be greated
+   */
+  async createChatRoom(chatRoom) {
+    const dbc = new pg.Client(this._connectionString);
 
-  // Create a new chatroom
+    try {
+      await dbc.connect();
+      await dbc.query('INSERT INTO chat_room (c_id, c_namespace, c_title, c_providerid, c_patientid) VALUES ($1,$2,$3,$4,$5) RETURNING *', 
+                              [chatRoom.id, chatRoom.namespace, chatRoom.title, chatRoom.providerId, chatRoom.patientId]);
+    }
+    catch(err){uhx.log.debug(err)}
+    finally {
+      dbc.end();
+    }
+  }
 
-  // Create a new Message
+  /**
+   * @method
+   * @summary gets chatrooms associated with specific user
+   * @param {string} userId The user associated with the chat rooms
+   */
+  async getChatRooms(userId) {
+    const dbc = new pg.Client(this._connectionString);
+    try {
+      let userChats = [];
+      await dbc.connect();
+      let userChatsFromDB = await dbc.query('SELECT * FROM chat_room WHERE c_patientid = $1', [userId])
+      for(var r in userChatsFromDB.rows)
+        userChats.push(new ChatRoom().fromData(userChatsFromDB.rows[r]));
 
+      return userChats;
+    }
+    catch(err){console.log(err)}
+    finally {
+
+    }
+  }
+
+  /**
+   * @method
+   * @summary Creates a chat message
+   * @param {string} chatRoomId ID of chat room message is associated with
+   * @param {string} chatMessage The message that needs to be saved
+   */
+  async createChatMessage(chatRoomId, chatMessage) {
+    const dbc = new pg.Client(this._connectionString);
+
+    try {
+      await dbc.connect();
+      await dbc.query('INSERT INTO chat_message (cm_id, cm_chatroom_id, cm_author, cm_datesent, cm_viewedstatus, cm_body) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *', 
+                              [chatMessage.id, chatRoomId, chatMessage.author, chatMessage.dateSent, chatMessage.viewedStatus, chatMessage.body]);
+    }
+    catch (err) {console.log(error)}
+    finally {
+      dbc.end();
+    }
+  }
+
+  /**
+   * @method
+   * @summary gets all chat messages associated with specific chatroom
+   * @param {string} chatRoomId ChatID of chat messages are associated with
+   */
+  async getChatMessages(chatRoomId) {
+    const dbc = new pg.Client(this._connectionString);
+    try {
+      let chatRoomMessages = [];
+      await dbc.connect();
+      let messagesFromDB = await dbc.query('SELECT * FROM chat_message WHERE cm_chatroom_id = $1', [chatRoomId])
+
+      for(var r in messagesFromDB.rows)
+      chatRoomMessages.push(new ChatRoom().fromData(messagesFromDB.rows[r]));
+
+      return chatRoomMessages;
+    }
+    catch (err) {console.log(error)}
+    finally {
+      dbc.end();
+    }
+  }
 
 }

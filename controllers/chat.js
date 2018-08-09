@@ -21,11 +21,13 @@ const ChatMessage = require('../model/ChatMessage'),
   ChatRoom = require('../model/ChatRoom'),
   http = require('http'),
   io = require('socket.io')(http),
-  uhx = require('../uhx'),
-  pg = require('pg');
+  security = require('../security'),
+  exception = require('../exception'),
+  uhx = require('../uhx');
 
 /**
- * Init web socket for chat
+ * @class
+ * @summary Represents Chat Object, with socket.io for listening, and routes for getting/creating chatrooms and chats
  */
 module.exports = class Chat {
 
@@ -38,17 +40,33 @@ module.exports = class Chat {
   }
 
 
+  get routes() {
+    return {
+      permission_group: "chat",
+      routes: [
+        {
+          "path": "chat",
+          "get" : {
+              demand: security.PermissionType.LIST,
+              method: this.getChatRooms
+          },
+          "post" : {
+              demand: security.PermissionType.WRITE,
+              method: this.createChatRoom
+          }
+        }
+      ]
+    }  
+  }
+
+
+
   initSockets() {
     io.on('connection', (socket) => {
       console.log('-------------------connected and stuff--------------------');
+
       socket.on('SEND_MESSAGE', function(data){
 
-        let chatRoomFromData = {
-          id: data.chatRoom.id,
-          namespace: data.chatRoom.namespace,
-          title: data.chatRoom.title,
-          members: data.chatRoom.members.map( m=>m )
-        }
         let chatMessageFromData = {
           id: data.chatMessage.id,
           chatRoomId: data.chatMessage.chatRoomId,
@@ -58,19 +76,12 @@ module.exports = class Chat {
           body: data.chatMessage.body 
         }
 
-        console.log('received message')
-        console.log(data);
-        //TODO Put data in model
-        let chatRoom = new ChatRoom().copy(chatRoomFromData);
+        //Create new Room or Message
         let chatMessage = new ChatMessage().copy(chatMessageFromData);
 
-        console.log(chatRoom);
-        console.log(chatMessage);
-        
-        //TODO: Database call
-
-        //Emit
+        //Emit to chat
         io.emit('RECEIVE_MESSAGE', data);
+
       })
 
       socket.on('disconnect', () => {
@@ -83,36 +94,66 @@ module.exports = class Chat {
     });
   }
 
-  //Create a chatroom
-  async createChatRoom(chatRoom) {
-    const dbc = new pg.Client(this._connectionString);
+  /**
+   * @method
+   * @summary Get a list of chatrooms that a user is a part of 
+   * @param {Express.Request} req http req from the client
+   * @param {Express.Response} res The HTTP response going to the client
+   */
+  async getChatRooms(req, res) {
+    if(!req.params.gid)
+        throw new exception.Exception("Missing chat user id parameter", exception.ErrorCodes.MISSING_PROPERTY);
 
-    try {
-      await dbc.query(`INSERT INTO chat_room (c_id, c_namespace, c_title, c_members) VALUES (${chatRoom.id},${chatRoom.namespace},${chatRoom.title},${chatRoom.members}) RETURNING *`);
-    }
-    catch(err){console.log(err)}
-    finally {
-      dbc.end();
-    }
+    res.status(200).json(await uhx.Repositories.chatRepository.getChatRooms(req.params.patientId));
+    return true;
   }
 
-  //Get Existing chatroom
-  async getChatRoom(chatRoomId) {
+  /**
+   * @method
+   * @summary Creates a new chat room
+   * @param {Express.Request} req The HTTP request fromthis client
+   * @param {Express.Response} res The HTTP response going to the client
+   */
+  async createChatRoom(req, res) {
+    if(!req.body)
+      throw new exception.Exception("Missing body", exception.ErrorCodes.MISSING_PAYLOAD);
 
+    let chatRoom = new ChatRoom().copy(req.body.chatRoom)
+    //Create unique chatroom ID
+    chatroom.id = `${new Date(MM/DD/YYYY)}${chatroom.providerId}${chatRoom.patientId}`
+    res.status(201).json(uhx.Repositories.chatRepository.createChatRoom(chatRoom));
+    return true;
   }
 
-  //Create Individual Message
-  async createChatMessage(chatRoomId, chatMessage) {
-    const dbc = new pg.Client(this._connectionString);
 
-    try {
+  /**
+   * @method
+   * @summary Creates a new chat message
+   * @param {Express.Request} req http req from the client
+   * @param {Express.Response} res The HTTP response going to the client
+   */
+  async createChatMessage(req, res) {
+    if(!req.body)
+      throw new exception.Exception("Missing body", exception.ErrorCodes.MISSING_PAYLOAD);
 
-    }
-    catch (err) {console.log(error)}
-    finally {
-      dbc.end();
-    }
+    let chatRoomId = req.body.chatRoomId;
+    let chatMessage = new ChatMessage().copy(req.body.chatMessage)
+    res.status(201).json(uhx.Repositories.chatRepository.createChatMessage(chatRoomId, chatMessage));
+    return true;
+  }
+
+  /**
+   * @method
+   * @summary Gets chat messages associated with a particular chat room
+   * @param {Express.Request} req http req from the client
+   * @param {Express.Response} res The HTTP response going to the client
+   */
+  async getChatMessages(req, res) {
+    if(!req.params.gid)
+        throw new exception.Exception("Missing chat room id parameter", exception.ErrorCodes.MISSING_PROPERTY);
+
+    res.status(200).json(await uhx.Repositories.chatRepository.getChatMessages(req.params.chatRoomId));
+    return true;
   }
 
 }
- 

@@ -29,6 +29,7 @@ const UserRepository = require('./userRepository'),
     ReportRepository = require('./reportRepository'),
     InvoiceRepository = require('./invoiceRepository'),
     BalanceRepository = require('./balanceRepository'),
+    ChatRepository = require('./chatRepository'),
     Chat = require('../controllers/chat'),
     pg = require('pg'),
     uhx = require('../uhx'),
@@ -217,6 +218,19 @@ class UhcRepositories {
         if(!this._balanceRepository)
             this._balanceRepository = new BalanceRepository(this.connectionString);
         return this._balanceRepository;
+    }
+
+    //ChatRepository
+
+    /**
+     * @property 
+     * @summary Get the chat repository
+     * @type {ChatRepository}
+     */
+    get chatRepository() {
+        if(!this._chatRepository)
+            this._chatRepository = new ChatRepository(this.connectionString);
+        return this._chatRepository;
     }
 }
 

@@ -35,9 +35,12 @@ const ModelBase = require('./ModelBase');
  *      title:
  *        type: string
  *        description: chat title
- *      members
+ *      providerId
  *        type: string
- *        description: chat members
+ *        description: userId of provider
+*       patientId
+ *        type: string
+ *        description: userId of patient
  */
 module.exports = class ChatRoom extends ModelBase {
   
@@ -59,7 +62,8 @@ module.exports = class ChatRoom extends ModelBase {
     this.id = dbMessage.id;
     this.namespace = dbMessage.namespace;
     this.title = dbMessage.title;
-    this.members = dbMessage.members;
+    this.providerId = dbMessage.providerId;
+    this.patientId = dbMessage.patientId;
     return this;
   }
 
@@ -72,7 +76,8 @@ module.exports = class ChatRoom extends ModelBase {
       id: this.id,
       namespace: this.namespace,
       title: this.title,
-      members: this.members
+      providerId: this.providerId,
+      patientId: this.patientId
     }
   }
 }
