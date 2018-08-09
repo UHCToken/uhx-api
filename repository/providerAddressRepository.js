@@ -126,16 +126,20 @@ module.exports = class ProviderAddressRepository {
                         AND provider_addresses.longitude BETWEEN ($2::NUMERIC - $3::NUMERIC) AND ($2::NUMERIC + $3::NUMERIC)
                         ) AS provider_addresses
                     ) SUB
-                WHERE distance <= $4`;
+                WHERE distance <= $4
+                AND deactivation_time IS NULL
+                AND visible = true`;
 
-            var sqlArgs = [filter.lat, filter.lon, filter.range || 0.5, filter.distance || 25];
+            var sqlArgs = [filter.lat, filter.lon, filter.distance * 0.02 || 0.5, filter.distance || 25, filter.limit || 25];
             if (filter.serviceType) {
                 sqlQuery += `
-                     AND id IN (SELECT provider_address_id FROM provider_address_types WHERE service_type = $5)`;
+                     AND id IN (SELECT provider_address_id FROM provider_address_types WHERE service_type = $6)`;
                 sqlArgs.push(filter.serviceType);
             }
 
-            sqlQuery += ` ORDER BY distance ASC`;
+            sqlQuery += `
+             ORDER BY distance ASC
+             LIMIT $5;`;
             const rdr = await dbc.query(sqlQuery, sqlArgs);
 
 
@@ -144,7 +148,7 @@ module.exports = class ProviderAddressRepository {
             else {
                 var retVal = [];
                 for (var r in rdr.rows)
-                    retVal[r] = rdr.rows[r];
+                    retVal[r] = new ProviderAddress().fromData(rdr.rows[r]);
                 return retVal;
             }
         }

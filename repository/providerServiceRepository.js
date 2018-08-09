@@ -37,6 +37,9 @@ module.exports = class ProviderServiceRepository {
     constructor(connectionString) {
         this._connectionString = connectionString;
         this.get = this.get.bind(this);
+        this.serviceTypeExists = this.serviceTypeExists.bind(this);
+        this.getAllForAddress = this.getAllForAddress.bind(this);
+        this.getAllForAddressByType = this.getAllForAddressByType.bind(this);
         this.update = this.update.bind(this);
         this.insert = this.insert.bind(this);
         this.delete = this.delete.bind(this);
@@ -91,8 +94,8 @@ module.exports = class ProviderServiceRepository {
 
     /**
      * @method
-     * @summary Retrieve all of an addresses services from the database
-     * @param {uuid} addressId Gets all of the specified addresses services
+     * @summary Retrieve all of an addresses services from the database for an address
+     * @param {string} addressId The address to get services for
      * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {*} The retrieved addresses services
      */
@@ -102,6 +105,34 @@ module.exports = class ProviderServiceRepository {
         try {
             if (!_txc) await dbc.connect();
             const rdr = await dbc.query("SELECT * FROM provider_address_services WHERE address_id = $1 AND deactivation_time IS NULL ORDER BY GREATEST(updated_time, creation_time) DESC", [addressId]);
+            if (rdr.rows.length == 0)
+                return null;
+            else {
+                var retVal = [];
+                for (var r in rdr.rows)
+                    retVal[r] = new ProviderService().fromData(rdr.rows[r]);
+                return retVal;
+            }
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Retrieve all of an addresses services from the database for an address for a service type
+     * @param {string} addressId The address to get services for
+     * @param {string} serviceType The service type to get services for
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {*} The retrieved addresses services
+     */
+    async getAllForAddressByType(addressId, serviceType, _txc) {
+
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+            const rdr = await dbc.query("SELECT * FROM provider_address_services WHERE address_id = $1 AND deactivation_time IS NULL AND service_type = $2 ORDER BY GREATEST(service_name) DESC", [addressId, serviceType]);
             if (rdr.rows.length == 0)
                 return null;
             else {

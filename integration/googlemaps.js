@@ -66,23 +66,29 @@ module.exports = class GoogleMaps {
     */
     async getDistances(origin, addresses) {
         var gm = new GoogleMapsAPI(uhx.Config.googleMaps);
-        
+
         var distanceParams = {
             origins: origin,
-            destinations: addresses.map((t)=> {return `${t.latitude},${t.longitude}`}).join("|"),
+            destinations: addresses.map((t) => { return `${t.latitude},${t.longitude}` }).join("|"),
             units: "metric"
         };
-        
+
         return await new Promise((fulfill, reject) => {
             gm.distance(distanceParams, function (err, results) {
                 if (results && results.status == "OK") {
-                    fulfill(results);
+                    try {
+                        for (var address in addresses)
+                            addresses[address].driving = results.rows[0].elements[address].duration ? results.rows[0].elements[address].duration.value : null;
+                        fulfill(addresses);
+                    } catch (ex) {
+                        reject(new exception.Exception("Error getting distances: " + ex, exception.ErrorCodes.DATA_ERROR));
+                    }
                 }
                 else {
                     reject(new exception.Exception("Error getting distances: " + err, exception.ErrorCodes.DATA_ERROR));
                 }
             });
         });
-        return results;
+        return addresses;
     }
 }

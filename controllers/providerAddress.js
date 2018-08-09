@@ -122,7 +122,17 @@ class ProviderAddressApiResource {
             req.query.lon = geometry.lon;
         }
         var addresses = await uhx.Repositories.providerAddressRepository.query(req.query);
-        //var distances = await uhx.GoogleMaps.getDistances(req.query.address, addresses);
+        if (addresses) {
+            addresses = await uhx.GoogleMaps.getDistances(req.query.address, addresses);
+            for (var adr in addresses) {
+                await addresses[adr].loadAddressServiceTypes();
+                await addresses[adr].loadProviderDetails();
+                if (req.query.serviceType)
+                    addresses[adr].services = await uhx.Repositories.providerServiceRepository.getAllForAddressByType(addresses[adr].id, req.query.serviceType);
+                else 
+                    addresses[adr].loadAddressServices();
+            }
+        }
         res.status(201).json(addresses);
         return true;
     }

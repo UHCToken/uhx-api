@@ -57,7 +57,6 @@ CREATE TABLE IF NOT EXISTS provider_addresses (
     postal_zip VARCHAR(16) NOT NULL,
     latitude NUMERIC(8, 6),
     longitude NUMERIC(9, 6),
-    place_id VARCHAR(32),
     provider_id UUID NOT NULL,
     visible BOOLEAN DEFAULT TRUE,
     creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
