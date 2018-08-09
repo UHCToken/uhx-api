@@ -32,7 +32,7 @@ const config = require('./config'),
     poolio = require('poolio'),
     Web3Client = require("./integration/web3"),
     BitcoinClient = require("./integration/bitcoin"),
-    Karis = require("./integration/karis"),
+    KarisService = require("./integration/karis"),
     worker = require('./worker');
 
 winston.level = config.logging.level;
@@ -62,7 +62,7 @@ module.exports.init = () => {
         winston.info("GreenMoney Initialized...");
         module.exports.GreenMoney = new GreenMoney();
         winston.info("Karis Initialized...");
-        module.exports.Karis = new Karis();
+        module.exports.Karis = new KarisService();
         winston.info("ObjectStorage Initialized...");
         module.exports.ObjectStorage = new ObjectStorage();
         winston.info("Google Maps Initialized...");

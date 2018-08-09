@@ -93,11 +93,11 @@ module.exports = class Subscription extends ModelBase {
         return {
             id : this.id,
             user_id : this.userId,
-            offering_id = this.offeringId,
-            starting_date = this.startingDate,
-            termination_date = this.terminationDate,
-            next_billing_date = this.nextBillingDate,
-            months_remaining = this.monthsRemaining
+            offering_id: this.offeringId,
+            starting_date: this.startingDate,
+            termination_date: this.terminationDate,
+            next_billing_date: this.nextBillingDate,
+            months_remaining: this.monthsRemaining
         };
     }
 
@@ -109,11 +109,11 @@ module.exports = class Subscription extends ModelBase {
         return {
             id : this.id,
             userId : this.user_id,
-            offeringId = this.offering_id,
-            startingDate = this.starting_date,
-            terminationDate = this.termination_date,
-            nextBillingDate = this.next_billing_date,
-            monthsRemaining = this.months_remaining
+            offeringId: this.offering_id,
+            startingDate: this.starting_date,
+            terminationDate: this.termination_date,
+            nextBillingDate: this.next_billing_date,
+            monthsRemaining: this.months_remaining
         }
     }
 }

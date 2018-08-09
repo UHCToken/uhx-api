@@ -36,7 +36,6 @@
     Transaction = require('./Transaction'),
     Wallet = require('./Wallet'),
     Subscription = require('./Subscription'),
-    Karis = require('./Karis'),
     Balance = require('./Balance'),
     Invoice = require('./Invoice');
 

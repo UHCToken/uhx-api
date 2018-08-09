@@ -23,11 +23,14 @@ const request = require("request"),
     schedule = require('node-schedule'),
     subscriptionRepository = require('../repository/subscriptionRepository'),
     userRepository = require('../repository/userRepository'),
-    uhx = require("../uhx");
-    model = require('../model/model');
-    config = require('../config');
+    uhx = require("../uhx"),
+    model = require('../model/model'),
+    config = require('../config'),
+    fs = require('fs'),
+    Json2csvTransform = require('json2csv').Transform,
+    Json2csvParser = require('json2csv').Parser;
 
-module.exports = class Karis {
+module.exports = class KarisService {
 
     constructor() {
         Number.prototype.pad = function(size) {
@@ -35,6 +38,8 @@ module.exports = class Karis {
             while (s.length < (size || 2)) {s = "0" + s;}
             return s;
         }
+
+        this.sendKarisReport(null, "test"); 
 
         // Starts a schedule to send daily logs to Karis every day at 9 pm
         schedule.scheduleJob('* * 19 * *', () => {
@@ -117,7 +122,8 @@ module.exports = class Karis {
      * @param {string} filename The name of the file to be saved within Karis
      */
     sendKarisReport(reports, filename) {
-        csvFilename = filename + ".csv";
+        const csvFilename = filename + ".csv";
+
 
     }
 }
