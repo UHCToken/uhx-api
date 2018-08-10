@@ -29,16 +29,13 @@ const UserRepository = require('./userRepository'),
     ReportRepository = require('./reportRepository'),
     InvoiceRepository = require('./invoiceRepository'),
     BalanceRepository = require('./balanceRepository'),
-<<<<<<< HEAD
     ChatRepository = require('./chatRepository'),
     Chat = require('../controllers/chat'),
-=======
     PatientRepository = require('./patientRepository'),
     ProviderRepository = require('./providerRepository'),
     ProviderAddressRepository = require('./providerAddressRepository'),
     ProviderServiceRepository = require('./providerServiceRepository'),
     ServiceTypeRepository = require('./serviceTypeRepository'),
->>>>>>> develop
     pg = require('pg'),
     uhx = require('../uhx'),
     exception = require('../exception');
