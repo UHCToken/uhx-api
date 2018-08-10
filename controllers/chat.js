@@ -36,7 +36,7 @@ module.exports = class Chat {
       permission_group: "chat",
       routes: [
         {
-          "path": "chat",
+          "path": "chat:uid",
           "get" : {
               demand: security.PermissionType.LIST,
               method: this.getChatRooms
@@ -44,6 +44,24 @@ module.exports = class Chat {
           "post" : {
               demand: security.PermissionType.WRITE,
               method: this.createChatRoom
+          }
+        },
+        {
+          "path": "chat:cid/messages",
+          "get" : {
+              demand: security.PermissionType.LIST,
+              method: this.getChatMessages
+          },
+          "post" : {
+              demand: security.PermissionType.WRITE,
+              method: this.createChatMessage
+          }
+        },
+        {
+          "path": "listen:cid",
+          "get" : {
+              demand: security.PermissionType.LIST,
+              method: this.initChatSocket
           }
         }
       ]
@@ -54,9 +72,13 @@ module.exports = class Chat {
   /**
    * @method
    * @summary: Initiates the web socket activity. 
+   * @param {Express.Request} req http req from the client
+   * @param {Express.Response} res The HTTP response going to the client
    */
-  initChatSocket(chatRoomId) {
-    let chat = io.of(chatRoomId)
+  async initChatSocket(req, res) {
+
+    //Create unique chatroom namespace from chatID
+    let chat = io.of(req.params.chatRoomId)
     //Web sockets listening...
     chat.listen(8080);  //TODO: Configure Port
 

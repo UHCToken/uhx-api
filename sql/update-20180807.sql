@@ -3,7 +3,6 @@
 
 CREATE TABLE chat_room (
   c_id varchar(255) NOT NULL,
-  c_namespace text,
   c_title text NOT NULL,
   c_providerId text NOT NULL,
   c_patientId text NOT NULL,
