@@ -22,10 +22,12 @@ const config = require('./config'),
     repositories = require('./repository/repository'),
     SecurityLogic = require('./logic/SecurityLogic'),
     TokenLogic = require('./logic/TokenLogic'),
+    UserLogic = require('./logic/UserLogic'),
     winston = require('winston'),
     Mailer = require('./integration/mail'),
     StellarClient = require("./integration/stellar"),
     GreenMoney = require("./integration/greenmoney"),
+    GoogleMaps = require("./integration/googlemaps"),
     ObjectStorage = require("./integration/storage"),
     poolio = require('poolio'),
     Web3Client = require("./integration/web3"),
@@ -43,6 +45,7 @@ var repository = new repositories.UhcRepositories(config.db.server);
 // Exports section
 module.exports.SecurityLogic = new SecurityLogic();
 module.exports.TokenLogic = new TokenLogic();
+module.exports.UserLogic = new UserLogic();
 module.exports.Config = config;
 module.exports.Repositories = repository;
 module.exports.log = winston;
@@ -59,6 +62,8 @@ module.exports.init = () => {
         module.exports.GreenMoney = new GreenMoney();
         winston.info("ObjectStorage Initialized...");
         module.exports.ObjectStorage = new ObjectStorage();
+        winston.info("Google Maps Initialized...");
+        module.exports.GoogleMaps = new GoogleMaps();
     });
 }
 /**
