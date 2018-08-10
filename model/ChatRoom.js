@@ -29,9 +29,6 @@ const ModelBase = require('./ModelBase');
  *      id:
  *        type: string
  *        description: unique identifier for messageHeader
- *      namespace:
- *        type: string
- *        description: chat namespace
  *      title:
  *        type: string
  *        description: chat title
@@ -60,7 +57,6 @@ module.exports = class ChatRoom extends ModelBase {
    */
   fromData(dbMessage) {
     this.id = dbMessage.id;
-    this.namespace = dbMessage.namespace;
     this.title = dbMessage.title;
     this.providerId = dbMessage.providerId;
     this.patientId = dbMessage.patientId;
@@ -74,7 +70,6 @@ module.exports = class ChatRoom extends ModelBase {
   toData() {
     return {
       id: this.id,
-      namespace: this.namespace,
       title: this.title,
       providerId: this.providerId,
       patientId: this.patientId
