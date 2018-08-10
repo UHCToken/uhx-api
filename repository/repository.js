@@ -29,8 +29,16 @@ const UserRepository = require('./userRepository'),
     ReportRepository = require('./reportRepository'),
     InvoiceRepository = require('./invoiceRepository'),
     BalanceRepository = require('./balanceRepository'),
+<<<<<<< HEAD
     ChatRepository = require('./chatRepository'),
     Chat = require('../controllers/chat'),
+=======
+    PatientRepository = require('./patientRepository'),
+    ProviderRepository = require('./providerRepository'),
+    ProviderAddressRepository = require('./providerAddressRepository'),
+    ProviderServiceRepository = require('./providerServiceRepository'),
+    ServiceTypeRepository = require('./serviceTypeRepository'),
+>>>>>>> develop
     pg = require('pg'),
     uhx = require('../uhx'),
     exception = require('../exception');
@@ -70,12 +78,12 @@ class UhcRepositories {
             await dbc.query("BEGIN TRANSACTION");
 
             var retVal = await transactionFn(dbc);
-            
+
             await dbc.query("COMMIT");
 
             return retVal;
         }
-        catch(e) {
+        catch (e) {
             await dbc.query("ROLLBACK");
             uhx.log.error(`Rolling back transaction due to: ${e.message}`);
             throw new exception.Exception("Database transaction failed", e.constructor.name == "BusinessRuleViolationException" ? exception.ErrorCodes.RULES_VIOLATION : exception.ErrorCodes.DATA_ERROR, e);
@@ -91,7 +99,7 @@ class UhcRepositories {
      * @type {UserRepository}
      */
     get userRepository() {
-        if(!this._userRepository)
+        if (!this._userRepository)
             this._userRepository = new UserRepository(this.connectionString);
         return this._userRepository;
     }
@@ -102,7 +110,7 @@ class UhcRepositories {
      * @type {ReportRepository}
      */
     get reportRepository() {
-        if(!this._reportRepository)
+        if (!this._reportRepository)
             this._reportRepository = new ReportRepository(this.connectionString);
         return this._reportRepository;
     }
@@ -113,7 +121,7 @@ class UhcRepositories {
      * @type {TransactionRepository}
      */
     get transactionRepository() {
-        if(!this._transactionRepository)
+        if (!this._transactionRepository)
             this._transactionRepository = new TransactionRepository(this.connectionString);
         return this._transactionRepository;
     }
@@ -124,7 +132,7 @@ class UhcRepositories {
      * @type {ApplicationRepository}
      */
     get applicationRepository() {
-        if(!this._applicationRepository)
+        if (!this._applicationRepository)
             this._applicationRepository = new ApplicationRepository(this.connectionString);
         return this._applicationRepository;
     }
@@ -135,7 +143,7 @@ class UhcRepositories {
      * @type {SessionRepository}
      */
     get sessionRepository() {
-        if(!this._sessionRepository)
+        if (!this._sessionRepository)
             this._sessionRepository = new SessionRepository(this.connectionString);
         return this._sessionRepository;
     }
@@ -146,7 +154,7 @@ class UhcRepositories {
      * @type {PermissionRepository}
      */
     get permissionRepository() {
-        if(!this._permissionRepository)
+        if (!this._permissionRepository)
             this._permissionRepository = new PermissionRepository(this.connectionString);
         return this._permissionRepository;
     }
@@ -157,7 +165,7 @@ class UhcRepositories {
      * @type {WalletRepository}
      */
     get walletRepository() {
-        if(!this._walletRepository)
+        if (!this._walletRepository)
             this._walletRepository = new WalletRepository(this.connectionString);
         return this._walletRepository;
     }
@@ -168,7 +176,7 @@ class UhcRepositories {
      * @type {GroupRepository}
      */
     get groupRepository() {
-        if(!this._groupRepository)
+        if (!this._groupRepository)
             this._groupRepository = new GroupRepository(this.connectionString);
         return this._groupRepository;
     }
@@ -179,7 +187,7 @@ class UhcRepositories {
      * @type {AssetRepository}
      */
     get assetRepository() {
-        if(!this._assetRepository)
+        if (!this._assetRepository)
             this._assetRepository = new AssetRepository(this.connectionString);
         return this._assetRepository;
     }
@@ -190,7 +198,7 @@ class UhcRepositories {
      * @type {InvitationRepository}
      */
     get invitationRepository() {
-        if(!this._invitationRepository)
+        if (!this._invitationRepository)
             this._invitationRepository = new InvitationRepository(this.connectionString);
         return this._invitationRepository;
     }
@@ -201,7 +209,7 @@ class UhcRepositories {
      * @type {InvoiceRepository}
      */
     get invoiceRepository() {
-        if(!this._invoiceRepository)
+        if (!this._invoiceRepository)
             this._invoiceRepository = new InvoiceRepository(this.connectionString);
         return this._invoiceRepository;
     }
@@ -212,12 +220,10 @@ class UhcRepositories {
      * @type {BalanceRepository}
      */
     get balanceRepository() {
-        if(!this._balanceRepository)
+        if (!this._balanceRepository)
             this._balanceRepository = new BalanceRepository(this.connectionString);
         return this._balanceRepository;
     }
-
-    //ChatRepository
 
     /**
      * @property 
@@ -228,6 +234,61 @@ class UhcRepositories {
         if(!this._chatRepository)
             this._chatRepository = new ChatRepository(this.connectionString);
         return this._chatRepository;
+    }
+
+    /**
+     * @property
+     * @summary Gets the patient repository
+     * @type {PatientRepository}
+     */
+    get patientRepository() {
+        if (!this._patientRepository)
+            this._patientRepository = new PatientRepository(this.connectionString);
+        return this._patientRepository;
+    }
+
+    /**
+     * @property
+     * @summary Gets the provider repository
+     * @type {ProviderRepository}
+     */
+    get providerRepository() {
+        if (!this._providerRepository)
+            this._providerRepository = new ProviderRepository(this.connectionString);
+        return this._providerRepository;
+    }
+
+    /**
+     * @property
+     * @summary Gets the provider address repository
+     * @type {ProviderAddressRepository}
+     */
+    get providerAddressRepository() {
+        if (!this._providerAddressRepository)
+            this._providerAddressRepository = new ProviderAddressRepository(this.connectionString);
+        return this._providerAddressRepository;
+    }
+
+    /**
+     * @property
+     * @summary Gets the provider service repository
+     * @type {ProviderServiceRepository}
+     */
+    get providerServiceRepository() {
+        if (!this._providerServiceRepository)
+            this._providerServiceRepository = new ProviderServiceRepository(this.connectionString);
+        return this._providerServiceRepository;
+    }
+
+    /**
+     * @property
+     * @summary Gets the service type repository
+     * @type {ServiceTypeRepository}
+     */
+    get serviceTypeRepository() {
+        if (!this._serviceTypeRepository)
+            this._serviceTypeRepository = new ServiceTypeRepository(this.connectionString);
+        return this._serviceTypeRepository;
     }
 }
 
