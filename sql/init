@@ -1,0 +1,744 @@
+﻿/**
+ * Universal Health Coin Database
+ * Copyright (C) 2018, Universal Health Coin
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * 
+ * Original Authors: Justin Fyfe (justin-fyfe), Rory Yendt (RoryYendt)
+ * Original Date: 2018-04-20
+ * 
+ * This file contains the primary schema for the UHC API
+ * 
+ */
+ 
+CREATE DATABASE uhc;
+\c uhc
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+CREATE TABLE IF NOT EXISTS wallets(
+	id uuid NOT NULL DEFAULT uuid_generate_v4(),
+	address varchar(256) NOT NULL,
+	seed varchar(256) NOT NULL,	
+    CONSTRAINT pk_wallets PRIMARY KEY (id)
+);
+
+-- REPRESENTS AN INDIVIDUAL WHO USES THE UHC SERVICE
+-- TODO: DETERMINE WHICH OF THESE FIELDS ARE MANDATORY
+CREATE TABLE IF NOT EXISTS users(
+	id uuid NOT NULL DEFAULT uuid_generate_v4(),
+	name VARCHAR(256) UNIQUE NOT NULL,
+	password VARCHAR(256) NOT NULL,
+	invalid_login INT NOT NULL DEFAULT 0,
+	last_login TIMESTAMPTZ,
+	lockout TIMESTAMPTZ, -- THE TIME THAT THE ACCOUNT IS LOCKED UNTIL
+	email VARCHAR(256),
+	email_verified BOOLEAN NOT NULL DEFAULT FALSE,
+	given_name VARCHAR(256),
+	family_name VARCHAR(256),
+	description VARCHAR(256),
+	tel VARCHAR(256),
+	tel_verified BOOLEAN NOT NULL DEFAULT FALSE,
+	street VARCHAR(256),
+	unit_suite VARCHAR(128),
+	city VARCHAR(256),
+	state_prov VARCHAR(16),
+	country VARCHAR(2),
+	postal_zip VARCHAR(16),
+	wallet_id uuid,
+	creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	updated_time TIMESTAMPTZ,
+	deactivation_time TIMESTAMPTZ,
+	CONSTRAINT pk_users PRIMARY KEY (id),
+	CONSTRAINT fk_users_wallets FOREIGN KEY (wallet_id) REFERENCES wallets(id)
+);
+
+-- REPRESENTS A USER INVITATION TO JOIN THE SERVICE
+CREATE TABLE IF NOT EXISTS invitations (
+    id uuid NOT NULL DEFAULT uuid_generate_v4(),
+    email VARCHAR(256) NOT NULL, -- THE E-MAIL ADDRESS OF THE invitee
+    given_name VARCHAR(256),
+    family_name VARCHAR(256),
+    tel VARCHAR(256),
+	street VARCHAR(256),
+	unit_suite VARCHAR(128),
+	city VARCHAR(256),
+	state_prov VARCHAR(16),
+	country VARCHAR(2),
+	postal_zip VARCHAR(16),
+    creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID NOT NULL, 
+	expiration_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP + '7 DAY'::INTERVAL,
+    claim_token VARCHAR(256) UNIQUE NOT NULL, -- THE TOKEN TO CLAIM
+    claim_time TIMESTAMPTZ, -- THE TIME THAT THE INVITE WAS CONSUMED
+    deactivation_time TIMESTAMPTZ, -- THE TIME THE INVITATION WAS RESCINDED
+    signup_user_id UUID, 
+    CONSTRAINT pk_invitations PRIMARY KEY (id),
+    CONSTRAINT fk_invitations_created_by FOREIGN KEY (created_by) REFERENCES users(id),
+    CONSTRAINT fk_invitations_signup_user FOREIGN KEY (signup_user_id) REFERENCES users(id)
+);
+
+-- INVITATION EMAIL INDEX
+CREATE UNIQUE INDEX ix_invitations_email ON invitations(email) WHERE deactivation_time IS NULL;
+
+-- REPRESENTS CLAIMS ABOUT A USER
+CREATE TABLE IF NOT EXISTS user_claims(
+    id uuid NOT NULL DEFAULT uuid_generate_v4(),
+    claim_type VARCHAR(256) NOT NULL, -- THE TYPE OF CLAIM EXAMPLE: FACEBOOK AUTH, RESET TOKEN
+    claim_value VARCHAR(256) NOT NULL, -- THE VALUE OF THE CLAIM
+    creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expiry TIMESTAMPTZ, -- WHEN PRESENT THE EXPIRATION OF THIS CLAIM
+    user_id uuid NOT NULL, -- THE USER TO WHICH THE CLAIM BELONGS
+    CONSTRAINT pk_user_claims PRIMARY KEY (id),
+    CONSTRAINT fk_user_claims_user FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE UNIQUE INDEX user_claim_name_value_idx ON user_claims(user_id, claim_type) WHERE expiry IS NULL;
+
+
+-- REPRESENTS CLAIMS ABOUT A USER
+CREATE TABLE IF NOT EXISTS invitation_claims(
+    id uuid NOT NULL DEFAULT uuid_generate_v4(),
+    claim_type VARCHAR(256) NOT NULL, -- THE TYPE OF CLAIM EXAMPLE: FACEBOOK AUTH, RESET TOKEN
+    claim_value VARCHAR(256) NOT NULL, -- THE VALUE OF THE CLAIM
+    creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expiry TIMESTAMPTZ, -- WHEN PRESENT THE EXPIRATION OF THIS CLAIM
+    invitation_id uuid NOT NULL, -- THE USER TO WHICH THE CLAIM BELONGS
+    CONSTRAINT pk_invitation_claims PRIMARY KEY (id),
+    CONSTRAINT fk_invitation_claims_user FOREIGN KEY (invitation_id) REFERENCES invitations(id)
+);
+
+CREATE UNIQUE INDEX invitation_claim_name_value_idx ON invitation_claims(invitation_id, claim_type) WHERE expiry IS NULL;
+
+-- REPRESENTS EXTERNAL IDENTITIES 
+CREATE TABLE IF NOT EXISTS user_identity (
+    id uuid NOT NULL DEFAULT uuid_generate_v4(),
+    provider VARCHAR(256) NOT NULL, -- THE PROVIDER (FACEBOOK, GOOGLE, IDENTITYMIND, ETC)
+    key VARCHAR(256) NOT NULL,  -- THE KEY THAT THE EXTERNAL PROVIDER KNOWS THE USER AS
+    creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, -- THE TIME THAT THE OBJECT WAS CREATED
+    user_id uuid NOT NULL, -- THE USER TO WHICH THE IDENTITY BELONGS
+    CONSTRAINT pk_user_identity PRIMARY KEY (id),
+    CONSTRAINT fk_user_identity_user FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- GROUPS OF USERS
+CREATE TABLE IF NOT EXISTS groups (
+    id uuid NOT NULL DEFAULT uuid_generate_v4(),
+    name VARCHAR(16) NOT NULL, -- THE NAME OF THE GROUP
+    creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, -- THE TIME THAT THE OBJECT WAS CREATED
+    created_by UUID NOT NULL, -- THE USER WHICH CREATED THE GROUP
+    updated_time TIMESTAMPTZ, -- THE TIME THAT THE OBJECT WAS UPDATED
+    updated_by UUID, -- THE USER WHICH UPDATED THE OBJECT
+    deactivation_time TIMESTAMPTZ, -- THE TIME THAT THE OBJECT WAS DEACTIVATED
+    deactivated_by UUID, -- THE USER WHICH DEACTIVATED THE OBJECT
+    CONSTRAINT pk_group PRIMARY KEY (id),
+    CONSTRAINT fk_group_created_by FOREIGN KEY (created_by) REFERENCES users(id),
+    CONSTRAINT fk_group_updated_by FOREIGN KEY (updated_by) REFERENCES users(id),
+    CONSTRAINT fk_group_deactivated_by FOREIGN KEY (deactivated_by) REFERENCES users(id)
+);
+
+-- USER <> GROUP ASSOCIATION
+CREATE TABLE IF NOT EXISTS user_group (
+    user_id UUID NOT NULL,
+    group_id UUID NOT NULL,
+    CONSTRAINT pk_user_group PRIMARY KEY (user_id, group_id),
+    CONSTRAINT fk_user_group_user FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_user_group_group FOREIGN KEY (group_id) REFERENCES groups(id)
+);
+
+-- REPRESENTS A SET OF PERMISSIONS THAT CAN BE APPLIED
+CREATE TABLE IF NOT EXISTS permission_sets (
+    id UUID NOT NULL DEFAULT uuid_generate_v4(),
+    name VARCHAR(256) UNIQUE NOT NULL,  -- A UNIQUE NAME FOR THE PERMISSION SET
+    description TEXT,  -- THE DESCRIPTION OF THE PERMISSION SET
+    creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, -- THE TIME THAT THE OBJECT WAS CREATED
+    created_by UUID NOT NULL, -- THE USER WHICH CREATED THE GROUP
+    updated_time TIMESTAMPTZ, -- THE TIME THAT THE OBJECT WAS UPDATED
+    updated_by UUID, -- THE USER WHICH UPDATED THE OBJECT
+    deactivation_time TIMESTAMPTZ, -- THE TIME THAT THE OBJECT WAS DEACTIVATED
+    deactivated_by UUID, -- THE USER WHICH DEACTIVATED THE OBJECT
+    CONSTRAINT pk_permission PRIMARY KEY (id),
+    CONSTRAINT fk_permission_created_by FOREIGN KEY (created_by) REFERENCES users(id),
+    CONSTRAINT fk_permission_updated_by FOREIGN KEY (updated_by) REFERENCES users(id),
+    CONSTRAINT fk_permission_deactivated_by FOREIGN KEY (deactivated_by) REFERENCES users(id)
+);
+
+-- ASSOCIATES GROUPS TO PERMISSION SETS
+CREATE TABLE IF NOT EXISTS group_permissions (
+    group_id UUID NOT NULL, 
+    permission_set_id UUID NOT NULL, -- THE PERMISSION SET
+    acl_flags INT NOT NULL DEFAULT 0, -- REPRESENTS THE ACL FLAGS (THESE ARE UNIX STYLE)
+    CONSTRAINT pk_group_permission PRIMARY KEY (group_id, permission_set_id),
+    CONSTRAINT fk_group_permission_group FOREIGN KEY (group_id) REFERENCES groups(id),
+    CONSTRAINT fk_group_permission_permission_set FOREIGN KEY (permission_set_id) REFERENCES permission_sets(id)
+);
+
+-- REPRESENTS OAUTH APPLICATIONS
+CREATE TABLE IF NOT EXISTS applications (
+    id UUID NOT NULL DEFAULT uuid_generate_v4(), 
+    name VARCHAR(256) UNIQUE NOT NULL, -- REPRESENTS THE NAME OF THE APPLICATION
+    secret VARCHAR(256) NOT NULL, -- REPRESENTS THE APPLICATION SECRET
+    creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, -- THE TIME THAT THE OBJECT WAS CREATED
+    invalid_login INT NOT NULL DEFAULT 0,
+    last_login TIMESTAMPTZ,
+    lockout TIMESTAMPTZ, -- THE TIME THAT THE ACCOUNT IS LOCKED UNTIL
+    created_by UUID NOT NULL, -- THE USER WHICH CREATED THE GROUP
+    updated_time TIMESTAMPTZ, -- THE TIME THAT THE OBJECT WAS UPDATED
+    updated_by UUID, -- THE USER WHICH UPDATED THE OBJECT
+    deactivation_time TIMESTAMPTZ, -- THE TIME THAT THE OBJECT WAS DEACTIVATED
+    deactivated_by UUID, -- THE USER WHICH DEACTIVATED THE OBJECT
+    CONSTRAINT pk_application PRIMARY KEY (id),
+    CONSTRAINT fk_application_created_by FOREIGN KEY (created_by) REFERENCES users(id),
+    CONSTRAINT fk_application_updated_by FOREIGN KEY (updated_by) REFERENCES users(id),
+    CONSTRAINT fk_application_deactivated_by FOREIGN KEY (deactivated_by) REFERENCES users(id)    
+);
+
+-- ASSOCIATES APPLICATIONS TO THEIR PERMISSIONS
+CREATE TABLE IF NOT EXISTS application_permissions (
+    application_id UUID NOT NULL, 
+    permission_set_id UUID NOT NULL, -- THE PERMISSION SET
+    acl_flags INT NOT NULL DEFAULT 0, -- REPRESENTS THE ACL FLAGS (THESE ARE UNIX STYLE)
+    client_only BOOLEAN NOT NULL DEFAULT FALSE, -- WHEN TRUE INDICATES THAT A CLIENT_GRANT CAN ACCESS THIS
+    CONSTRAINT pk_application_permission PRIMARY KEY (application_id, permission_set_id),
+    CONSTRAINT fk_application_permission_application FOREIGN KEY (application_id) REFERENCES applications(id),
+    CONSTRAINT fk_application_permission_permission_set FOREIGN KEY (permission_set_id) REFERENCES permission_sets(id)
+);
+
+-- ASSOCIATES AN APPLICATION WITH A USER AND THE PERMISSION THEY GRANT TO THAT APPLICATION
+CREATE TABLE IF NOT EXISTS application_user_consent (
+    id UUID NOT NULL DEFAULT uuid_generate_v4(),
+    application_id UUID NOT NULL,
+    user_id UUID NOT NULL,
+    permission_set_id UUID NOT NULL,
+    creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    rescinded_time TIMESTAMPTZ,
+    CONSTRAINT pk_application_user_consent PRIMARY KEY (id),
+    CONSTRAINT fk_application_user_consent_application FOREIGN KEY (application_id) REFERENCES applications(id),
+    CONSTRAINT fk_application_user_consent_user FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_application_user_consent_permission FOREIGN KEY (permission_set_id) REFERENCES permission_sets(id)
+);
+
+-- REPRESENTS A SINGLE SESSION - A SESSION IS A COMBINATION OF A USER USING AN APPLICATION 
+CREATE TABLE IF NOT EXISTS sessions (
+    id UUID NOT NULL DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL, 
+    application_id UUID NOT NULL,
+    not_before TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, -- THE TIME THE SESSION STARTED
+    not_after TIMESTAMPTZ NOT NULL, -- THE EXPIRATION TIME (NOT AFTER) OF THE SESSION
+    scope VARCHAR(256) NOT NULL,
+    refresh_token VARCHAR(256), -- IF THE SESSION CAN BE EXTENDED AUTOMATICALLY, THE REFRESH TOKEN TO USE
+    ip_addr VARCHAR(256), -- THE IP ADDRESS OF THE REMOTE  SESSION
+    CONSTRAINT pk_sessions PRIMARY KEY (id),
+    CONSTRAINT fk_sessions_users FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_sessions_application FOREIGN KEY (application_id) REFERENCES applications(id)
+);
+
+-- A LIST OF ASSETS CLASSES WHICH THIS SERVICE CAN INTERACT WITH
+CREATE TABLE IF NOT EXISTS assets (
+    id UUID NOT NULL DEFAULT uuid_generate_v4(),
+    code VARCHAR(12) NOT NULL UNIQUE, -- THE ASSET CODE
+    name VARCHAR(32) NOT NULL, -- ASSET TYPE CODE
+    description TEXT NOT NULL, -- THE DESCRIPTION OF THE ASSET
+    issuer VARCHAR(256) NOT NULL, -- THE ISSUING ACCOUNT
+    display_decimals NUMERIC(2) NOT NULL DEFAULT 2, -- DISPLAY DECIMALS
+    img VARCHAR(256), -- A LINK TO THE IMAGE
+    dist_wallet_id UUID NOT NULL, -- THE DISTRIBUTION WALLET ID
+    kyc_req BOOLEAN NOT NULL DEFAULT FALSE,
+    creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID NOT NULL, -- THE USER WHICH CREATED THE GROUP
+    updated_time TIMESTAMPTZ, -- THE TIME THAT THE OBJECT WAS UPDATED
+    updated_by UUID, -- THE USER WHICH UPDATED THE OBJECT
+    deactivation_time TIMESTAMPTZ, -- THE TIME THAT THE OBJECT WAS DEACTIVATED
+    deactivated_by UUID, -- THE USER WHICH DEACTIVATED THE OBJECT
+    locked BOOLEAN NOT NULL DEFAULT FALSE,
+    CONSTRAINT pk_assets PRIMARY KEY (id),
+    CONSTRAINT fk_asset_created_by FOREIGN KEY (created_by) REFERENCES users(id),
+    CONSTRAINT fk_asset_updated_by FOREIGN KEY (updated_by) REFERENCES users(id),
+    CONSTRAINT fk_asset_deactivated_by FOREIGN KEY (deactivated_by) REFERENCES users(id),
+    CONSTRAINT fk_asset_dist_wallet_id FOREIGN KEY (dist_wallet_id) REFERENCES wallets(id)
+);
+
+-- LINKS ASSETS TO A SCHEDULE WHICH IDENTIFIES FIXED RATES AND LIMITS
+-- EXAMPLES:
+--  (BETWEEN 2018-06-01 AND 2018-06-30) OR (SELL @ 0.2 USD) FROM WALLET AAAAAA
+--  (BETWEEN 2018-07-04 AND 2018-07-31) OR (SELL @ 0.4 USD) FROM WALLET BBBBBB
+CREATE TABLE IF NOT EXISTS asset_offer (
+    id UUID NOT NULL DEFAULT uuid_generate_v4(),
+    asset_id UUID NOT NULL, -- THE ASSET TYPE
+    start_date DATE, -- THE START DATE OF THE SCHEDULE
+    stop_date DATE, -- THE STOP DATE OF THE SCHEDULE
+    wallet_id UUID NOT NULL, -- THE WALLET FROM WHICH ASSETS SHOULD BE PURCHASED DURING THIS OFFER
+    price NUMERIC(20, 7), -- THE OFFER DURING THIS SCHEDULE (IF NULL NO FIXED EXCHANGE) 
+    price_code VARCHAR(12), -- THE OFFER CODE ()
+    amount NUMERIC(20, 7), -- WHEN POPULATED AND START DATE HAS PASSED THE BALANCE OF THE ACCOUNT SHOULD BE X 
+    creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by UUID NOT NULL, -- THE USER WHICH CREATED THE GROUP
+    updated_time TIMESTAMPTZ, -- THE TIME THAT THE OBJECT WAS UPDATED
+    updated_by UUID, -- THE USER WHICH UPDATED THE OBJECT
+    deactivation_time TIMESTAMPTZ, -- THE TIME THAT THE OBJECT WAS DEACTIVATED
+    deactivated_by UUID, -- THE USER WHICH DEACTIVATED THE OBJECT
+    is_public BOOLEAN NOT NULL DEFAULT TRUE, -- IF TRUE LIST THE SALE ON THE DEX
+    offer_id VARCHAR(256), -- THE OFFER ID CREATED ON THE STELLAR BLOCKCHAIN
+    CONSTRAINT pk_asset_sale PRIMARY KEY (id),
+    CONSTRAINT fk_asset_sale_asset FOREIGN KEY (asset_id) REFERENCES assets(id),
+    CONSTRAINT fk_asset_sale_wallet_id FOREIGN KEY (wallet_id) REFERENCES wallets(id),
+    CONSTRAINT ck_asset_sale_sell  CHECK (stop_date IS NULL OR (stop_date > start_date AND stop_date > CURRENT_DATE)),
+    CONSTRAINT ck_asset_sale_sell_code CHECK (price IS NULL OR price_code IS NOT NULL),
+    CONSTRAINT fk_asset_sale_created_by FOREIGN KEY (created_by) REFERENCES users(id),
+    CONSTRAINT fk_asset_sale_updated_by FOREIGN KEY (updated_by) REFERENCES users(id),
+    CONSTRAINT fk_asset_sale_deactivated_by FOREIGN KEY (deactivated_by) REFERENCES users(id)
+);
+
+
+-- CREATE ADMIN
+INSERT INTO users (id, name, password, email) VALUES ('3c673456-23b1-4263-9deb-df46770852c9', 'admin@test.com',crypt('UniversalHealthCoinAdmin', gen_salt('bf')), 'admin@test.com');
+
+-- CREATE APP_USER
+INSERT INTO users (id, name, password) VALUES (uuid_nil(), 'NILUSER', crypt(uuid_generate_v4()::TEXT, gen_salt('bf')));
+
+-- CREATE GROUPS 
+INSERT INTO groups (id, name, created_by) VALUES ('044894bd-084e-47bb-9428-dbd80277614a', 'Administrators', '3c673456-23b1-4263-9deb-df46770852c9');
+INSERT INTO groups (id, name, created_by) VALUES ('330d2fb4-ba61-4b48-a0a1-8162a4708e96', 'Users', '3c673456-23b1-4263-9deb-df46770852c9');
+
+-- ASSIGN ADMIN <> ADMINISTRATORS
+INSERT INTO user_group (user_id, group_id) VALUES ('3c673456-23b1-4263-9deb-df46770852c9', '044894bd-084e-47bb-9428-dbd80277614a');
+
+-- CREATE DEFAULT PERMISSION SETS
+INSERT INTO permission_sets (id, name, description, created_by) VALUES ('29b52e3b-52d6-4108-bb6e-f4c692cb4145', 'user', 'Access to the user resource', '3c673456-23b1-4263-9deb-df46770852c9');
+INSERT INTO permission_sets (id, name, description, created_by) VALUES ('c428ff6a-0d07-424f-802b-b51a040d023b', 'wallet', 'Access to the user resource', '3c673456-23b1-4263-9deb-df46770852c9');
+INSERT INTO permission_sets (id, name, description, created_by) VALUES ('5245dff0-9b79-4ddb-b3bd-9dd733afd678', 'purchase', 'Access to the FIAT resource', '3c673456-23b1-4263-9deb-df46770852c9');
+INSERT INTO permission_sets (id, name, description, created_by) VALUES ('608844ca-b98a-47f5-b834-d7fded513945', 'application', 'Access to the APPLICATION resource', '3c673456-23b1-4263-9deb-df46770852c9');
+INSERT INTO permission_sets (id, name, description, created_by) VALUES ('20a97388-5b6a-43e7-ac07-911ceee7e0d6', 'asset', 'Access to the CONTRACT resource', '3c673456-23b1-4263-9deb-df46770852c9');
+INSERT INTO permission_sets (id, name, description, created_by) VALUES ('3fc7cbc7-58ca-40fa-9d17-060dbf180e0b', 'group', 'Access to the GROUP resource', '3c673456-23b1-4263-9deb-df46770852c9');
+INSERT INTO permission_sets (id, name, description, created_by) VALUES ('17e4de1c-4fd3-49ea-b394-90ddb5ccac38', 'permission', 'Access to the PERMISSION resource', '3c673456-23b1-4263-9deb-df46770852c9');
+INSERT INTO permission_sets (id, name, description, created_by) VALUES ('76818f0a-2caa-4c46-83f5-064248001821', 'invitation', 'Access to the INVITATION resource', '3c673456-23b1-4263-9deb-df46770852c9');
+INSERT INTO permission_sets (id, name, description, created_by) VALUES ('5e61b3dd-6b06-43d7-9d7f-839b30b6c496', 'transaction', 'Access to the TRANSACTION resource', '3c673456-23b1-4263-9deb-df46770852c9');
+
+-- ASSIGN DEFAULT PERMISSIONS
+
+-- ADMINS = RWXL ON ALL 
+INSERT INTO group_permissions (group_id, permission_set_id, acl_flags)
+	SELECT '044894bd-084e-47bb-9428-dbd80277614a', id, 15
+	FROM permission_sets
+	WHERE NOT EXISTS (
+		SELECT TRUE 
+		FROM group_permissions
+		WHERE group_id = '044894bd-084e-47bb-9428-dbd80277614a'
+		AND permission_set_id = permission_sets.id
+	);
+
+-- USERS 
+--	USER - RW OWNER
+--	WALLET - RWXL OWNER
+--	FIAT - RWXL OWNER	
+--	CONTRACT - RWL OWNER
+INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('330d2fb4-ba61-4b48-a0a1-8162a4708e96', '29b52e3b-52d6-4108-bb6e-f4c692cb4145', 22);
+INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('330d2fb4-ba61-4b48-a0a1-8162a4708e96', 'c428ff6a-0d07-424f-802b-b51a040d023b', 31);
+INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('330d2fb4-ba61-4b48-a0a1-8162a4708e96', '5245dff0-9b79-4ddb-b3bd-9dd733afd678', 31);
+INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('330d2fb4-ba61-4b48-a0a1-8162a4708e96', '20a97388-5b6a-43e7-ac07-911ceee7e0d6', 11);
+INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('330d2fb4-ba61-4b48-a0a1-8162a4708e96', '76818f0a-2caa-4c46-83f5-064248001821', 4);
+INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('330d2fb4-ba61-4b48-a0a1-8162a4708e96', '5e61b3dd-6b06-43d7-9d7f-839b30b6c496', 31);
+
+-- CREATE A TEST USER
+INSERT INTO users (name, password, email) VALUES ('bob@test.com',crypt('Test123', gen_salt('bf')), 'bob@test.com');
+
+-- INSERT INTO wallets (id, address, seed) VALUES ('61b2c165-15b2-4bc7-9bf1-d94ee390c38c', 'address', 'seed') Address and seed of distributer account
+
+INSERT INTO user_group (user_id, group_id)
+	SELECT id, '330d2fb4-ba61-4b48-a0a1-8162a4708e96' 
+	FROM users
+	WHERE name = 'bob@test.com';
+
+-- CREATE TEST APPLICATION FOR FIDDLER
+INSERT INTO applications (id, name, secret, created_by) VALUES ('4fc15664-b152-4e6b-a852-b2aab0f05e05', 'fiddler', crypt('fiddler', gen_salt('bf')), '3c673456-23b1-4263-9deb-df46770852c9');
+-- FIDDLER GRANT ALL 
+INSERT INTO application_permissions (application_id, permission_set_id, acl_flags, client_only)
+	SELECT '4fc15664-b152-4e6b-a852-b2aab0f05e05', id, 31, false
+	FROM permission_sets;
+
+	
+	CREATE TABLE tfa_methods (
+    id NUMERIC(2) NOT NULL,
+    name VARCHAR(32) UNIQUE NOT NULL,
+    moduleName VARCHAR(256) NOT NULL, -- THE NAME OF THE MODULE WHICH HANDLES THE TFA MECHANISM
+    display VARCHAR(256) NOT NULL, -- THE DISPLAY NAME OF THE TFA METHOD
+    CONSTRAINT pk_tfa_methods PRIMARY KEY (id)
+);
+
+INSERT INTO tfa_methods (id, name, moduleName, display) VALUES (1, 'sms', '../tfa/Sms', 'Send me a Text Message');
+INSERT INTO tfa_methods (id, name, moduleName, display) VALUES (2, 'email', '../tfa/Email', 'Send me an E-Mail');
+
+-- ALTER TABLE USERS TO USE TFA METHOD
+ALTER TABLE users ADD COLUMN tfa_method NUMERIC(2);
+
+-- ADD TIMESTAMP DATA TO WALLETS
+ALTER TABLE wallets ADD COLUMN creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE wallets ADD COLUMN updated_time TIMESTAMPTZ;
+ALTER TABLE wallets ADD COLUMN deactivation_time TIMESTAMPTZ;
+
+
+CREATE TABLE IF NOT EXISTS asset_quote (
+    id UUID NOT NULL DEFAULT uuid_generate_v4(), -- THE UNIQUE IDENTIFIER FOR THE QUOTE
+    asset_id UUID NOT NULL, -- THE ASSET BEING QUOTED
+    from_code VARCHAR(12) NOT NULL, -- THE CODE OF THE CURRENCY AGAINST WHICH THE QUOTE WAS SECURED
+    rate NUMERIC(20, 7) NOT NULL, -- THE RATE WHICH WAS ESTABLISHED
+    creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, -- THE DATE THE QUOTE WAS CREATED
+    expiry TIMESTAMPTZ NOT NULL, -- THE TIME WHEN THE OFFER WILL EXPIRE
+    CONSTRAINT pk_asset_quote PRIMARY KEY (id),
+    CONSTRAINT fk_asset_quote_asset FOREIGN KEY (asset_id) REFERENCES assets(id),
+    CONSTRAINT ck_asset_quote_expiry CHECK (expiry > creation_time)
+);
+
+-- ADD PO BOX
+ALTER TABLE users ADD COLUMN po_box VARCHAR(36);
+ALTER TABLE invitations ADD COLUMN po_box VARCHAR(36);
+
+-- IDENTIFIES THE APPLICATION GRANT TYPES WHICH ARE PERMITTED FOR AN APPLICATION
+CREATE TABLE IF NOT EXISTS application_grant_type (
+    application_id UUID NOT NULL, -- THE APPLICATION TO WHICH THE GRANT TYPE APPLIES
+    grant_type VARCHAR(32) NOT NULL, -- THE GRANT TYPE WHICH THE APPLICATION IS ALLOWED TO HAVE
+    CONSTRAINT pk_application_grant_type PRIMARY KEY (application_id, grant_type),
+    CONSTRAINT pk_application_grant_type_application FOREIGN KEY (application_id) REFERENCES applications(id),
+    CONSTRAINT ck_application_grant_type CHECK (grant_type IN ('password', 'authorization_code', 'refresh', 'client_credentials'))
+);
+
+CREATE TABLE IF NOT EXISTS purchase_state (
+    id NUMERIC(1) NOT NULL,
+    code VARCHAR(8) NOT NULL UNIQUE,
+    description VARCHAR(32) NOT NULL,
+    CONSTRAINT pk_purchase_state PRIMARY KEY (id)
+);
+
+INSERT INTO purchase_state (id, code, description) VALUES (1, 'NEW', 'New / Uncharged');
+INSERT INTO purchase_state (id, code, description) VALUES (2, 'COMPLETE', 'Completed');
+INSERT INTO purchase_state (id, code, description) VALUES (3, 'CANCEL', 'Cancelled');
+INSERT INTO purchase_state (id, code, description) VALUES (4, 'REJECT', 'Rejected');
+INSERT INTO purchase_state (id, code, description) VALUES (5, 'HOLD', 'On-Hold');
+INSERT INTO purchase_state (id, code, description) VALUES (6, 'ACTIVE', 'Active');
+
+-- CREATES THE FIAT PURCHASE TABLE
+-- NB: THIS TABLE IS USED FOR TRACKING FUNDS RECEIVED AND TOKENS DISTRIBUTED
+CREATE TABLE IF NOT EXISTS purchase (
+    id UUID NOT NULL DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL, -- THE USER WHICH MADE THE PURCHASE
+    quote_id UUID NOT NULL, -- THE QUOTE THAT WAS USED AS THE BASIS FOR THIS TRANSACTION
+    charge_amount NUMERIC(20, 7) NOT NULL, -- THE AMOUNT IN charge_currency THAT WAS RECEIVED
+    charge_currency VARCHAR(6) NOT NULL, -- THE CURRENCY IN WHICH charge_amount IS EXPRESSED
+    asset_id UUID NOT NULL, -- THE ASSET THAT WAS PURCHASED
+    dist_wallet_id UUID, -- THE WALLET WHICH WAS ASSETS WERE DISTRIBUTED FROM
+    amount NUMERIC(20, 7) NOT NULL, -- THE AMOUNT OF ASSETS THAT WERE TRANSFERRED TO THE ACCOUNT
+    memo VARCHAR(28), -- A TEXTUAL MEMO THAT WAS CREATED
+    ref VARCHAR(256), -- A REFERENCE WHICH POINTS TO THE SOURCE OF THE TRANSACTION EITHER ON THE BLOCKCHAIN OR IN FIAT
+    escrow VARCHAR(256), -- IF THE FUNDS WERE PLACED INTO ESCROW, THEN THE ESCROW ACCOUNT INFORMATION FROM THE BLOCKCHAIN
+    escrow_time INTERVAL NOT NULL DEFAULT '0 DAY'::INTERVAL, -- IF IN ESCROW WHAT IS THE HOLD ON THESE FUNDS?
+    creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, -- THE TIME THE PURCHASE WAS RECORDED
+    created_by UUID NOT NULL, -- THE USER THAT CREATED THE PURCHASE, COULD BE A USER OR AN ADMINISTRATOR WHO IS RECORDING AN AIRDROP
+    updated_time TIMESTAMPTZ, 
+    updated_by UUID,
+    transaction_time TIMESTAMPTZ, -- THE TIME THE TRANSACTION ACTUALLY WAS PROCESSED
+    state NUMERIC(1) NOT NULL,
+    CONSTRAINT pk_purchase PRIMARY KEY (id),
+    CONSTRAINT fk_purchase_user FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_purchase_quote FOREIGN KEY (quote_id) REFERENCES asset_quote(id),
+    CONSTRAINT fk_purchase_state FOREIGN KEY (state) REFERENCES purchase_state(id),
+    CONSTRAINT fk_purchase_created_by FOREIGN KEY (created_by) REFERENCES users(id),
+    CONSTRAINT fk_purchase_updated_by FOREIGN KEY (updated_by) REFERENCES users(id),
+    CONSTRAINT ck_purchase_updated CHECK (updated_time IS NULL AND updated_by IS NULL OR updated_by IS NOT NULL AND updated_time IS NOT NULL)
+);
+
+CREATE TABLE IF NOT EXISTS reports (
+    id UUID NOT NULL DEFAULT uuid_generate_v4(),
+    name VARCHAR(32) NOT NULL, -- A HUMAN NAME FOR THE REPORT
+    description TEXT, -- ADDITIONAL DESCRIPTION OF THE REPORT
+    view_name VARCHAR(64), -- THE NAME OF THE POSTGRESQL VIEW THIS REPORT EXECUTES
+    CONSTRAINT pk_reports PRIMARY KEY (id)
+);
+
+INSERT INTO reports (id, name, description, view_name) VALUES ('18b4ac9f-1445-4600-af66-18893df6bc7c', 'Purchases by Currency', 'Shows purchases made for each asset type registered by the currency which those purchases were made. <strong>Note:</strong> This data only include purchases made using the websites not stellar transactions', 'rpt_purchase_by_currency');
+INSERT INTO reports (id, name, description, view_name) VALUES ('56a253ee-11a9-4911-b6ba-80b1c8d868ef', 'Purchases by Currency/Date', 'Shows purchases made for each asset type registered by the currency which those purchases were made grouped by date. <strong>Note:</strong> This data only include purchases made using the websites not stellar transactions', 'rpt_purchase_by_currency_date');
+INSERT INTO reports (id, name, description, view_name) VALUES ('926ed9bf-12ce-4d80-8e10-c42aa40c8b40', 'Sessions by Date', 'Shows the sessions created by date', 'rpt_sessions_by_date');
+INSERT INTO reports (id, name, description, view_name) VALUES ('7bb7b70e-aef6-46c0-bf5f-4b283150126f', 'New Users by Date', 'Shows the number of new users registered by date', 'rpt_num_users');
+INSERT INTO reports (id, name, description, view_name) VALUES ('1c3b2ea9-935b-4e12-9542-5c15c1cbc8b8', 'Invitations', 'Shows the number invitations including statistics of average claim time', 'rpt_invitations');
+
+CREATE OR REPLACE VIEW rpt_purchase_by_currency AS
+    SELECT 
+        assets.code, 
+        charge_currency, 
+        sum(charge_amount) as total_charge, 
+        avg(charge_amount) as average_charge, 
+        count(purchase.id) as num_purchases,
+        min(charge_amount) as smallest_charge,
+        max(charge_amount) as largest_charge,
+        sum(amount) as amount,
+        count(distinct user_id) as num_buyers
+    FROM 
+        purchase 
+        INNER JOIN assets ON (asset_id = assets.id)
+    WHERE
+        state = 2
+    GROUP BY
+        code, charge_currency;
+
+CREATE OR REPLACE VIEW rpt_purchase_by_currency_date AS
+    SELECT 
+        assets.code, 
+        charge_currency, 
+        to_char(transaction_time, 'yyyy-MM-dd') as date,
+        sum(charge_amount) as total_charge, 
+        avg(charge_amount) as average_charge, 
+        count(purchase.id) as num_purchases,
+        min(charge_amount) as smallest_charge,
+        max(charge_amount) as largest_charge,
+        sum(amount) as amount,
+        count(distinct user_id) as num_buyers
+    FROM 
+        purchase 
+        INNER JOIN assets ON (asset_id = assets.id)
+    WHERE
+        state = 2
+    GROUP BY
+        code, charge_currency, date
+    ORDER BY 
+        date;  
+
+CREATE OR REPLACE VIEW rpt_sessions_by_date AS 
+    SELECT 
+        to_char(not_before, 'YYYY-mm-dd') AS date,
+        count(distinct user_id) AS num_users,
+        count(distinct id) AS num_sessions
+    FROM sessions
+    GROUP BY 
+        date
+    ORDER BY 
+        date;
+
+CREATE OR REPLACE VIEW rpt_num_users AS 
+    SELECT 
+        to_char(creation_time, 'yyyy-MM-dd') AS date,
+        count(id) as num_users
+    FROM 
+        users
+    GROUP BY
+        date
+    ORDER BY 
+        date;
+
+CREATE OR REPLACE VIEW rpt_invitations AS
+    SELECT 
+        to_char(invitations.creation_time, 'yyyy-MM-dd') AS date,
+        COUNT(invitations.id) AS num_invitations,
+        COUNT(invitations.signup_user_id) AS num_claimed,
+        AVG(users.creation_time - invitations.creation_time) AS avg_claim_time
+    FROM 
+        invitations
+        LEFT JOIN users ON (invitations.signup_user_id = users.id)
+    GROUP BY
+        date
+    ORDER BY 
+        date;
+
+INSERT INTO permission_sets (id, name, description, created_by) VALUES ('1350145c-b111-4f15-a167-216a92891edd', 'reporting', 'Access to the REPORT resource', '3c673456-23b1-4263-9deb-df46770852c9');
+INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) 
+    VALUES ('044894bd-084e-47bb-9428-dbd80277614a', '1350145c-b111-4f15-a167-216a92891edd', 15);
+	
+CREATE INDEX purchase_id_sha_idx ON purchase(digest(id::text, 'sha256')) WHERE state = 2;
+
+CREATE TABLE IF NOT EXISTS transaction_type (
+    id NUMERIC(1) NOT NULL,
+    code VARCHAR(8) NOT NULL, 
+    description VARCHAR(48) NOT NULL,
+    CONSTRAINT pk_transaction_type PRIMARY KEY (id)
+);
+
+INSERT INTO transaction_type (id, code, description) VALUES (1, 'PAYMENT', 'Payment from one user to another');
+INSERT INTO transaction_type (id, code, description) VALUES (2, 'PURCHASE', 'Payment made in a FIAT for an asset');
+INSERT INTO transaction_type (id, code, description) VALUES (3, 'TRUST', 'A change of trust has been completed');
+INSERT INTO transaction_type (id, code, description) VALUES (4, 'REFUND', 'A refund is being made to a user');
+INSERT INTO transaction_type (id, code, description) VALUES (5, 'DEPOSIT', 'A deposit was made to the user');
+INSERT INTO transaction_type (id, code, description) VALUES (6, 'MANAGE', 'Account management function');
+INSERT INTO transaction_type (id, code, description) VALUES (7, 'AIRDROP', 'An air-drop from the distributor');
+
+-- SEQUENCE ID
+CREATE SEQUENCE transactions_seq_id START WITH 1 INCREMENT BY 1;
+
+-- A SUPPLEMENTAL TRANSACTION RECORD WHICH RECORDS ADDITIONAL INFORMATION
+-- ABOUT THE TRANSFER OF FUNDS MADE BY THIS API ONTO THOSE TRANSACTIONS
+-- MADE BY THE BLOCKCHAIN
+CREATE TABLE IF NOT EXISTS transactions (
+    id UUID NOT NULL DEFAULT uuid_generate_v4(),
+    payor_wallet_id UUID NOT NULL, -- THE WALLET WHICH MADE THE PAYMENT
+    payee_wallet_id UUID NOT NULL, -- THE WALLET OF THE PAYEE
+    type_id NUMERIC(1) NOT NULL, -- THE TYPE OF TRANSACTION THIS REALLY REPRESENTS
+    batch_id UUID NOT NULL DEFAULT uuid_generate_v4(), -- IF THIS TRANSACTION IS PART OF A LARGER TRANSACTION
+    memo VARCHAR(28), -- A TEXTUAL MEMO THAT WAS CREATED
+    ref VARCHAR(256), -- A REFERENCE WHICH POINTS TO THE SOURCE OF THE TRANSACTION EITHER ON THE BLOCKCHAIN OR IN FIAT
+    escrow VARCHAR(256), -- IF THE FUNDS WERE PLACED INTO ESCROW, THEN THE ESCROW ACCOUNT INFORMATION FROM THE BLOCKCHAIN
+    escrow_time INTERVAL NOT NULL DEFAULT '0 DAY'::INTERVAL, -- IF IN ESCROW WHAT IS THE HOLD ON THESE FUNDS?
+    creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP, -- THE TIME THE PURCHASE WAS RECORDED
+    created_by UUID NOT NULL, -- THE USER THAT CREATED THE PURCHASE, COULD BE A USER OR AN ADMINISTRATOR WHO IS RECORDING AN AIRDROP
+    updated_time TIMESTAMPTZ, 
+    updated_by UUID,
+    transaction_time TIMESTAMPTZ, -- THE TIME THE TRANSACTION ACTUALLY WAS PROCESSED
+    seq_id NUMERIC(20) UNIQUE NOT NULL DEFAULT nextval('transactions_seq_id'),
+    CONSTRAINT pk_transaction PRIMARY KEY (id),
+    CONSTRAINT fk_transaction_payor_id FOREIGN KEY (payor_wallet_id) REFERENCES wallets(id),
+    CONSTRAINT fk_transaction_payee_wallet_id FOREIGN KEY (payee_wallet_id) REFERENCES wallets(id),
+    CONSTRAINT fk_transaction_created_by FOREIGN KEY (created_by) REFERENCES users(id),
+    CONSTRAINT fk_transaction_updated_by FOREIGN KEY (updated_by) REFERENCES users(id),
+    CONSTRAINT fk_transaction_type FOREIGN KEY (type_id) REFERENCES transaction_type(id),
+    CONSTRAINT ck_transaction_updated CHECK (updated_time IS NULL AND updated_by IS NULL OR updated_by IS NOT NULL AND updated_time IS NOT NULL)
+);
+
+CREATE INDEX idx_transactions_batch ON transactions(batch_id);
+
+-- MIGRATE PURHCASES AS TRANSACTIONS
+INSERT INTO transactions (id, payor_wallet_id, payee_wallet_id, type_id, memo, ref, escrow, escrow_time, creation_time, created_by, transaction_time)
+    SELECT purchase.id, dist_wallet_id, wallets.id, 2, memo, ref, escrow, escrow_time, purchase.creation_time, created_by, transaction_time
+    FROM
+        purchase
+        INNER JOIN users ON (user_id = users.id)
+        INNER JOIN wallets ON (wallet_id = wallets.id);
+ALTER TABLE purchase DROP COLUMN ref;
+ALTER TABLE purchase DROP COLUMN escrow;
+ALTER TABLE purchase DROP COLUMN escrow_time;
+ALTER TABLE purchase DROP COLUMN memo;
+
+ALTER TABLE purchase ADD CONSTRAINT fk_purchase_transaction_id FOREIGN KEY (id) REFERENCES transactions(id);
+
+CREATE INDEX transaction_id_sha_idx ON transactions(digest(id::text, 'sha256'));
+CREATE INDEX transaction_batch_id_sha_idx ON transactions(digest(batch_id::text, 'sha256'));
+
+CREATE TABLE IF NOT EXISTS wallet_network (
+    id NUMERIC(1) NOT NULL, -- THE NETWORK
+    name VARCHAR(36) NOT NULL, -- THE NAME OF THE NETWORK
+    CONSTRAINT pk_wallet_network PRIMARY KEY (id)
+);
+
+INSERT INTO wallet_network VALUES (1, 'STELLAR');
+INSERT INTO wallet_network VALUES (2, 'ETHERIUM');
+
+ALTER TABLE wallets ADD COLUMN network_id NUMERIC(1);
+ALTER TABLE wallets ADD CONSTRAINT fk_wallet_network_id FOREIGN KEY (network_id) REFERENCES wallet_network(id);
+
+ALTER TABLE wallets ADD COLUMN user_id uuid;
+ALTER TABLE wallets ADD CONSTRAINT fk_wallets_user FOREIGN KEY (user_id) REFERENCES users(id);
+
+-- MIGRATE WALLETS
+UPDATE wallets SET network_id = 1, user_id = (SELECT id FROM users WHERE wallet_id = wallets.id);
+ALTER TABLE users DROP COLUMN wallet_id CASCADE;
+ALTER TABLE wallets ALTER COLUMN network_id SET NOT NULL;
+
+ALTER TABLE wallet_network ADD COLUMN symbol VARCHAR(3);
+UPDATE wallet_network SET symbol = 'str' WHERE id = 1;
+UPDATE wallet_network SET symbol = 'eth' WHERE id = 2;
+ALTER TABLE wallet_network ALTER COLUMN symbol SET NOT NULL;
+
+ALTER TABLE transactions ALTER COLUMN memo TYPE TEXT;
+
+-- TRANSACTION STATUS
+CREATE TABLE transaction_state (
+    id NUMERIC(1) NOT NULL,
+    name VARCHAR(20) NOT NULL,
+    CONSTRAINT pk_transaction_state PRIMARY KEY (id)
+);
+
+INSERT INTO transaction_state VALUES (-1, 'FAILED');
+INSERT INTO transaction_state VALUES (1, 'PENDING');
+INSERT INTO transaction_state VALUES (2, 'COMPLETE');
+INSERT INTO transaction_state VALUES (3, 'ACTIVE');
+INSERT INTO transaction_state VALUES (4, 'HOLD');
+
+ALTER TABLE transactions ADD COLUMN state_id NUMERIC(1) NOT NULL DEFAULT 1;
+ALTER TABLE transactions ADD CONSTRAINT fk_transaction_state FOREIGN KEY (state_id) REFERENCES transaction_state(id);
+UPDATE transactions SET state_id = COALESCE((SELECT CASE WHEN state <= 2 THEN state ELSE -1 END FROM purchase WHERE purchase.id = transactions.id), -1);
+ALTER TABLE purchase DROP COLUMN state CASCADE;
+
+
+ALTER TABLE transactions ADD COLUMN amount NUMERIC(20,7);
+ALTER TABLE transactions ADD COLUMN asset_code VARCHAR(12);
+ALTER TABLE purchase DROP COLUMN charge_amount;
+ALTER TABLE purchase DROP COLUMN charge_currency; 
+ALTER TABLE purchase RENAME COLUMN amount TO quantity;
+
+-- UPDATE REPORTS
+
+CREATE OR REPLACE VIEW rpt_purchase_by_currency AS
+    SELECT 
+        assets.code, 
+        transactions.asset_code as charge_currency, 
+        sum(transactions.amount) as total_charge, 
+        avg(transactions.amount) as average_charge, 
+        count(purchase.id) as num_purchases,
+        min(transactions.amount) as smallest_charge,
+        max(transactions.amount) as largest_charge,
+        sum(purchase.quantity) as amount,
+        count(distinct user_id) as num_buyers
+    FROM 
+        purchase 
+        INNER JOIN transactions USING (id)
+        INNER JOIN assets ON (asset_id = assets.id)
+    WHERE
+        state_id = 2
+    GROUP BY
+        code, charge_currency;
+
+CREATE OR REPLACE VIEW rpt_purchase_by_currency_date AS
+    SELECT 
+        assets.code, 
+        transactions.asset_code as charge_currency, 
+        to_char(transactions.transaction_time, 'yyyy-MM-dd') as date,
+        sum(amount) as total_charge, 
+        avg(amount) as average_charge, 
+        count(purchase.id) as num_purchases,
+        min(amount) as smallest_charge,
+        max(amount) as largest_charge,
+        sum(quantity) as amount,
+        count(distinct user_id) as num_buyers
+    FROM 
+        purchase 
+        INNER JOIN transactions USING (id)
+        INNER JOIN assets ON (asset_id = assets.id)
+    WHERE
+        state_id = 2
+    GROUP BY
+        code, charge_currency, date
+    ORDER BY 
+        date;  
+
+		
+-- WALLET OF UHX ASSET
+INSERT INTO wallets (id, address, seed, network_id) VALUES ('b63c79f1-3548-46b7-af0d-0fb7ac9014c1','GBK3Z54T4SCL5GCKGWFA5WHFEL3XSYVKKREDCG73IXZPQZ2LWTCY2O7T','SC4UWAQGBGOWB3G54JGKER4RJXJ54SPP4W7TMSQ6QNCHRZVBPGT23MKG', 1);
+
+-- CREATE TEST APPLICATION FOR ALLCODE
+INSERT INTO applications (id, name, secret, created_by) VALUES ('5e356a70-1a20-42d1-b582-2e1270e3daa1', 'allcode_kyc', crypt('@AllCodeKYC_UHXCorp2018', gen_salt('bf')), '3c673456-23b1-4263-9deb-df46770852c9');
+-- GRANT WRITE INVITE
+INSERT INTO application_permissions (application_id, permission_set_id, acl_flags, client_only) VALUES ('5e356a70-1a20-42d1-b582-2e1270e3daa1', '76818f0a-2caa-4c46-83f5-064248001821', 6, true);
+
+-- CREATE TEST APPLICATION FOR UHC WEB
+INSERT INTO applications (id, name, secret, created_by) VALUES ('2fe9252e-750d-49ca-b2c5-fd5e3fefb7c5', 'uhx_www_web', crypt('@UniversalHealthX_UHXCorp2018', gen_salt('bf')), '3c673456-23b1-4263-9deb-df46770852c9');
+INSERT INTO application_permissions (application_id, permission_set_id, acl_flags, client_only)
+	SELECT '2fe9252e-750d-49ca-b2c5-fd5e3fefb7c5', id, 31, false
+	FROM permission_sets;
+
+INSERT INTO applications (id, name, secret, created_by) VALUES ('11e42813-5837-4619-84e9-aef8ab8a28f6', 'uhx_www_register', crypt('@UniversalHealthX_UHXCorp2018', gen_salt('bf')), '3c673456-23b1-4263-9deb-df46770852c9');
+INSERT INTO application_permissions (application_id, permission_set_id, acl_flags, client_only) VALUES ('11e42813-5837-4619-84e9-aef8ab8a28f6', '29b52e3b-52d6-4108-bb6e-f4c692cb4145', 5, true);
+INSERT INTO application_permissions (application_id, permission_set_id, acl_flags, client_only) VALUES ('11e42813-5837-4619-84e9-aef8ab8a28f6', '76818f0a-2caa-4c46-83f5-064248001821', 1, true);
+
+-- ADMIN'S WALLET
+INSERT INTO wallets (id, address, seed) VALUES ('29f688a2-2ad6-406c-9a1e-e3d323627df2', 'GB5E6NXXU3UMWN76IPYHFC7VS3KXC3ZXTVGVVX3UBR5CO4DI6B55VKR6', 'SBQJ4YLRUDEWGKVYJ53LJCZ6RYICOZ6B4DARI4QGS4YWZA5HJ4OV6U5U');
+UPDATE users SET wallet_id = '29f688a2-2ad6-406c-9a1e-e3d323627df2' WHERE id = '3c673456-23b1-4263-9deb-df46770852c9';
+
+-- BOB'S TEST WALLET
+INSERT INTO wallets (id, address, seed) VALUES ('e7f69af0-dd77-4398-a5e5-04c0beaa34e4', 'GC52U5USBCAW23E6I3TD4GFEEREBJEITVRI6LZND6TIACWO3OLLTB4BJ','SDRBS4PHWLXC4Q34VH3CQCOYMFOCTV4FBMQMUVN7Y67E3HCCBGI7FZ2V');
+UPDATE users SET wallet_id = 'e7f69af0-dd77-4398-a5e5-04c0beaa34e4' WHERE id = 'a514af56-bea6-4403-b27a-3b3022d82f32';
+-- TODO: UPDATE FOR UHX TEST ASSET
