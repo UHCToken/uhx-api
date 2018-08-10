@@ -31,15 +31,6 @@ const ChatMessage = require('../model/ChatMessage'),
  */
 module.exports = class Chat {
 
-  constructor(connectionString) {
-    this._connectionString = connectionString;
-    
-    //Web sockets listening...
-    io.listen(8080);
-    this.initSockets()
-  }
-
-
   get routes() {
     return {
       permission_group: "chat",
@@ -60,9 +51,16 @@ module.exports = class Chat {
   }
 
 
+  /**
+   * @method
+   * @summary: Initiates the web socket activity. 
+   */
+  initChatSocket(chatRoomId) {
+    let chat = io.of(chatRoomId)
+    //Web sockets listening...
+    chat.listen(8080);  //TODO: Configure Port
 
-  initSockets() {
-    io.on('connection', (socket) => {
+    chat.on('connection', (socket) => {
       console.log('-------------------connected and stuff--------------------');
 
       socket.on('SEND_MESSAGE', function(data){
@@ -80,7 +78,7 @@ module.exports = class Chat {
         let chatMessage = new ChatMessage().copy(chatMessageFromData);
 
         //Emit to chat
-        io.emit('RECEIVE_MESSAGE', data);
+        chat.emit('RECEIVE_MESSAGE', data);
 
       })
 

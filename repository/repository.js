@@ -49,9 +49,6 @@ class UhcRepositories {
     constructor(connectionString) {
         this.connectionString = connectionString;
         this.transaction = this.transaction.bind(this);
-
-        //Init web socket listening
-        this.chat = new Chat(this.connectionString);
     }
 
     /**

@@ -50,6 +50,7 @@ module.exports = class ChatRepository {
    * @param {string} chatRoom The chatroom to be greated
    */
   async createChatRoom(chatRoom) {
+    
     const dbc = new pg.Client(this._connectionString);
 
     try {
@@ -81,7 +82,7 @@ module.exports = class ChatRepository {
     }
     catch(err){console.log(err)}
     finally {
-
+      dbc.end();
     }
   }
 
