@@ -25,41 +25,26 @@ const uhx = require('../uhx'),
 
 /**
  * @class
- * @summary Represents a user payment service
+ * @summary Represents a user's subscription
  * @swagger
  * tags:
- *  - name: "wallet"
- *    description: "The wallet resource represents a single user's wallet (stellar or other blockchain account, etc.)"
+ *  - name: subscription
+ *    description: The subscription resource represents a single user's subscription to an offering of services
  */
-class WalletApiResource {
-
-    /**
-     * @constructor
-     */
-    constructor() {
-    }
-
+module.exports.SubscriptionApiResource = class SubscriptionApiResource {
     /**
      * @method
      * @summary Get routing information for this class
      */
     get routes() {
         return {
-            "permission_group": "subscription",
+            "permission_group": "user",
             "routes": [
                 {
                     "path": "user/:uid/subscription",
-                    "put": {
-                        "demand": security.PermissionType.WRITE,
-                        "method": this.put
-                    },
                     "get": {
                         "demand": security.PermissionType.LIST,
                         "method": this.get
-                    },
-                    "delete": {
-                        "demand": security.PermissionType.WRITE,
-                        "method": this.delete
                     }
                 }
             ]
