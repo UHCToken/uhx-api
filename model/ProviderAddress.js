@@ -119,11 +119,13 @@ module.exports = class ProviderAddress extends ModelBase {
         this.stateProv = dbAddress.state_prov;
         this.country = dbAddress.country;
         this.postalZip = dbAddress.postal_zip;
-        this.unitSuite = dbAddress.unit_suite;
+        this.latitude = dbAddress.latitude;
+        this.longitude = dbAddress.longitude;
         this.visible = dbAddress.visible;
         this.creationTime = dbAddress.creation_time;
         this.updatedTime = dbAddress.updated_time;
         this.deactivationTime = dbAddress.deactivation_time;
+        this.distance = dbAddress.distance;
         return this;
     }
 
@@ -144,7 +146,9 @@ module.exports = class ProviderAddress extends ModelBase {
             state_prov: this.stateProv,
             country: this.country,
             postal_zip: this.postalZip,
-            visible: this.visible
+            visible: this.visible,
+            latitude: this.latitude,
+            longitude: this.longitude
         };
 
         return retVal;
@@ -164,19 +168,33 @@ module.exports = class ProviderAddress extends ModelBase {
      * @method
      * @summary Prefetch address services
      */
-    async loadAddressServices(_txc) {
-        if (!this._services)
-            this._services = await uhx.Repositories.providerServiceRepository.getAllForAddress(this.id, _txc);
+    async loadAddressServices(serviceType, _txc) {
+        if (!this._services){
+            if (!serviceType) this._services = await uhx.Repositories.providerServiceRepository.getAllForAddress(this.id, _txc);
+            else this._services = await uhx.Repositories.providerServiceRepository.getAllForAddressByType(this.id, serviceType, _txc);
+        }
 
         if (this._services) {
             for (var s in this._services) {
                 if (await uhx.Repositories.providerServiceRepository.serviceTypeExists(this._services[s].id, this.id, _txc))
                     await this._services[s].loadServiceTypeDetails();
-                else 
-                    delete(this._services[s]);
+                else
+                    delete (this._services[s]);
             }
         }
         return this._services;
+    }
+
+    /**
+     * @method
+     * @summary Prefetch provider details
+     */
+    async loadProviderDetails(_txc) {
+        if (!this._provider) {
+            this._provider = await uhx.Repositories.providerRepository.get(this.providerId, _txc);
+            await this._provider.loadProviderServiceTypes();
+        }
+        return this._provider;
     }
 
     /**
@@ -187,6 +205,7 @@ module.exports = class ProviderAddress extends ModelBase {
         var retVal = this.stripHiddenFields();
         retVal.serviceTypes = this._asTypes;
         retVal.services = this._services;
+        retVal.provider = this._provider;
         return retVal;
     }
 

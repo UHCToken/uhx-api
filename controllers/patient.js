@@ -24,13 +24,13 @@ const uhx = require('../uhx'),
 
 /**
  * @class
- * @summary Represents a provider service
+ * @summary Represents a patient service
  * @swagger
  * tags:
- *  - name: "provider"
- *    description: "The provider resource represents a single provider (client, provider, etc.) which is a member of UhX"
+ *  - name: "patient"
+ *    description: "The patient resource represents a single patient (client, patient, etc.) which is a member of UhX"
  */
-class ProviderApiResource {
+class PatientApiResource {
 
     /**
      * @constructor
@@ -48,19 +48,19 @@ class ProviderApiResource {
             "permission_group": "user",
             "routes": [
                 {
-                    "path": "provider",
+                    "path": "patient",
                     "post": {
                         "demand": security.PermissionType.WRITE,
                         "method": this.post
                     },
-                    "path": "provider",
+                    "path": "patient",
                     "get": {
                         "demand": security.PermissionType.LIST,
                         "method": this.getAll
                     }
                 },
                 {
-                    "path": "provider/:providerid",
+                    "path": "patient/:patientid",
                     "get": {
                         "demand": security.PermissionType.READ,
                         "method": this.get
@@ -71,14 +71,14 @@ class ProviderApiResource {
                     }
                 },
                 {
-                    "path": "provider/:uid/upload",
+                    "path": "patient/:uid/upload",
                     "post": {
                         "demand": security.PermissionType.WRITE,
                         "method": this.upload
                     }
                 },
                 {
-                    "path": "provider/:uid/img",
+                    "path": "patient/:uid/img",
                     "get": {
                         "demand": security.PermissionType.READ,
                         "method": this.getProfilePicture
@@ -90,16 +90,16 @@ class ProviderApiResource {
 
     /**
      * @method
-     * @summary Creates a new provider
+     * @summary Creates a new patient
      * @param {Express.Request} req The request from the client
      * @param {Express.Response} res The response to send back to the client
      * @swagger
-     * /provider:
+     * /patient:
      *  post:
      *      tags:
-     *      - "provider"
-     *      summary: "Registers a new provider in the UhX API"
-     *      description: "This method will register a new provider in the UhX API"
+     *      - "patient"
+     *      summary: "Registers a new patient in the UhX API"
+     *      description: "This method will register a new patient in the UhX API"
      *      consumes: 
      *      - "application/json"
      *      produces:
@@ -107,17 +107,17 @@ class ProviderApiResource {
      *      parameters:
      *      - in: "body"
      *        name: "body"
-     *        description: "The provider that is to be created"
+     *        description: "The patient that is to be created"
      *        required: true
      *        schema:
-     *          $ref: "#/definitions/Provider"
+     *          $ref: "#/definitions/Patient"
      *      responses:
      *          201: 
      *             description: "The requested resource was created successfully"
      *             schema: 
-     *                  $ref: "#/definitions/Provider"
+     *                  $ref: "#/definitions/Patient"
      *          422:
-     *              description: "The provider object sent by the client was rejected"
+     *              description: "The patient object sent by the client was rejected"
      *              schema: 
      *                  $ref: "#/definitions/Exception"
      *          500:
@@ -138,36 +138,32 @@ class ProviderApiResource {
         if (!req.body.userId)
             throw new exception.Exception("Must have a userId", exception.ErrorCodes.MISSING_PROPERTY);
 
-        if (!req.body.name)
-            throw new exception.Exception("Must have a name", exception.ErrorCodes.MISSING_PROPERTY);
-
-        var provider = new model.Provider().copy(req.body);
-        var newProvider = await uhx.UserLogic.addProvider(provider, req.body.serviceTypes, req.principal);
-        await newProvider.loadProviderServiceTypes();
-        res.status(201).json(newProvider);
+        var patient = new model.Patient().copy(req.body);
+        var newPatient = await uhx.UserLogic.addPatient(patient, req.principal);
+        res.status(201).json(newPatient);
 
         return true;
     }
 
     /**
      * @method
-     * @summary Get all providers
+     * @summary Get all patients
      * @param {Express.Reqeust} req The request from the client 
      * @param {Express.Response} res The response from the client
      * @swagger
-     * /provider:
+     * /patient:
      *  get:
      *      tags:
-     *      - "provider"
-     *      summary: "Gets all providers"
-     *      description: "This method gets all providers"
+     *      - "patient"
+     *      summary: "Gets all patients"
+     *      description: "This method gets all patients"
      *      produces:
      *      - "application/json"
      *      responses:
      *          200: 
      *             description: "The requested resource was queried successfully"
      *             schema: 
-     *                  $ref: "#/definitions/Provider"
+     *                  $ref: "#/definitions/Patients"
      *          500:
      *              description: "An internal server error occurred"
      *              schema:
@@ -177,49 +173,49 @@ class ProviderApiResource {
      *          - "list:user"
      */
     async getAll(req, res) {
-        res.status(200).json(await uhx.Repositories.providerRepository.getAllProviders());
+        res.status(200).json(await uhx.Repositories.patientRepository.getAllPatients());
         return true;
     }
 
     /**
      * @method
-     * @summary Updates an existing provider
+     * @summary Updates an existing patient
      * @param {Express.Request} req The request from the client
      * @param {Express.Response} res The response to the client
      * @swagger
-     * /provider/{providerid}:
+     * /patient/{patientid}:
      *  put:
      *      tags:
-     *      - "provider"
-     *      summary: "Updates an existing provider in the UhX API"
-     *      description: "This method will update an existing  provider in the UhX API"
+     *      - "patient"
+     *      summary: "Updates an existing patient in the UhX API"
+     *      description: "This method will update an existing patient in the UhX API"
      *      consumes: 
      *      - "application/json"
      *      produces:
      *      - "application/json"
      *      parameters:
-     *      - name: "providerid"
+     *      - name: "patientid"
      *        in: "path"
-     *        description: "The user ID of the provider being updated"
+     *        description: "The user ID of the patient being updated"
      *        required: true
      *        type: "string"
      *      - in: "body"
      *        name: "body"
-     *        description: "The provider that is to be updated"
+     *        description: "The patient that is to be updated"
      *        required: true
      *        schema:
-     *          $ref: "#/definitions/Provider"
+     *          $ref: "#/definitions/Patient"
      *      responses:
      *          201: 
      *             description: "The requested resource was updated successfully"
      *             schema: 
-     *                  $ref: "#/definitions/Provider"
+     *                  $ref: "#/definitions/Patient"
      *          404:
-     *              description: "The specified provider cannot be found"
+     *              description: "The specified patient cannot be found"
      *              schema: 
      *                  $ref: "#/definitions/Exception"
      *          422:
-     *              description: "The provider object sent by the client was rejected"
+     *              description: "The patient object sent by the client was rejected"
      *              schema: 
      *                  $ref: "#/definitions/Exception"
      *          500:
@@ -232,42 +228,39 @@ class ProviderApiResource {
      *          - "read:user"
      */
     async put(req, res) {
-        req.body.id = req.params.providerid;
+        req.body.id = req.params.patientid;
 
-        var provider = await uhx.UserLogic.updateProvider(new model.Provider().copy(req.body), req.body.serviceTypes, req.principal);
-        if (provider)
-            await provider.loadProviderServiceTypes();
-        res.status(201).json(provider);
+        res.status(201).json(await uhx.UserLogic.updatePatient(new model.Patient().copy(req.body), req.principal));
         return true;
     }
 
     /**
      * @method
-     * @summary Get a single provider 
+     * @summary Get a single patient 
      * @param {Express.Reqeust} req The request from the client 
      * @param {Express.Response} res The response from the client
      * @swagger
-     * /provider/{providerid}:
+     * /patient/{patientid}:
      *  get:
      *      tags:
-     *      - "provider"
-     *      summary: "Gets an existing provider from the UhX member database"
-     *      description: "This method will fetch an existing provider from the UhX member database"
+     *      - "patient"
+     *      summary: "Gets an existing patient from the UhX database"
+     *      description: "This method will fetch an existing patient from the UhX database"
      *      produces:
      *      - "application/json"
      *      parameters:
-     *      - name: "providerid"
+     *      - name: "patientid"
      *        in: "path"
-     *        description: "The provider ID of the provider"
+     *        description: "The patient ID of the patient"
      *        required: true
      *        type: "string"
      *      responses:
      *          200: 
      *             description: "The requested resource was fetched successfully"
      *             schema: 
-     *                  $ref: "#/definitions/Provider"
+     *                  $ref: "#/definitions/Patient"
      *          404:
-     *              description: "The specified provider cannot be found"
+     *              description: "The specified patient cannot be found"
      *              schema: 
      *                  $ref: "#/definitions/Exception"
      *          500:
@@ -279,28 +272,23 @@ class ProviderApiResource {
      *          - "read:user"
      */
     async get(req, res) {
-        var provider = await uhx.Repositories.providerRepository.get(req.params.providerid);
-        if (provider) {
-            await provider.loadProviderServiceTypes();
-            await provider.loadAddresses();
-        }
-        res.status(200).json(provider);
+        res.status(200).json(await uhx.Repositories.patientRepository.get(req.params.patientid));
         return true;
     }
 
 
     /**
      * @method
-     * @summary Uploads an image for the provider
+     * @summary Uploads an image for the patient
      * @param {Express.Request} req The request from the client
      * @param {Express.Response} res The response to the client
      * @swagger
-     * /provider/{userid}/upload:
+     * /patient/{userid}/upload:
      *  post:
      *      tags:
-     *      - "provider"
-     *      summary: "Uploads an image for the provider"
-     *      description: "This method will allow the provider to upload an image into object storage"
+     *      - "patient"
+     *      summary: "Uploads an image for the patient"
+     *      description: "This method will allow the patient to upload an image into object storage"
      *      consumes: 
      *      - "application/json"
      *      produces:
@@ -308,7 +296,7 @@ class ProviderApiResource {
      *      parameters:
      *      - name: "userid"
      *        in: "path"
-     *        description: "The user ID of the provider adding an image"
+     *        description: "The user ID of the patient adding an image"
      *        required: true
      *        type: "string"
      *      - in: "body"
@@ -316,18 +304,18 @@ class ProviderApiResource {
      *        description: "The file to upload"
      *        required: true
      *        schema:
-     *          $ref: "#/definitions/Provider"
+     *          $ref: "#/definitions/Patient"
      *      responses:
      *          201: 
      *             description: "The requested resource was updated successfully"
      *             schema: 
-     *                  $ref: "#/definitions/Provider"
+     *                  $ref: "#/definitions/Patient"
      *          404:
-     *              description: "The specified provider cannot be found"
+     *              description: "The specified patient cannot be found"
      *              schema: 
      *                  $ref: "#/definitions/Exception"
      *          422:
-     *              description: "The provider object sent by the client was rejected"
+     *              description: "The patient object sent by the client was rejected"
      *              schema: 
      *                  $ref: "#/definitions/Exception"
      *          500:
@@ -339,7 +327,7 @@ class ProviderApiResource {
      *          - "write:user"
      */
     async upload(req, res) {
-        var result = await uhx.ObjectStorage.uploadProfileImage(req, res, 'provider');
+        var result = await uhx.ObjectStorage.uploadProfileImage(req, res, 'patient');
         var status = result instanceof exception.Exception ? 500 : 201;
 
         res.status(status).json(result);
@@ -347,33 +335,33 @@ class ProviderApiResource {
         return true;
     }
 
-    /**
+/**
  * @method
- * @summary Get a single providers profile picture
+ * @summary Get a single patients profile picture
  * @param {Express.Reqeust} req The request from the client 
  * @param {Express.Response} res The response from the client
  * @swagger
- * /provider/{userid}/img:
+ * /patient/{userid}/img:
  *  get:
  *      tags:
- *      - "provider"
- *      summary: "Gets the profile picture for a specified provider"
- *      description: "This method will fetch the profile image for a specific provider"
+ *      - "patient"
+ *      summary: "Gets the profile picture for a specified patient"
+ *      description: "This method will fetch the profile image for a specific patient"
  *      produces:
  *      - "application/json"
  *      parameters:
  *      - name: "userid"
  *        in: "path"
- *        description: "The ID of the provider for the profile image"
+ *        description: "The ID of the patient for the profile image"
  *        required: true
  *        type: "string"
  *      responses:
  *          200: 
  *             description: "The requested resource was fetched successfully"
  *             schema: 
- *                  $ref: "#/definitions/Provider"
+ *                  $ref: "#/definitions/Patient"
  *          404:
- *              description: "The specified provider cannot be found"
+ *              description: "The specified patient cannot be found"
  *              schema: 
  *                  $ref: "#/definitions/Exception"
  *          500:
@@ -385,7 +373,7 @@ class ProviderApiResource {
  *          - "read:user"
  */
     async getProfilePicture(req, res) {
-        var image = await uhx.ObjectStorage.getProfileImage(req, res, 'provider');
+        var image = await uhx.ObjectStorage.getProfileImage(req, res, 'patient');
         var status = image instanceof exception.Exception ? 404 : 201;
         if (status == 201)
             image.pipe(res);
@@ -397,4 +385,4 @@ class ProviderApiResource {
 }
 
 // Module exports
-module.exports.ProviderApiResource = ProviderApiResource;
+module.exports.PatientApiResource = PatientApiResource;

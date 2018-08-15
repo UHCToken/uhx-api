@@ -49,6 +49,10 @@ class ProviderAddressApiResource {
             "routes": [
                 {
                     "path": "provideraddress",
+                    "get": {
+                        "demand": security.PermissionType.READ,
+                        "method": this.query
+                    },
                     "post": {
                         "demand": security.PermissionType.WRITE,
                         "method": this.post
@@ -63,6 +67,10 @@ class ProviderAddressApiResource {
                     "put": {
                         "demand": security.PermissionType.WRITE | security.PermissionType.READ,
                         "method": this.put
+                    },
+                    "delete": {
+                        "demand": security.PermissionType.WRITE | security.PermissionType.READ,
+                        "method": this.delete
                     }
                 },
                 {
@@ -75,7 +83,60 @@ class ProviderAddressApiResource {
             ]
         };
     }
-    
+
+    /**
+     * @method
+     * @summary Allows for a query of all provider addresses with filters
+     * @param {Express.Reqeust} req The request from the client 
+     * @param {Express.Response} res The response from the client
+     * @swagger
+     * /provideraddress:
+     *  get:
+     *      tags:
+     *      - "provideraddress"
+     *      summary: "Gets filted address results"
+     *      description: "This method will fetch all addresses and filter the results"
+     *      produces:
+     *      - "application/json"
+     *      responses:
+     *          200: 
+     *             description: "The requested resource was fetched successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/ProviderAddress"
+     *          404:
+     *              description: "The specified address cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "read:user"
+     */
+    async query(req, res) {
+        if (req.query.address && !req.query.lat && !req.query.lon) {
+            var geometry = await uhx.GoogleMaps.getLatLon(req.query.address);
+            req.query.lat = geometry.lat;
+            req.query.lon = geometry.lon;
+        }
+        var addresses = await uhx.Repositories.providerAddressRepository.query(req.query);
+        if (addresses) {
+            addresses = await uhx.GoogleMaps.getDistances(req.query.address, addresses);
+            for (var adr in addresses) {
+                await addresses[adr].loadAddressServiceTypes();
+                await addresses[adr].loadProviderDetails();
+                if (req.query.serviceType)
+                    addresses[adr].services = await uhx.Repositories.providerServiceRepository.getAllForAddressByType(addresses[adr].id, req.query.serviceType);
+                else 
+                    addresses[adr].loadAddressServices();
+            }
+        }
+        res.status(201).json(addresses);
+        return true;
+    }
+
     /**
      * @method
      * @summary Creates a new provider address
@@ -118,6 +179,9 @@ class ProviderAddressApiResource {
 
         if (!req.body.providerId)
             throw new exception.Exception("Must have a providerId", exception.ErrorCodes.MISSING_PROPERTY);
+
+        if (!req.body.addressName)
+            throw new exception.Exception("Must have an addressName", exception.ErrorCodes.MISSING_PROPERTY);
 
         var address = new model.ProviderAddress().copy(req.body);
         var newAddress = await uhx.UserLogic.addProviderAddress(address, req.body.serviceTypes, req.principal);
@@ -168,7 +232,7 @@ class ProviderAddressApiResource {
     async get(req, res) {
 
         var address = await uhx.Repositories.providerAddressRepository.get(req.params.addressid);
-        if (address){
+        if (address) {
             await address.loadAddressServiceTypes();
             await address.loadAddressServices();
         }
@@ -214,8 +278,8 @@ class ProviderAddressApiResource {
     async getAllForProvider(req, res) {
 
         var addresses = await uhx.Repositories.providerAddressRepository.getAllForProvider(req.params.providerid);
-        if (addresses){
-            for(var adr in addresses){
+        if (addresses) {
+            for (var adr in addresses) {
                 await addresses[adr].loadAddressServiceTypes();
                 await addresses[adr].loadAddressServices();
             }
@@ -286,6 +350,61 @@ class ProviderAddressApiResource {
         return true;
     }
 
+    /**
+     * @method
+     * @summary Deactivates an existing provider address
+     * @param {Express.Request} req The request from the client
+     * @param {Express.Response} res The response to the client
+     * @swagger
+     * /provideraddress/{addressid}:
+     *  delete:
+     *      tags:
+     *      - "provideraddress"
+     *      summary: "Deactivates an existing provider address in the UhX API"
+     *      description: "This method will deactivate an existing provider address in the UhX API"
+     *      consumes: 
+     *      - "application/json"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "addressid"
+     *        in: "path"
+     *        description: "The ID of the provider address being deactivated"
+     *        required: true
+     *        type: "string"
+     *      - in: "body"
+     *        name: "body"
+     *        description: "The provider address that is to be deactivated"
+     *        required: true
+     *        schema:
+     *          $ref: "#/definitions/ProviderAddress"
+     *      responses:
+     *          201: 
+     *             description: "The requested resource was deactivated successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/ProviderAddress"
+     *          404:
+     *              description: "The specified provider address cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          422:
+     *              description: "The provider object sent by the client was rejected"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "write:user"
+     *          - "read:user"
+     */
+    async delete(req, res) {
+        req.body.id = req.params.addressid;
+        res.status(200).json(await uhx.UserLogic.deleteProviderAddress(new model.ProviderAddress().copy(req.body), req.principal));
+        return true;
+    }
 
 }
 

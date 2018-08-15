@@ -38,6 +38,7 @@ module.exports = class ProviderAddressRepository {
         this._connectionString = connectionString;
         this.get = this.get.bind(this);
         this.getAllForProvider = this.getAllForProvider.bind(this);
+        this.query = this.query.bind(this);
         this.update = this.update.bind(this);
         this.insert = this.insert.bind(this);
         this.getAddressServiceTypes = this.getAddressServiceTypes.bind(this);
@@ -58,7 +59,7 @@ module.exports = class ProviderAddressRepository {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if (!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM provider_addresses WHERE id = $1", [id]);
+            const rdr = await dbc.query("SELECT * FROM provider_addresses WHERE deactivation_time IS NULL AND id = $1", [id]);
             if (rdr.rows.length == 0)
                 return null;
             else
@@ -69,7 +70,6 @@ module.exports = class ProviderAddressRepository {
         }
 
     }
-
 
     /**
      * @method
@@ -83,7 +83,66 @@ module.exports = class ProviderAddressRepository {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if (!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM provider_addresses WHERE provider_id = $1", [providerId]);
+            const rdr = await dbc.query("SELECT * FROM provider_addresses WHERE deactivation_time IS NULL AND provider_id = $1", [providerId]);
+            if (rdr.rows.length == 0)
+                return null;
+            else {
+                var retVal = [];
+                for (var r in rdr.rows)
+                    retVal[r] = new ProviderAddress().fromData(rdr.rows[r]);
+                return retVal;
+            }
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Query the database for the specified addresses
+     * @param {*} filter The query template to use
+     * @returns {*} The matching addresses
+     */
+    async query(filter, _txc) {
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+
+            if (!filter || !filter.lat || !filter.lon)
+                throw new exception.Exception("Missing latitude/longitude", exception.ErrorCodes.ARGUMENT_EXCEPTION);
+            var sqlQuery = `
+                SELECT *
+                FROM (
+                    SELECT *, 
+                        (3959 * ACOS(COS(RADIANS($1)) * COS(RADIANS(provider_addresses.latitude)) 
+                        * COS(RADIANS(provider_addresses.longitude) - RADIANS($2)) 
+                        + SIN(RADIANS($1)) * SIN(RADIANS(provider_addresses.latitude))
+                        )) AS distance 
+                    FROM (
+                        SELECT *
+                        FROM provider_addresses
+                        WHERE provider_addresses.latitude BETWEEN ($1::NUMERIC - $3::NUMERIC) AND ($1::NUMERIC + $3::NUMERIC)
+                        AND provider_addresses.longitude BETWEEN ($2::NUMERIC - $3::NUMERIC) AND ($2::NUMERIC + $3::NUMERIC)
+                        ) AS provider_addresses
+                    ) SUB
+                WHERE distance <= $4
+                AND deactivation_time IS NULL
+                AND visible = true`;
+
+            var sqlArgs = [filter.lat, filter.lon, filter.distance * 0.02 || 0.5, filter.distance || 25, filter.limit || 25];
+            if (filter.serviceType) {
+                sqlQuery += `
+                     AND id IN (SELECT provider_address_id FROM provider_address_types WHERE service_type = $6)`;
+                sqlArgs.push(filter.serviceType);
+            }
+
+            sqlQuery += `
+             ORDER BY distance ASC
+             LIMIT $5;`;
+            const rdr = await dbc.query(sqlQuery, sqlArgs);
+
+
             if (rdr.rows.length == 0)
                 return null;
             else {
@@ -295,7 +354,7 @@ module.exports = class ProviderAddressRepository {
             if (rdr.rows.length == 0)
                 throw new exception.Exception("Could not DEACTIVATE provider address in data store", exception.ErrorCodes.DATA_ERROR);
             else
-                return new Provider().fromData(rdr.rows[0]);
+                return new ProviderAddress().fromData(rdr.rows[0]);
         }
         finally {
             if (!_txc) dbc.end();

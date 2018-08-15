@@ -23,6 +23,7 @@ const uhx = require('../uhx'),
     security = require('../security'),
     model = require('../model/model'),
     Provider = require('../model/Provider'),
+    Patient = require('../model/Patient'),
     User = require('../model/User');
 
 const uuidRegex = /[A-F0-9]{8}-(?:[A-F0-9]{4}\-){3}[A-F0-9]{12}/i;
@@ -45,10 +46,13 @@ module.exports = class UserLogic {
         this.updateProviderAddress = this.updateProviderAddress.bind(this);
         this.updateAddressServiceTypes = this.updateAddressServiceTypes.bind(this);
         this.addProviderServices = this.addProviderServices.bind(this);
+        this.getAllServices = this.getAllServices.bind(this);
         this.editProviderServices = this.editProviderServices.bind(this);
         this.addProviderService = this.addProviderService.bind(this);
         this.updateProviderService = this.updateProviderService.bind(this);
         this.deleteProviderService = this.deleteProviderService.bind(this);
+        this.addPatient = this.addPatient.bind(this);
+        this.updatePatient = this.updatePatient.bind(this);
     }
 
     /**
@@ -168,13 +172,22 @@ module.exports = class UserLogic {
      */
     async addProviderAddress(address, serviceTypes, principal) {
 
-        var addressExists = await uhx.Repositories.providerAddressRepository.get(address.addressId);
+        var addressExists = await uhx.Repositories.providerAddressRepository.get(address.id);
         if (addressExists)
             throw new exception.Exception("This address exists", exception.ErrorCodes.ARGUMENT_EXCEPTION);
 
-        delete (address.creationTime);
-        delete (address.updatedTime);
-        delete (address.deactivationTime);
+        var providerExists = await uhx.Repositories.providerRepository.checkIfExists(address.providerId);
+        if (!providerExists)
+            throw new exception.Exception("Provider Id does not exist", exception.ErrorCodes.ARGUMENT_EXCEPTION);
+
+        delete (address.latitude);
+        delete (address.longitude);
+
+        // Get the latitude and longitude
+        var geometry = await uhx.GoogleMaps.getLatLon(address);
+        address.latitude = geometry.lat;
+        address.longitude = geometry.lon;
+        address.placeId = geometry.placeId;
 
         try {
             var newAddress = await uhx.Repositories.providerAddressRepository.insert(address, principal);
@@ -196,11 +209,34 @@ module.exports = class UserLogic {
      * @returns {ProviderAddress} The updated provider address
      */
     async updateProviderAddress(address, serviceTypes, principal) {
+
+        var oldAddress = await uhx.Repositories.providerAddressRepository.get(address.id);
+        if (!oldAddress)
+            throw new exception.Exception("This address does not exist", exception.ErrorCodes.ARGUMENT_EXCEPTION);
+
         if (serviceTypes)
             await uhx.UserLogic.updateAddressServiceTypes(address.id, serviceTypes, principal);
 
         // Delete fields which can't be set by clients 
         delete (address.providerId);
+        delete (address.latitude);
+        delete (address.longitude);
+
+        if ((address.street && (address.street != oldAddress.street)) || (address.city && (address.city != oldAddress.city)) || (address.stateProv && (address.stateProv != oldAddress.stateProv)) || (address.country && (address.country != oldAddress.country)) || (address.postalZip && (address.postalZip != oldAddress.postalZip))) {
+            // Load new/old address data
+            var newAddress = {};
+            newAddress.street = address.street || oldAddress.street;
+            newAddress.city = address.city || oldAddress.city;
+            newAddress.stateProv = address.stateProv || oldAddress.stateProv;
+            newAddress.country = address.country || oldAddress.country;
+            newAddress.postalZip = address.postalZip || oldAddress.postalZip;
+
+            // Get the latitude and longitude
+            var geometry = await uhx.GoogleMaps.getLatLon(newAddress);
+            address.latitude = geometry.lat;
+            address.longitude = geometry.lon;
+            address.placeId = geometry.placeId;
+        }
 
         if (principal.grant["user"] & security.PermissionType.OWNER) {
             try {
@@ -230,8 +266,6 @@ module.exports = class UserLogic {
      * @param {SecurityPrincipal} principal The user who is making the request
      */
     async updateAddressServiceTypes(addressId, serviceTypes, principal) {
-        //var existingServiceTypes = await uhx.Repositories.providerAddressRepository.getAddressServiceTypes(addressId);
-
         try {
             for (var i in serviceTypes) {
                 var exists = await uhx.Repositories.providerAddressRepository.serviceTypeExists(addressId, serviceTypes[i].type_id);
@@ -246,6 +280,27 @@ module.exports = class UserLogic {
         catch (e) {
             uhx.log.error(`Error updating service type: ${e.message}`);
             throw new exception.Exception("Error updating service type", e.code || exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
+
+
+
+    /**
+     * @method
+     * @summary Deactivates the specified provider address
+     * @param {ProviderAddress} address The provider address to be deactivated
+     * @returns {ProviderAddress} The provider address that was deactivated
+     */
+    async deleteProviderAddress(address, principal, _txc) {
+        if (!(await uhx.Repositories.providerAddressRepository.get(address.id)))
+            throw new exception.Exception("Address not found", exception.ErrorCodes.NOT_FOUND);
+
+        try {
+            return await uhx.Repositories.providerAddressRepository.delete(address.id, _txc);
+        }
+        catch (e) {
+            uhx.log.error("Error deleting address: " + e.message);
+            throw new exception.Exception("Error deleting address", exception.ErrorCodes.UNKNOWN, e);
         }
     }
 
@@ -266,6 +321,7 @@ module.exports = class UserLogic {
         return await uhx.Repositories.transaction(async (_txc) => {
             for (var s in services) {
                 services[s].addressId = address.id;
+
                 try {
                     retVal.push(await uhx.UserLogic.addProviderService(services[s], principal, _txc));
                 }
@@ -276,6 +332,28 @@ module.exports = class UserLogic {
             }
             return retVal;
         });
+    }
+
+    /**
+     * @method
+     * @summary Gets all the services for an address in the UhX API
+     * @param {string} addressId The provider address id to get services for
+     * @param {SecurityPrincipal} principal The user who is making the request
+     * @returns {*} The services for the provider address
+     */
+    async getAllServices(addressId, principal) {
+        var address = await uhx.Repositories.providerAddressRepository.get(addressId);
+        if (!address)
+            throw new exception.Exception("Address not found", exception.ErrorCodes.NOT_FOUND);
+
+        var services = await uhx.Repositories.providerServiceRepository.getAllForAddress(addressId);
+        for (var s in services) {
+            if (await uhx.Repositories.providerServiceRepository.serviceTypeExists(services[s].id, services[s].addressId))
+                await services[s].loadServiceTypeDetails();
+            else
+                delete (services[s]);
+        }
+        return services;
     }
 
     /**
@@ -325,8 +403,8 @@ module.exports = class UserLogic {
         if (!service.addressId)
             throw new exception.Exception("Must have an addressId", exception.ErrorCodes.MISSING_PROPERTY);
 
-        if (!service.serviceType)
-            throw new exception.Exception("Must have a serviceType", exception.ErrorCodes.MISSING_PROPERTY);
+        if (!service.serviceName || !service.description || !service.cost || !service.serviceType)
+            throw new exception.Exception("Missing one or more properties", exception.ErrorCodes.MISSING_PROPERTY);
 
         if (!service.providerId) {
             var address = await uhx.Repositories.providerAddressRepository.get(service.addressId);
@@ -395,4 +473,53 @@ module.exports = class UserLogic {
         }
     }
 
+    /**
+     * @method
+     * @summary Adds a patient to the UhX API
+     * @param {Patient} patient The patient to add
+     * @param {SecurityPrincipal} principal The user who is making the request
+     */
+    async addPatient(patient, principal) {
+
+        var patientExists = await uhx.Repositories.patientRepository.get(patient.userId);
+        if (patientExists)
+            throw new exception.Exception("User has a patient profile", exception.ErrorCodes.ARGUMENT_EXCEPTION);
+
+        try {
+            var retVal = await uhx.Repositories.patientRepository.insert(patient, principal);
+            await uhx.Repositories.groupRepository.addUser(uhx.Config.security.sysgroups.patients, retVal.userId, principal);
+            return retVal;
+        }
+        catch (e) {
+            uhx.log.error(`Error adding patient: ${e.message}`);
+            throw new exception.Exception("Error adding patient", e.code || exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
+
+    /**
+     * @method
+     * @summary Updates the specified patient
+     * @param {Patient} patient The patient to be updated
+     * @returns {Patient} The updated patient
+     */
+    async updatePatient(patient, principal) {
+
+        try {
+
+            // Delete fields which can't be set by clients 
+            delete (patient.userId);
+            delete (patient.profileImage);
+
+            return await uhx.Repositories.transaction(async (_txc) => {
+                // Update the patient
+                return await uhx.Repositories.patientRepository.update(patient, null, _txc);
+
+            });
+        }
+        catch (e) {
+            uhx.log.error("Error updating patient: " + e.message);
+            throw new exception.Exception("Error updating patient", exception.ErrorCodes.UNKNOWN, e);
+        }
+
+    }
 }

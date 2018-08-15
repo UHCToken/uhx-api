@@ -28,6 +28,7 @@ const config = require('./config'),
     Mailer = require('./integration/mail'),
     StellarClient = require("./integration/stellar"),
     GreenMoney = require("./integration/greenmoney"),
+    GoogleMaps = require("./integration/googlemaps"),
     ObjectStorage = require("./integration/storage"),
     poolio = require('poolio'),
     Web3Client = require("./integration/web3"),
@@ -63,6 +64,8 @@ module.exports.init = () => {
         module.exports.GreenMoney = new GreenMoney();
         winston.info("ObjectStorage Initialized...");
         module.exports.ObjectStorage = new ObjectStorage();
+        winston.info("Google Maps Initialized...");
+        module.exports.GoogleMaps = new GoogleMaps();
     });
 }
 /**

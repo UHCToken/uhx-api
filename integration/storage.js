@@ -82,6 +82,10 @@ module.exports = class ObjectStorage {
                                     var provider = await uhx.Repositories.providerRepository.get(req.params.uid);
                                     provider.profileImage = filename;
                                     await uhx.Repositories.providerRepository.update(provider);
+                                } else if (fn && fn == 'patient'){
+                                    var patient = await uhx.Repositories.patientRepository.get(req.params.uid);
+                                    patient.profileImage = filename;
+                                    await uhx.Repositories.patientRepository.update(patient);
                                 } else {
                                     var user = await uhx.Repositories.userRepository.get(req.params.uid);
                                     user.profileImage = filename;
@@ -120,6 +124,8 @@ module.exports = class ObjectStorage {
         var adapter = skipperS3(s3config);
         if (fn && fn == 'provider')
             var user = await uhx.Repositories.providerRepository.get(req.params.uid);
+        else if (fn && fn == 'patient')
+            var user = await uhx.Repositories.patientRepository.get(req.params.uid);
         else
             var user = await uhx.Repositories.userRepository.get(req.params.uid);
 
@@ -136,17 +142,4 @@ module.exports = class ObjectStorage {
         }
         return result;
     }
-
-    /**
-    * @method
-    * @summary Generates a new UUID
-    * @returns A new UUID
-    */
-    async uuidv4() {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-            return v.toString(16);
-        });
-    }
-
 }

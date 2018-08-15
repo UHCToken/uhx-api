@@ -156,13 +156,7 @@ class ProviderServiceApiResource {
      *          - "read:user"
      */
     async getAll(req, res) {
-        var services = await uhx.Repositories.providerServiceRepository.getAllForAddress(req.params.addressid);
-
-        if (services) {
-            for (var s in services) {
-                await services[s].loadServiceTypeDetails();
-            }
-        }
+         var services = await uhx.UserLogic.getAllServices(req.params.addressid);
 
         res.status(200).json(services);
         return true;
@@ -224,10 +218,7 @@ class ProviderServiceApiResource {
 
         var newServices = await uhx.UserLogic.addProviderServices(req.params.addressid, req.body.map(o => new model.ProviderService().copy(o)), req.principal);
         if (newServices) {
-            var services = await uhx.Repositories.providerServiceRepository.getAllForAddress(req.params.addressid);
-            for (var s in services) {
-                await services[s].loadServiceTypeDetails();
-            }
+            var services = await uhx.UserLogic.getAllServices(req.params.addressid);
         }
         res.status(201).json(services);
 
@@ -290,12 +281,7 @@ class ProviderServiceApiResource {
 
         var editedServices = await uhx.UserLogic.editProviderServices(req.params.addressid, req.body.map(o => new model.ProviderService().copy(o)), req.body.map(o => o.action), req.principal);
         if (editedServices) {
-            var services = await uhx.Repositories.providerServiceRepository.getAllForAddress(req.params.addressid);
-            if (services) {
-                for (var s in services) {
-                    await services[s].loadServiceTypeDetails();
-                }
-            }
+            var services = await uhx.UserLogic.getAllServices(req.params.addressid);
         }
         res.status(201).json(services);
 

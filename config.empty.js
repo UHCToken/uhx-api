@@ -319,6 +319,19 @@ module.exports = {
         maxFileSize: 1048576
     },
     /**
+     * @summary Google maps configuration
+     */
+    googleMaps: {
+        /**
+         * @summary API key
+         */
+        key: "XXXXXXXXXXXXXXXXXXXXXXXXX",
+        /**
+         * @summary Use HTTPS
+         */
+        secure: true
+    },
+    /**
      * @summary Swagger configuration
      */
     swagger: {

@@ -25,6 +25,7 @@
     oauth = require('./controllers/oauth'),
     purchase = require('./controllers/purchase'),
     user = require('./controllers/user'),
+    patient = require('./controllers/patient'),
     provider = require('./controllers/provider'),
     providerAddress = require('./controllers/providerAddress'),
     providerService = require('./controllers/providerService'),
@@ -77,6 +78,7 @@ if(uhx.Config.swagger.enabled) {
 // Add OAuth token service
 restApi.addResource(new oauth.OAuthTokenService());
 restApi.addResource(new user.UserApiResource());
+restApi.addResource(new patient.PatientApiResource());
 restApi.addResource(new provider.ProviderApiResource());
 restApi.addResource(new providerAddress.ProviderAddressApiResource());
 restApi.addResource(new providerService.ProviderServiceApiResource());

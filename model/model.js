@@ -22,6 +22,7 @@
     crypto = require('crypto'),
     security = require('../security'),
     User = require('./User'),
+    Patient = require('./Patient'),
     Provider = require('./Provider'),
     ProviderAddress = require('./ProviderAddress'),
     ProviderService = require('./ProviderService'),
@@ -72,6 +73,7 @@ const TransactionStatus = {
 module.exports.User = User;
 module.exports.Application = Application;
 module.exports.Session = Session;
+module.exports.Patient = Patient;
 module.exports.Provider = Provider;
 module.exports.ProviderAddress = ProviderAddress;
 module.exports.ProviderService = ProviderService;
