@@ -35,6 +35,7 @@ const UserRepository = require('./userRepository'),
     ProviderServiceRepository = require('./providerServiceRepository'),
     ServiceTypeRepository = require('./serviceTypeRepository'),
     SubscriptionRepository = require('./subscriptionRepository'),
+    OfferingRepository = require('./offeringRepository'),
     pg = require('pg'),
     uhx = require('../uhx'),
     exception = require('../exception');
@@ -285,6 +286,17 @@ class UhcRepositories {
         if (!this._subscriptionRepository)
             this._subscriptionRepository = new SubscriptionRepository(this.connectionString);
         return this._subscriptionRepository;
+    }
+
+    /**
+     * @property
+     * @summary Gets the offering repository
+     * @type {OfferingRepository}
+     */
+    get offeringRepository() {
+        if (!this._offeringRepository)
+            this._offeringRepository = new OfferingRepository(this.connectionString);
+        return this._offeringRepository;
     }
 }
 

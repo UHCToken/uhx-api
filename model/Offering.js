@@ -26,8 +26,6 @@ const ModelBase = require('./ModelBase'),
  * @property {string} id The identifier for the service
  * @property {string} description The description for the service
  * @property {Array} services The group of services offered
- * 
- * 
  * @swagger
  * definitions:
  *  Offering:
