@@ -83,7 +83,7 @@ class ProviderAddressApiResource {
             ]
         };
     }
-    
+
     /**
      * @method
      * @summary Allows for a query of all provider addresses with filters
@@ -116,9 +116,24 @@ class ProviderAddressApiResource {
      *          - "read:user"
      */
     async query(req, res) {
-
-        var results = await uhx.Repositories.providerAddressRepository.query(req.query.postalZip);
-        res.status(201).json(results);
+        if (req.query.address && !req.query.lat && !req.query.lon) {
+            var geometry = await uhx.GoogleMaps.getLatLon(req.query.address);
+            req.query.lat = geometry.lat;
+            req.query.lon = geometry.lon;
+        }
+        var addresses = await uhx.Repositories.providerAddressRepository.query(req.query);
+        if (addresses) {
+            addresses = await uhx.GoogleMaps.getDistances(req.query.address, addresses);
+            for (var adr in addresses) {
+                await addresses[adr].loadAddressServiceTypes();
+                await addresses[adr].loadProviderDetails();
+                if (req.query.serviceType)
+                    addresses[adr].services = await uhx.Repositories.providerServiceRepository.getAllForAddressByType(addresses[adr].id, req.query.serviceType);
+                else 
+                    addresses[adr].loadAddressServices();
+            }
+        }
+        res.status(201).json(addresses);
         return true;
     }
 
@@ -217,7 +232,7 @@ class ProviderAddressApiResource {
     async get(req, res) {
 
         var address = await uhx.Repositories.providerAddressRepository.get(req.params.addressid);
-        if (address){
+        if (address) {
             await address.loadAddressServiceTypes();
             await address.loadAddressServices();
         }
@@ -263,8 +278,8 @@ class ProviderAddressApiResource {
     async getAllForProvider(req, res) {
 
         var addresses = await uhx.Repositories.providerAddressRepository.getAllForProvider(req.params.providerid);
-        if (addresses){
-            for(var adr in addresses){
+        if (addresses) {
+            for (var adr in addresses) {
                 await addresses[adr].loadAddressServiceTypes();
                 await addresses[adr].loadAddressServices();
             }

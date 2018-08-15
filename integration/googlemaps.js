@@ -35,14 +35,16 @@ module.exports = class GoogleMaps {
 
         var gm = new GoogleMapsAPI(uhx.Config.googleMaps);
 
-        var geocodeParams = {
-            "address": `${address.street}, ${address.postalZip}, ${address.city} ${address.stateProv} ${address.country}`
-        };
+        if (address instanceof Object)
+            var geocodeParams = { "address": `${address.street}, ${address.postalZip}, ${address.city} ${address.stateProv} ${address.country}` };
+        else
+            var geocodeParams = { "address": address };
+
 
         var retVal = {};
         return await new Promise((fulfill, reject) => {
             gm.geocode(geocodeParams, function (err, results) {
-                if (results.status == "OK") {
+                if (results && results.status == "OK") {
                     retVal.lat = results.results[0].geometry.location.lat;
                     retVal.lon = results.results[0].geometry.location.lng;
                     retVal.placeId = results.results[0].place_id;
@@ -55,4 +57,38 @@ module.exports = class GoogleMaps {
         return retVal;
     }
 
+    /**
+    * @method
+    * @summary Gets the distances for the addresses provided
+    * @param {Address} origin The origin address
+    * @param {Addresses} addresses The address to get distances of
+    * @returns {Object} The latitude and longitude
+    */
+    async getDistances(origin, addresses) {
+        var gm = new GoogleMapsAPI(uhx.Config.googleMaps);
+
+        var distanceParams = {
+            origins: origin,
+            destinations: addresses.map((t) => { return `${t.latitude},${t.longitude}` }).join("|"),
+            units: "metric"
+        };
+
+        return await new Promise((fulfill, reject) => {
+            gm.distance(distanceParams, function (err, results) {
+                if (results && results.status == "OK") {
+                    try {
+                        for (var address in addresses)
+                            addresses[address].driving = results.rows[0].elements[address].duration ? results.rows[0].elements[address].duration.value : null;
+                        fulfill(addresses);
+                    } catch (ex) {
+                        reject(new exception.Exception("Error getting distances: " + ex, exception.ErrorCodes.DATA_ERROR));
+                    }
+                }
+                else {
+                    reject(new exception.Exception("Error getting distances: " + err, exception.ErrorCodes.DATA_ERROR));
+                }
+            });
+        });
+        return addresses;
+    }
 }

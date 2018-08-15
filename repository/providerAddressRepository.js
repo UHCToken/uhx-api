@@ -105,22 +105,55 @@ module.exports = class ProviderAddressRepository {
      * @returns {*} The matching addresses
      */
     async query(filter, _txc) {
-        const dbc =  _txc || new pg.Client(this._connectionString);
+        const dbc = _txc || new pg.Client(this._connectionString);
         try {
-            if(!_txc) await dbc.connect();
-            // TODO: Filter
-            const rdr = await dbc.query("SELECT * FROM provider_addresses");
+            if (!_txc) await dbc.connect();
+
+            if (!filter || !filter.lat || !filter.lon)
+                throw new exception.Exception("Missing latitude/longitude", exception.ErrorCodes.ARGUMENT_EXCEPTION);
+            var sqlQuery = `
+                SELECT *
+                FROM (
+                    SELECT *, 
+                        (3959 * ACOS(COS(RADIANS($1)) * COS(RADIANS(provider_addresses.latitude)) 
+                        * COS(RADIANS(provider_addresses.longitude) - RADIANS($2)) 
+                        + SIN(RADIANS($1)) * SIN(RADIANS(provider_addresses.latitude))
+                        )) AS distance 
+                    FROM (
+                        SELECT *
+                        FROM provider_addresses
+                        WHERE provider_addresses.latitude BETWEEN ($1::NUMERIC - $3::NUMERIC) AND ($1::NUMERIC + $3::NUMERIC)
+                        AND provider_addresses.longitude BETWEEN ($2::NUMERIC - $3::NUMERIC) AND ($2::NUMERIC + $3::NUMERIC)
+                        ) AS provider_addresses
+                    ) SUB
+                WHERE distance <= $4
+                AND deactivation_time IS NULL
+                AND visible = true`;
+
+            var sqlArgs = [filter.lat, filter.lon, filter.distance * 0.02 || 0.5, filter.distance || 25, filter.limit || 25];
+            if (filter.serviceType) {
+                sqlQuery += `
+                     AND id IN (SELECT provider_address_id FROM provider_address_types WHERE service_type = $6)`;
+                sqlArgs.push(filter.serviceType);
+            }
+
+            sqlQuery += `
+             ORDER BY distance ASC
+             LIMIT $5;`;
+            const rdr = await dbc.query(sqlQuery, sqlArgs);
+
+
             if (rdr.rows.length == 0)
                 return null;
             else {
                 var retVal = [];
                 for (var r in rdr.rows)
-                    retVal[r] = rdr.rows[r];
+                    retVal[r] = new ProviderAddress().fromData(rdr.rows[r]);
                 return retVal;
             }
         }
         finally {
-            if(!_txc) dbc.end();
+            if (!_txc) dbc.end();
         }
     }
 
