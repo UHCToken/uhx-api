@@ -16,5 +16,5 @@ CREATE TABLE chat_message (
   datesent timestamp NOT NULL,
   viewedstatus varchar(20) NOT NULL,
   body varchar(500),
-  PRIMARY KEY (cm_id)
+  PRIMARY KEY (id)
 );

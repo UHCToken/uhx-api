@@ -50,7 +50,7 @@ module.exports = class GoogleMaps {
                     retVal.placeId = results.results[0].place_id;
                     fulfill(retVal);
                 } else {
-                    reject(new exception.Exception("Invalid Address", exception.ErrorCodes.DATA_ERROR));
+                    reject(new exception.Exception("An error has occurred: " + (err || results.error_message), exception.ErrorCodes.DATA_ERROR));
                 }
             });
         });
