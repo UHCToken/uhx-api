@@ -5,7 +5,7 @@
 --  * ADDS SERVICE_BUNDLES TABLE
 --  * ADDS SUBSCRIPTIONS TABLE
 
-DROP VIEW offering_lookup;
+DROP VIEW IF EXISTS offering_lookup;
 DROP TABLE IF EXISTS service_bundles;
 DROP TABLE IF EXISTS subscriptions;
 DROP TABLE IF EXISTS fields_required_for_service;
