@@ -90,13 +90,13 @@ CREATE TABLE IF NOT EXISTS service_bundles (
 -- LIST OF USERS AND THEIR SUBSCRIPTIONS
 CREATE TABLE IF NOT EXISTS subscriptions (
 	id UUID NOT NULL DEFAULT uuid_generate_v4(),
-	offering_id UUID NOT NULL, -- OFFERING THAT THE USER HAS PURCHASED
+	country_offering_id UUID NOT NULL, -- OFFERING THAT THE USER HAS PURCHASED
 	patient_id UUID NOT NULL, -- ID OF THE PATIENT THAT BOUGHT THE SERVICE
-	date_next_payment TIMESTAMPTZ, -- DATE OF NEXT BILLING REQUEST
-	date_subscribed TIMESTAMPTZ, -- DATE WHEN SUBSCRIPTION STARTS
-	date_terminated TIMESTAMPTZ, -- DATE WHEN SUBSCRIPTION ENDS
+	date_next_payment DATE, -- DATE OF NEXT BILLING REQUEST
+	date_subscribed DATE, -- DATE WHEN SUBSCRIPTION STARTS
+	date_terminated DATE, -- DATE WHEN SUBSCRIPTION ENDS
   auto_renew BOOLEAN, -- 1 FOR ENABLED, 0 FOR DISABLED
 	CONSTRAINT pk_subscription PRIMARY KEY (id),
-	CONSTRAINT fk_subscription_offering FOREIGN KEY (offering_id) REFERENCES offerings(id),
+	CONSTRAINT fk_subscription_offering FOREIGN KEY (country_offering_id) REFERENCES country_offerings(id),
 	CONSTRAINT fk_subscription_patient FOREIGN KEY (patient_id) REFERENCES patients(id)
 );
