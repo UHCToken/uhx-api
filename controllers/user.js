@@ -119,6 +119,13 @@ class UserApiResource {
                         "demand": security.PermissionType.READ,
                         "method": this.getProfilePicture
                     }
+                },
+                {
+                    "path": "user/:uid/group",
+                    "get": {
+                        "demand": security.PermissionType.READ,
+                        "method": this.getGroups
+                    }
                 }
             ]
         };
@@ -679,7 +686,7 @@ class UserApiResource {
      */
     async upload(req, res) {
         req.body.id = req.params.uid;
-        var result = await uhx.ObjectStorage.uploadProfileImage(req, res);
+        var result = await uhx.ObjectStorage.uploadProfileImage(req, res, 'profile');
         var status = result instanceof exception.Exception ? 500 : 201;
 
         res.status(status).json(result);
@@ -688,50 +695,92 @@ class UserApiResource {
     }
 
     /**
- * @method
- * @summary Get a single users profile picture
- * @param {Express.Reqeust} req The request from the client 
- * @param {Express.Response} res The response from the client
- * @swagger
- * /user/{userid}/img:
- *  get:
- *      tags:
- *      - "user"
- *      summary: "Gets the profile picture for a specified user"
- *      description: "This method will fetch the profile image for a specific user"
- *      produces:
- *      - "application/json"
- *      parameters:
- *      - name: "userid"
- *        in: "path"
- *        description: "The ID of the user for the profile image"
- *        required: true
- *        type: "string"
- *      responses:
- *          200: 
- *             description: "The requested resource was fetched successfully"
- *             schema: 
- *                  $ref: "#/definitions/User"
- *          404:
- *              description: "The specified user cannot be found"
- *              schema: 
- *                  $ref: "#/definitions/Exception"
- *          500:
- *              description: "An internal server error occurred"
- *              schema:
- *                  $ref: "#/definitions/Exception"
- *      security:
- *      - uhx_auth:
- *          - "read:user"
- */
+     * @method
+     * @summary Get a single users profile picture
+     * @param {Express.Reqeust} req The request from the client 
+     * @param {Express.Response} res The response from the client
+     * @swagger
+     * /user/{userid}/img:
+     *  get:
+     *      tags:
+     *      - "user"
+     *      summary: "Gets the profile picture for a specified user"
+     *      description: "This method will fetch the profile image for a specific user"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "userid"
+     *        in: "path"
+     *        description: "The ID of the user for the profile image"
+     *        required: true
+     *        type: "string"
+     *      responses:
+     *          200: 
+     *             description: "The requested resource was fetched successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/User"
+     *          404:
+     *              description: "The specified user cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "read:user"
+     */
     async getProfilePicture(req, res) {
-        var image = await uhx.ObjectStorage.getProfileImage(req, res);
+        var image = await uhx.ObjectStorage.getProfileImage(req, res, 'profile');
         var status = image instanceof exception.Exception ? 404 : 201;
         if (status == 201)
             image.pipe(res);
         else
             res.status(status).json(image);
 
+        return true;
+    }
+
+    /**
+     * @method
+     * @summary Get a single users groups
+     * @param {Express.Reqeust} req The request from the client 
+     * @param {Express.Response} res The response from the client
+     * @swagger
+     * /user/{userid}/groups:
+     *  get:
+     *      tags:
+     *      - "user"
+     *      summary: "Gets the groups for a specified user"
+     *      description: "This method will fetch the groups for a specific user"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "userid"
+     *        in: "path"
+     *        description: "The ID of the user to lookup groups for"
+     *        required: true
+     *        type: "string"
+     *      responses:
+     *          200: 
+     *             description: "The requested resource was fetched successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/User"
+     *          404:
+     *              description: "The specified user cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "read:user"
+     */
+    async getGroups(req, res) {
+        res.status(200).json(await uhx.Repositories.groupRepository.getByUserId(req.params.uid));
         return true;
     }
 
