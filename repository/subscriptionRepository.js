@@ -56,7 +56,7 @@ const pg = require('pg'),
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 1);
 
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM subscriptions WHERE patient_id = $1", [patientId]);
+            const rdr = await dbc.query("SELECT * FROM subscription_lookup WHERE patient_id = $1", [patientId]);
             if(rdr.rows.length === 0)
                 return [];
             else {
