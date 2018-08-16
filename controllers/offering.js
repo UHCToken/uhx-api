@@ -143,10 +143,8 @@ module.exports.OfferingApiResource = class OfferingApiResource {
      */
     async getOffering(req, res) {
         var offering = await uhx.Repositories.offeringRepository.getOffering(req.body.offeringId);
-
-        var retVal = offering;
       
-        res.status(200).json(retVal);
+        res.status(200).json(offering);
         return true;
     }
 }

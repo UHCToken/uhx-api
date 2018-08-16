@@ -77,7 +77,7 @@ const pg = require('pg'),
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM offerings WHERE id = $1", [id]);
+            const rdr = await dbc.query("SELECT * FROM offering_lookup WHERE id = $1", [id]);
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('offerings', id);
             else {

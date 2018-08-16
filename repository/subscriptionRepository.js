@@ -130,6 +130,31 @@ const pg = require('pg'),
 
     /**
      * @method
+     * @summary Cancels a given subscription for a patient
+     * @param {subscriptionId} id The identifier for the subscription to cancel
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {Subscription} The updated subscriptions for the patinet
+     */
+    async cancel(subscriptionId, _txc) {
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+
+            const today = new Date();
+            const rdr = await dbc.query("UPDATE subscriptions SET date_next_payment = null, date_terminated = $2 WHERE id = $1 RETURNING *", [subscriptionId, today]);
+            if(rdr.rows.length === 0)
+                throw new exception.NotFoundException('subscriptions', patientId);
+            else {
+                return new model.Subscription().fromData(rdr.rows[0]);
+            }
+        }
+        finally {
+            if(!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
      * @summary Retrieve a set of subscribers from the database that have current subscriptions for today
      * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {Subscription} The fetched subscriptions

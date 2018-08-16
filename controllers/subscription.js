@@ -60,6 +60,13 @@ module.exports.SubscriptionApiResource = class SubscriptionApiResource {
                         "demand": security.PermissionType.WRITE,
                         "method": this.update
                     }
+                },
+                {
+                    "path": "subscription/cancel",
+                    "post": {
+                        "demand": security.PermissionType.WRITE,
+                        "method": this.cancel
+                    }
                 }
             ]
         };
@@ -150,10 +157,8 @@ module.exports.SubscriptionApiResource = class SubscriptionApiResource {
      */
     async post(req, res) {
         var subscriptions = await uhx.Repositories.subscriptionRepository.post(req.params.id, req.body.offeringId, req.body.autoRenew);
-
-        var retVal = subscriptions;
       
-        res.status(200).json(retVal);
+        res.status(200).json(subscriptions);
         return true
     }
 
@@ -202,5 +207,42 @@ module.exports.SubscriptionApiResource = class SubscriptionApiResource {
      */
     async update(req, res) {
         var subscription = await uhx.Repositories.subscriptionRepository.update(req.body.id, req.body.offeringId, req.body.autoRenew);
+    }
+
+    /**
+     * @method
+     * @summary Cancel the patient's subscription
+     * @param {Express.Reqeust} req The request from the client 
+     * @param {Express.Response} res The response from the client
+     * @swagger
+     * /subscription/cancel:
+     *  post:
+     *      tags:
+     *      - "subscription"
+     *      summary: "Cancels a given patient's subscription"
+     *      description: "This method will cancel the patient's subscription."
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "id"
+     *        in: "body"
+     *        description: "The identity of the subscription to cancel"
+     *        required: true
+     *        type: string
+     *      responses:
+     *          200: 
+     *             description: "The patient's subscription has been canceled."
+     *             schema: 
+     *                  $ref: "#/definitions/Subscription"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "read:subscription"
+     */
+    async cancel(req, res) {
+        var subscription = await uhx.Repositories.subscriptionRepository.cancel(req.body.subscriptionId);
     }
 }
