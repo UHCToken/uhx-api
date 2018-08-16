@@ -101,6 +101,8 @@ module.exports.OfferingApiResource = class OfferingApiResource {
             offering.offerings = offering.offerings.filter((off) => {
                 return off.country_code === countryCode;
             });
+
+            delete(offering.services);
         }
 
         res.status(200).json(offeringGroups);
