@@ -58,7 +58,7 @@ const pg = require('pg'),
             if(!_txc) await dbc.connect();
             const rdr = await dbc.query("SELECT * FROM subscriptions WHERE patient_id = $1", [patientId]);
             if(rdr.rows.length === 0)
-                throw new exception.NotFoundException('subscriptions', patientId);
+                return [];
             else {
                 const subscriptions = [];
 

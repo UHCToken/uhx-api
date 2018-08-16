@@ -101,8 +101,6 @@ module.exports.SubscriptionApiResource = class SubscriptionApiResource {
     async get(req, res) {
         var subscriptions = await uhx.Repositories.subscriptionRepository.get(req.params.id);
 
-        console.log(subscriptions);
-
         res.status(200).json(subscriptions);
         return true
     }
