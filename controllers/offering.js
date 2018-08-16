@@ -43,7 +43,7 @@ module.exports.OfferingApiResource = class OfferingApiResource {
                 {
                     "path": "offering",
                     "get": {
-                        "demand": security.PermissionType.LIST,
+                        "demand": security.PermissionType.READ,
                         "method": this.get
                     }
                 },

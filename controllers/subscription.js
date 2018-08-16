@@ -43,14 +43,14 @@ module.exports.SubscriptionApiResource = class SubscriptionApiResource {
                 {
                     "path": "patient/:id/subscription",
                     "get": {
-                        "demand": security.PermissionType.LIST,
+                        "demand": security.PermissionType.READ,
                         "method": this.get
                     }
                 },
                 {
                     "path": "patient/:id/subscription",
                     "post": {
-                        "demand": security.PermissionType.LIST,
+                        "demand": security.PermissionType.READ,
                         "method": this.post
                     }
                 },
