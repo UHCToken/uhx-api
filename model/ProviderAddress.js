@@ -179,9 +179,10 @@ module.exports = class ProviderAddress extends ModelBase {
                 if (await uhx.Repositories.providerServiceRepository.serviceTypeExists(this._services[s].id, this.id, _txc))
                     await this._services[s].loadServiceTypeDetails();
                 else
-                    delete (this._services[s]);
+                    this._services.splice(s, 1);
             }
-        }
+        } else
+            this._services = [];
         return this._services;
     }
 
