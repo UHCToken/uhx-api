@@ -137,6 +137,7 @@ SELECT
 	s.patient_id,
 	s.date_next_payment,
 	s.date_subscribed,
+	s.date_terminated,
 	s.auto_renew,
 	og.id AS offering_group_id
 FROM subscriptions s
