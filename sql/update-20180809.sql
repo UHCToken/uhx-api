@@ -5,7 +5,7 @@
 --  * ADDS SERVICE_BUNDLES TABLE
 --  * ADDS SUBSCRIPTIONS TABLE
 
-DROP VIEW IF EXISTS subsription_lookup;
+DROP VIEW IF EXISTS subscription_lookup;
 DROP VIEW IF EXISTS offering_lookup;
 DROP TABLE IF EXISTS service_bundles;
 DROP TABLE IF EXISTS subscriptions;
@@ -130,7 +130,7 @@ SELECT
 	 WHERE o.id = ANY (SELECT o.id FROM offerings o WHERE o.offering_group_id = og.id)) as offerings
 FROM offering_groups og;
 
-CREATE OR REPLACE VIEW subsription_lookup AS
+CREATE OR REPLACE VIEW subscription_lookup AS
 SELECT
 	s.id AS subscription_id,
 	s.offering_id,
