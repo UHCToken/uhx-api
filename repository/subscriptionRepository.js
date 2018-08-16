@@ -88,7 +88,10 @@ const pg = require('pg'),
 
         try {
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("INSERT INTO subscriptions $1", [patientId]);
+            const today = new Date();
+
+            const rdr = await dbc.query("INSERT INTO subscriptions (offering_id, patient_id, date_subscribed, auto_renew) VALUES ($1, (SELECT id from patients WHERE id = $2), $3, $4) RETURNING *", [offeringId, patientId, today, autoRenew]);
+            
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', patientId);
             else {

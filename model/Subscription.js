@@ -82,8 +82,8 @@ module.exports = class Subscription extends ModelBase {
         this.id = dbSubscription.id;
         this.patientId = dbSubscription.patient_id;
         this.offeringId = dbSubscription.offering_id;
-        this.dateSubscribed = dbSubscription.date_subscribed.toLocaleString();
-        this.dateTerminated = dbSubscription.date_terminated.toLocaleString();
+        this.dateSubscribed = dbSubscription.date_subscribed !== null ? dbSubscription.date_subscribed.toLocaleString() : null;
+        this.dateTerminated = dbSubscription.date_terminated !== null ? dbSubscription.date_terminated.toLocaleString() : null;
         this.dateNextPayment = dbSubscription.date_next_payment;
         // this.monthsRemaining = dbSubscription.months_remaining;
         this.autoRenew = dbSubscription.auto_renew;

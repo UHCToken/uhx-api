@@ -149,7 +149,7 @@ module.exports.SubscriptionApiResource = class SubscriptionApiResource {
      *          - "read:subscription"
      */
     async post(req, res) {
-        var subscriptions = await uhx.Repositories.subscriptionRepository.post(req.params.patientId);
+        var subscriptions = await uhx.Repositories.subscriptionRepository.post(req.params.id, req.body.offeringId, req.body.autoRenew);
 
         var retVal = subscriptions;
       
