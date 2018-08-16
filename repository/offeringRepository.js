@@ -48,7 +48,7 @@ const pg = require('pg'),
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM offerings");
+            const rdr = await dbc.query("SELECT * FROM offering_lookup");
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('offerings', null);
             else {
@@ -66,14 +66,14 @@ const pg = require('pg'),
         }
     }
 
-    /**
+     /**
      * @method
-     * @summary Retrieve a list of offerings available to the patient
-     * @param {string} id The id for the current patient
+     * @summary Retrieves more details for the given offering 
+     * @param {string} id The id for the offering to view
      * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {Offering} The fetched offerings available
      */
-    async getOfferingsForPatient(id, _txc) {
+    async getOffering(id, _txc) {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
@@ -81,13 +81,7 @@ const pg = require('pg'),
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('offerings', id);
             else {
-                const offerings = [];
-
-                for (let i = 0; i < rdr.rows.length; i++) {
-                    offerings.push(new model.Offering().fromData(rdr.rows[i]))
-                }
-
-                return offerings;
+                return new model.Offering().fromData(rdr.rows[0]);
             }
         }
         finally {

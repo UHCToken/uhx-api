@@ -26,9 +26,9 @@ const ModelBase = require('./ModelBase'),
  * @property {string} id The identifier for the subscription
  * @property {string} patientId The user id of the patient
  * @property {string} offeringId The offering id of the subscription
- * @property {Date} startingDate The date the subscription begins
- * @property {Date} terminationDate The date the subscription will end
- * @property {Date} nextBillingDate The date of the next billing period
+ * @property {Date} dateSubscribed The date the subscription begins
+ * @property {Date} dateTerminated The date the subscription will end
+ * @property {Date} dateNextPayment The date of the next billing period
  * @property {number} monthsRemaining The number of months remaining for the given subscription
  * @property {boolean} autoRenew Represents if the billing cycle is auto-renewed
  * @swagger
@@ -44,13 +44,13 @@ const ModelBase = require('./ModelBase'),
  *          offeringId:
  *              type: string
  *              description: The id of the group of services this subscription is subscribed to
- *          startingDate:
+ *          dateSubscribed:
  *              type: Date
  *              description: The date the subscription began
- *          terminationDate:
+ *          dateTerminated:
  *              type: Date
  *              description: The date the subscription ends
- *          nextBillingDate:
+ *          dateNextPayment:
  *              type: Date
  *              description: The date of the next billing period
  *          monthsRemaining:
@@ -82,10 +82,10 @@ module.exports = class Subscription extends ModelBase {
         this.id = dbSubscription.id;
         this.patientId = dbSubscription.patient_id;
         this.offeringId = dbSubscription.offering_id;
-        this.startingDate = dbSubscription.starting_date;
-        this.terminationDate = dbSubscription.termination_date;
-        this.nextBillingDate = dbSubscription.next_billing_date;
-        this.monthsRemaining = dbSubscription.months_remaining;
+        this.dateSubscribed = dbSubscription.date_subscribed.toLocaleString();
+        this.dateTerminated = dbSubscription.date_terminated.toLocaleString();
+        this.dateNextPayment = dbSubscription.date_next_payment;
+        // this.monthsRemaining = dbSubscription.months_remaining;
         this.autoRenew = dbSubscription.auto_renew;
         return this;
     }
@@ -99,10 +99,10 @@ module.exports = class Subscription extends ModelBase {
             id : this.id,
             patient_id : this.patientId,
             offering_id: this.offeringId,
-            starting_date: this.startingDate,
-            termination_date: this.terminationDate,
-            next_billing_date: this.nextBillingDate,
-            months_remaining: this.monthsRemaining,
+            date_subscribed: this.dateSubscribed,
+            date_terminated: this.dateTerminated,
+            date_next_payment: this.dateNextPayment,
+            // months_remaining: this.monthsRemaining,
             auto_renew: this.autoRenew
         };
     }
@@ -114,13 +114,13 @@ module.exports = class Subscription extends ModelBase {
     toJSON() {
         return {
             id : this.id,
-            patientId : this.patient_id,
-            offeringId: this.offering_id,
-            startingDate: this.starting_date,
-            terminationDate: this.termination_date,
-            nextBillingDate: this.next_billing_date,
-            monthsRemaining: this.months_remaining,
-            autoRenew: this.auto_renew
+            patientId : this.patientId,
+            offeringId: this.offeringId,
+            dateSubscribed: this.dateSubscribed,
+            dateTerminated: this.dateTerminated,
+            dateNextPayment: this.dateNextPayment,
+            // monthsRemaining: this.monthsRemaining,
+            autoRenew: this.autoRenew
         }
     }
 }

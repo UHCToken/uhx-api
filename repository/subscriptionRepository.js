@@ -36,27 +36,29 @@ const pg = require('pg'),
     constructor(connectionString) {
         this._connectionString = connectionString;
         this.get = this.get.bind(this);
+        this.post = this.post.bind(this);
+        this.update = this.update.bind(this);
         this.getSubscriptionsForDailyReport = this.getSubscriptionsForDailyReport.bind(this);
         this.getSubscriptionsForMonthlyReport = this.getSubscriptionsForMonthlyReport.bind(this);
     }
 
     /**
      * @method
-     * @summary Retrieve a specific subscription from the database for a user
-     * @param {uuid} id Gets the specified users subscriptions
+     * @summary Retrieve the subscriptions from the database for a patient
+     * @param {patientId} id Gets the specified patient's subscriptions
      * @param {Client} _txc The postgresql connection with an active transaction to run in
-     * @returns {Subscription} The fetched subscriptions for the user
+     * @returns {Subscription} The fetched subscriptions for the patient
      */
-    async get(userId, _txc) {
+    async get(patientId, _txc) {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             const now = new Date();
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 1);
 
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM subscriptions WHERE user_id = $1 AND termination_date < $2 OR NULL", [userId, today]);
+            const rdr = await dbc.query("SELECT * FROM subscriptions WHERE patient_id = $1", [patientId]);
             if(rdr.rows.length === 0)
-                throw new exception.NotFoundException('subscriptions', userId);
+                throw new exception.NotFoundException('subscriptions', patientId);
             else {
                 const subscriptions = [];
 
@@ -65,6 +67,57 @@ const pg = require('pg'),
                 }
 
                 return subscriptions;
+            }
+        }
+        finally {
+            if(!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Adds a new subscription for the patient
+     * @param {patientId} id The identifier for the patient that is making the subscription
+     * @param {offeringId} id The identifier for the offering that the patient subscribed to
+     * @param {autoRenew} bool The flag that represents if the subscription will renew automatically
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {Subscription} The fetched subscriptions for the patient
+     */
+    async post(patientId, offeringId, autoRenew, _txc) {
+        const dbc = _txc || new pg.Client(this._connectionString);
+
+        try {
+            if(!_txc) await dbc.connect();
+            const rdr = await dbc.query("INSERT INTO subscriptions $1", [patientId]);
+            if(rdr.rows.length === 0)
+                throw new exception.NotFoundException('subscriptions', patientId);
+            else {
+                return new model.Subscription().fromData(rdr.rows[0]);
+            }
+        }
+        finally {
+            if(!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Updates a given subscription for a patient
+     * @param {subscriptionId} id The identifier for the subscription to update
+     * @param {offeringId} id The identifier for new offer the patient is subscribing to
+     * @param {autoRenew} bool The flaf representing if the given subscription will renew automatically
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {Subscription} The updated subscriptions for the patinet
+     */
+    async update(subscriptionId, offeringId, autoRenew, _txc) {
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+            const rdr = await dbc.query("UPDATE subscriptions SET offering_id = $1, auto_renew = $2 WHERE id = $3", [offeringId, autoRenew, subscriptionId]);
+            if(rdr.rows.length === 0)
+                throw new exception.NotFoundException('subscriptions', patientId);
+            else {
+                return new model.Subscription().fromData(rdr.rows[0]);
             }
         }
         finally {
@@ -85,7 +138,7 @@ const pg = require('pg'),
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 1);
 
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM subscriptions WHERE effective_date >= $1 AND termination_date < $1 OR NULL", [today]);
+            const rdr = await dbc.query("SELECT * FROM subscriptions WHERE effective_date >= $1 AND date_terminated < $1 OR NULL", [today]);
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', 'No Subscriptions found.');
             else {
@@ -113,7 +166,7 @@ const pg = require('pg'),
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM subscriptions WHERE termination_date IS NULL OR termination_date < $1", [new Date()]);
+            const rdr = await dbc.query("SELECT * FROM subscriptions WHERE date_terminated IS NULL OR date_terminated < $1", [new Date()]);
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', 'No Subscriptions found.');
             else {
