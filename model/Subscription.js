@@ -26,6 +26,7 @@ const ModelBase = require('./ModelBase'),
  * @property {string} id The identifier for the subscription
  * @property {string} patientId The user id of the patient
  * @property {string} offeringId The offering id of the subscription
+ * @property {string} offeringGroupId The offering group id of the subscription
  * @property {Date} dateSubscribed The date the subscription begins
  * @property {Date} dateTerminated The date the subscription will end
  * @property {Date} dateNextPayment The date of the next billing period
@@ -44,6 +45,9 @@ const ModelBase = require('./ModelBase'),
  *          offeringId:
  *              type: string
  *              description: The id of the group of services this subscription is subscribed to
+ *          offeringGroupId:
+ *              type: string
+ *              description: The id of the group offering this subscription is subscribed to
  *          dateSubscribed:
  *              type: Date
  *              description: The date the subscription began
@@ -82,6 +86,7 @@ module.exports = class Subscription extends ModelBase {
         this.id = dbSubscription.id;
         this.patientId = dbSubscription.patient_id;
         this.offeringId = dbSubscription.offering_id;
+        this.offeringGroupId = dbSubscription.offering_group_id;
         this.dateSubscribed = dbSubscription.date_subscribed !== null ? dbSubscription.date_subscribed.toLocaleString() : null;
         this.dateTerminated = dbSubscription.date_terminated !== null ? dbSubscription.date_terminated.toLocaleString() : null;
         this.dateNextPayment = dbSubscription.date_next_payment !== null ? dbSubscription.date_next_payment.toLocaleString() : null;
@@ -99,6 +104,7 @@ module.exports = class Subscription extends ModelBase {
             id : this.id,
             patient_id : this.patientId,
             offering_id: this.offeringId,
+            offering_group_id: this.offeringGroupId,
             date_subscribed: this.dateSubscribed,
             date_terminated: this.dateTerminated,
             date_next_payment: this.dateNextPayment,
@@ -116,6 +122,7 @@ module.exports = class Subscription extends ModelBase {
             id : this.id,
             patientId : this.patientId,
             offeringId: this.offeringId,
+            offeringGroupId: this.offeringGroupId,
             dateSubscribed: this.dateSubscribed,
             dateTerminated: this.dateTerminated,
             dateNextPayment: this.dateNextPayment,
