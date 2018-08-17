@@ -17,8 +17,9 @@
  * 
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
- 
+
 const pg = require('pg'),
+    moment = require('moment'),
     exception = require('../exception'),
     model = require('../model/model');
 
@@ -89,8 +90,10 @@ const pg = require('pg'),
         try {
             if(!_txc) await dbc.connect();
             const today = new Date();
+            const offering = await dbc.query("SELECT * FROM offerings WHERE id = $1", [offeringId]);
+            const nextPaymentDate = moment().add(offering.rows[0].period_in_months, 'months');
 
-            const rdr = await dbc.query("INSERT INTO subscriptions (offering_id, patient_id, date_subscribed, auto_renew) VALUES ($1, $2, $3, $4) RETURNING *", [offeringId, patientId, today, autoRenew]);
+            const rdr = await dbc.query("INSERT INTO subscriptions (offering_id, patient_id, date_next_payment, date_subscribed, auto_renew) VALUES ($1, $2, $3, $4, $5) RETURNING *", [offeringId, patientId, nextPaymentDate, today, autoRenew]);
             
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', patientId);
@@ -166,7 +169,7 @@ const pg = require('pg'),
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 1);
 
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM subscriptions WHERE effective_date >= $1 AND date_terminated < $1 OR NULL", [today]);
+            const rdr = await dbc.query("SELECT * FROM subscriptions WHERE date_subscribed >= $1 AND date_terminated IS NULL OR date_terminated >= $1", [today]);
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', 'No Subscriptions found.');
             else {

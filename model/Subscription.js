@@ -83,7 +83,7 @@ module.exports = class Subscription extends ModelBase {
      * @return {Subscription} The updated subscription instance
      */
     fromData(dbSubscription) {
-        this.id = dbSubscription.id;
+        this.id = dbSubscription.id || dbSubscription.subscription_id;
         this.patientId = dbSubscription.patient_id;
         this.offeringId = dbSubscription.offering_id;
         this.offeringGroupId = dbSubscription.offering_group_id;
