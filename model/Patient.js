@@ -28,6 +28,7 @@ const uhx = require('../uhx'),
   * @property {string} givenName The given name of the patient
   * @property {string} familyName The family name of the patient
   * @property {string} tel The patient's telephone 
+  * @property {string} telExt The patient's telephone extension
   * @property {string} fax The patient's fax number
   * @property {string} email The patient's contact email
   * @property {string} profileImage The patient's profile image
@@ -64,6 +65,9 @@ const uhx = require('../uhx'),
   *             tel:
   *                 type: string
   *                 description: The patients's contact telephone number
+  *             telExt:
+  *                 type: string
+  *                 description: The patients's contact telephone number extension
   *             fax:
   *                 type: string
   *                 description: The patients's fax number
@@ -143,6 +147,7 @@ const uhx = require('../uhx'),
         this.givenName = dbPatient.given_name;
         this.familyName = dbPatient.family_name;
         this.tel = dbPatient.tel;
+        this.telExt = dbPatient.tel_ext;
         this.fax = dbPatient.fax;
         this.email = dbPatient.email;
         this.profileImage = dbPatient.profile_image;
@@ -175,6 +180,7 @@ const uhx = require('../uhx'),
             given_name: this.givenName,
             family_name: this.familyName,
             tel: this.tel,
+            tel_ext: this.telExt,
             fax: this.fax,
             email: this.email,
             profile_image: this.profileImage,

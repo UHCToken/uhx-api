@@ -28,6 +28,7 @@ const uhx = require('../uhx'),
   * @property {string} name The name of the provider
   * @property {string} description The textual information of the provider's profile
   * @property {string} tel The provider's telephone 
+  * @property {string} telExt The provider's telephone extension
   * @property {string} fax The provider's fax number
   * @property {string} email The provider's contact email
   * @property {string} profileImage The provider's profile image
@@ -54,6 +55,9 @@ const uhx = require('../uhx'),
   *             tel:
   *                 type: string
   *                 description: The provider's contact telephone number
+  *             telExt:
+  *                 type: string
+  *                 description: The provider's contact telephone number extension
   *             fax:
   *                 type: string
   *                 description: The provider's fax number
@@ -101,6 +105,7 @@ const uhx = require('../uhx'),
         this.name = dbProvider.name;
         this.description = dbProvider.description;
         this.tel = dbProvider.tel;
+        this.telExt = dbProvider.tel_ext;
         this.fax = dbProvider.fax;
         this.email = dbProvider.email;
         this.profileImage = dbProvider.profile_image;
@@ -122,6 +127,7 @@ const uhx = require('../uhx'),
             name: this.name,
             description: this.description,
             tel: this.tel,
+            tel_ext: this.telExt,
             fax: this.fax,
             email: this.email,
             profile_image: this.profileImage,
