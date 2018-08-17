@@ -41,12 +41,12 @@ const ModelBase = require('./ModelBase');
  *      viewedStatus:
  *        type: string
  *        description: specifies whether a message has been read or is unread
- *      body
+ *      body:
  *        type: string
  *        description: text content of the message
  */
 module.exports = class ChatMessage extends ModelBase {
-  
+
   /**
    * @constructor
    */

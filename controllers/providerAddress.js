@@ -116,24 +116,31 @@ class ProviderAddressApiResource {
      *          - "read:user"
      */
     async query(req, res) {
+        // Get the latitude and longitude for the query
         if (req.query.address && !req.query.lat && !req.query.lon) {
             var geometry = await uhx.GoogleMaps.getLatLon(req.query.address);
             req.query.lat = geometry.lat;
             req.query.lon = geometry.lon;
         }
+        // Query for addresses using the query parameters provided
         var addresses = await uhx.Repositories.providerAddressRepository.query(req.query);
         if (addresses) {
+            // Get driving distances
             addresses = await uhx.GoogleMaps.getDistances(req.query.address, addresses);
             for (var adr in addresses) {
+                // Load service types and provider details
                 await addresses[adr].loadAddressServiceTypes();
                 await addresses[adr].loadProviderDetails();
+                // Load services
                 if (req.query.serviceType)
-                    addresses[adr].services = await uhx.Repositories.providerServiceRepository.getAllForAddressByType(addresses[adr].id, req.query.serviceType);
-                else 
-                    addresses[adr].loadAddressServices();
+                    await addresses[adr].loadAddressServices(req.query.serviceType);
+                else
+                    await addresses[adr].loadAddressServices();
             }
         }
-        res.status(201).json(addresses);
+        // Add the query latitude and longitude
+        var query = { latitude: req.query.lat, longitude: req.query.lon };
+        res.status(201).json({ addresses, query });
         return true;
     }
 
