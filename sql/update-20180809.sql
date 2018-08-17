@@ -5,6 +5,7 @@
 --  * ADDS SERVICE_BUNDLES TABLE
 --  * ADDS SUBSCRIPTIONS TABLE
 
+DROP VIEW IF EXISTS subscription_lookup;
 DROP VIEW IF EXISTS offering_lookup;
 DROP TABLE IF EXISTS service_bundles;
 DROP TABLE IF EXISTS subscriptions;
@@ -128,3 +129,17 @@ SELECT
 	 LEFT JOIN currencies cur ON cur.id = o.currency_id
 	 WHERE o.id = ANY (SELECT o.id FROM offerings o WHERE o.offering_group_id = og.id)) as offerings
 FROM offering_groups og;
+
+CREATE OR REPLACE VIEW subscription_lookup AS
+SELECT
+	s.id AS subscription_id,
+	s.offering_id,
+	s.patient_id,
+	s.date_next_payment,
+	s.date_subscribed,
+	s.date_terminated,
+	s.auto_renew,
+	og.id AS offering_group_id
+FROM subscriptions s
+LEFT JOIN offerings o ON s.offering_id = o.id
+LEFT JOIN offering_groups og ON og.id = o.offering_group_id;

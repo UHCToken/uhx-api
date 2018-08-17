@@ -133,7 +133,8 @@ class ProviderAddressApiResource {
                     addresses[adr].loadAddressServices();
             }
         }
-        res.status(201).json(addresses);
+        var query = {latitude: req.query.lat, longitude: req.query.lon};
+        res.status(201).json({addresses, query});
         return true;
     }
 

@@ -43,55 +43,19 @@ module.exports.OfferingApiResource = class OfferingApiResource {
                 {
                     "path": "offering",
                     "get": {
-                        "demand": security.PermissionType.LIST,
+                        "demand": security.PermissionType.READ,
                         "method": this.get
                     }
                 },
                 {
-                    "path": "offering/:patientid",
+                    "path": "offering/:id",
                     "get": {
-                        "demand": security.PermissionType.LIST,
-                        "method": this.getAllForPatient
+                        "demand": security.PermissionType.READ,
+                        "method": this.getOffering
                     }
                 }
             ]
         };
-    }
-
-     /**
-     * @method
-     * @summary Get a list of available offerings
-     * @param {Express.Reqeust} req The request from the client 
-     * @param {Express.Response} res The response from the client
-     * @swagger
-     * /offering:
-     *  get:
-     *      tags:
-     *      - "offering"
-     *      summary: "Gets a list of available service offerings"
-     *      description: "This method will return a list of all offerings."
-     *      produces:
-     *      - "application/json"
-     *      responses:
-     *          200: 
-     *             description: "The list of available offerings"
-     *             schema: 
-     *                  $ref: "#/definitions/Offering"
-     *          500:
-     *              description: "An internal server error occurred"
-     *              schema:
-     *                  $ref: "#/definitions/Exception"
-     *      security:
-     *      - uhx_auth:
-     *          - "read:offering"
-     */
-    async get(req, res) {
-        var offerings = await uhx.Repositories.offeringRepository.get();
-
-        var retVal = offerings;
-      
-        res.status(200).json(retVal);
-        return true
     }
 
     /**
@@ -108,9 +72,14 @@ module.exports.OfferingApiResource = class OfferingApiResource {
      *      description: "This method will return a list of offerings that the patient can subscribe to. These are subsets of Services that are available as a group."
      *      produces:
      *      - "application/json"
+     *      parameters:
+     *      - in: "body"
+     *        name: "patientId"
+     *        description: "The patient that is requesting the list of available offerings."
+     *        required: true
      *      responses:
      *          200: 
-     *             description: "The list of available offerings"
+     *             description: "The list of available offerings."
      *             schema: 
      *                  $ref: "#/definitions/Offering"
      *          500:
@@ -121,12 +90,61 @@ module.exports.OfferingApiResource = class OfferingApiResource {
      *      - uhx_auth:
      *          - "read:offering"
      */
-    async getAllForPatient(req, res) {
-        var offerings = await uhx.Repositories.offeringRepository.getOfferingsForPatient(req.params.patientid);
+    async get(req, res) {
+        const offeringGroups = await uhx.Repositories.offeringRepository.get();
 
-        var retVal = offerings;
+        const countryCode = req.query.countryCode;
+
+        for (let i = 0; i < offeringGroups.length; i++) {
+            const offering = offeringGroups[i];
+
+            offering.offerings = offering.offerings.filter((off) => {
+                return off.country_code === countryCode;
+            });
+
+            delete(offering.services);
+        }
+
+        res.status(200).json(offeringGroups);
+        return true;
+    }
+
+    /**
+     * @method
+     * @summary Gets more details about a given offering
+     * @param {Express.Reqeust} req The request from the client 
+     * @param {Express.Response} res The response from the client
+     * @swagger
+     * /offering/{id}:
+     *  get:
+     *      tags:
+     *      - "offering"
+     *      summary: "Gets more details about a given offering"
+     *      description: "This method will return the details of a given offering including services associated with this offering with descriptions and prices."
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - in: "path"
+     *        name: "offering"
+     *        description: "The offering that the patient is requesting to view."
+     *        required: true
+     *      responses:
+     *          200: 
+     *             description: "The details of the requested offering."
+     *             schema: 
+     *                  $ref: "#/definitions/Offering"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "read:offering"
+     */
+    async getOffering(req, res) {
+        var offering = await uhx.Repositories.offeringRepository.getOffering(req.params.id);
       
-        res.status(200).json(retVal);
-        return true
+        res.status(200).json(offering);
+        return true;
     }
 }
