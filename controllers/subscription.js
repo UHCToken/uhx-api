@@ -207,6 +207,9 @@ module.exports.SubscriptionApiResource = class SubscriptionApiResource {
      */
     async update(req, res) {
         var subscription = await uhx.Repositories.subscriptionRepository.update(req.body.id, req.body.offeringId, req.body.autoRenew);
+
+        res.status(200).json(subscription);
+        return true
     }
 
     /**
@@ -244,5 +247,8 @@ module.exports.SubscriptionApiResource = class SubscriptionApiResource {
      */
     async cancel(req, res) {
         var subscription = await uhx.Repositories.subscriptionRepository.cancel(req.body.subscriptionId);
+
+        res.status(200).json(subscription);
+        return true
     }
 }

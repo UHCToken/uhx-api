@@ -90,7 +90,7 @@ const pg = require('pg'),
             if(!_txc) await dbc.connect();
             const today = new Date();
 
-            const rdr = await dbc.query("INSERT INTO subscriptions (offering_id, patient_id, date_subscribed, auto_renew) VALUES ($1, (SELECT id from patients WHERE id = $2), $3, $4) RETURNING *", [offeringId, patientId, today, autoRenew]);
+            const rdr = await dbc.query("INSERT INTO subscriptions (offering_id, patient_id, date_subscribed, auto_renew) VALUES ($1, $2, $3, $4) RETURNING *", [offeringId, patientId, today, autoRenew]);
             
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', patientId);
@@ -116,7 +116,7 @@ const pg = require('pg'),
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("UPDATE subscriptions SET offering_id = $1, auto_renew = $2 WHERE id = $3", [offeringId, autoRenew, subscriptionId]);
+            const rdr = await dbc.query("UPDATE subscriptions SET offering_id = $1, auto_renew = $2 WHERE id = $3 RETURNING *", [offeringId, autoRenew, subscriptionId]);
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', patientId);
             else {
@@ -141,7 +141,7 @@ const pg = require('pg'),
             if(!_txc) await dbc.connect();
 
             const today = new Date();
-            const rdr = await dbc.query("UPDATE subscriptions SET date_next_payment = null, date_terminated = $2 WHERE id = $1 RETURNING *", [subscriptionId, today]);
+            const rdr = await dbc.query("UPDATE subscriptions SET date_next_payment = null, date_terminated = $1 WHERE id = $2 RETURNING *", [today, subscriptionId]);
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', patientId);
             else {
