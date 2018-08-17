@@ -48,7 +48,7 @@ module.exports.OfferingApiResource = class OfferingApiResource {
                     }
                 },
                 {
-                    "path": "offering/{id}",
+                    "path": "offering/:id",
                     "get": {
                         "demand": security.PermissionType.READ,
                         "method": this.getOffering
@@ -142,7 +142,7 @@ module.exports.OfferingApiResource = class OfferingApiResource {
      *          - "read:offering"
      */
     async getOffering(req, res) {
-        var offering = await uhx.Repositories.offeringRepository.getOffering(req.body.offeringId);
+        var offering = await uhx.Repositories.offeringRepository.getOffering(req.params.id);
       
         res.status(200).json(offering);
         return true;
