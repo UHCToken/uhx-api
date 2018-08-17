@@ -45,7 +45,7 @@ class ProviderApiResource {
      */
     get routes() {
         return {
-            "permission_group": "user",
+            "permission_group": "provider",
             "routes": [
                 {
                     "path": "provider",

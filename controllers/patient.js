@@ -45,7 +45,7 @@ class PatientApiResource {
      */
     get routes() {
         return {
-            "permission_group": "user",
+            "permission_group": "patient",
             "routes": [
                 {
                     "path": "patient",

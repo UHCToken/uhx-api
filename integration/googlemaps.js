@@ -35,8 +35,15 @@ module.exports = class GoogleMaps {
 
         var gm = new GoogleMapsAPI(uhx.Config.googleMaps);
 
-        if (address instanceof Object)
-            var geocodeParams = { "address": `${address.street}, ${address.postalZip}, ${address.city} ${address.stateProv} ${address.country}` };
+
+        if (address instanceof Object){
+            if (address.country){
+                var country = await uhx.Repositories.countryRepository.getCountryByCode(address.country);
+                if (!country) throw new exception.Exception("Invalid country code", exception.ErrorCodes.INVALID_NAME);
+                else country = country.name;
+            }
+            var geocodeParams = { "address": `${address.street || ''} ${address.postalZip || ''} ${address.city || ''} ${address.stateProv || ''} ${country || address.country || ''}` };
+        }
         else
             var geocodeParams = { "address": address };
 
@@ -47,7 +54,6 @@ module.exports = class GoogleMaps {
                 if (results && results.status == "OK") {
                     retVal.lat = results.results[0].geometry.location.lat;
                     retVal.lon = results.results[0].geometry.location.lng;
-                    retVal.placeId = results.results[0].place_id;
                     fulfill(retVal);
                 } else {
                     reject(new exception.Exception("An error has occurred: " + (err || results.error_message), exception.ErrorCodes.DATA_ERROR));

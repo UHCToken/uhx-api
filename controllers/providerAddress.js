@@ -45,7 +45,7 @@ class ProviderAddressApiResource {
      */
     get routes() {
         return {
-            "permission_group": "user",
+            "permission_group": "providerAddress",
             "routes": [
                 {
                     "path": "provideraddress",
@@ -65,7 +65,7 @@ class ProviderAddressApiResource {
                         "method": this.get
                     },
                     "put": {
-                        "demand": security.PermissionType.WRITE | security.PermissionType.READ,
+                        "demand": security.PermissionType.WRITE,
                         "method": this.put
                     },
                     "delete": {

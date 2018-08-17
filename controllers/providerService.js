@@ -45,7 +45,7 @@ class ProviderServiceApiResource {
      */
     get routes() {
         return {
-            "permission_group": "user",
+            "permission_group": "providerService",
             "routes": [
                 {
                     "path": "addressservice",

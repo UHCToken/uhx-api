@@ -83,7 +83,7 @@ module.exports = class ProviderAddressRepository {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if (!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM provider_addresses WHERE deactivation_time IS NULL AND provider_id = $1 ORDER BY GREATEST(updated_time, creation_time) DESC", [providerId]);
+            const rdr = await dbc.query("SELECT * FROM provider_addresses WHERE deactivation_time IS NULL AND provider_id = $1 ORDER BY GREATEST(creation_time) ASC", [providerId]);
             if (rdr.rows.length == 0)
                 return null;
             else {

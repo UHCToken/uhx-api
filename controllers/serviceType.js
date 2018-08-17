@@ -45,12 +45,12 @@ class ServiceTypeApiResource {
      */
     get routes() {
         return {
-            "permission_group": "user",
+            "permission_group": "serviceType",
             "routes": [
                 {
                     "path": "servicetype",
                     "get": {
-                        "demand": security.PermissionType.WRITE,
+                        "demand": security.PermissionType.LIST,
                         "method": this.getAll
                     },
                     "post": {
