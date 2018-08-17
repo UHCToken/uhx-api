@@ -38,6 +38,8 @@ const pg = require('pg'),
         this.get = this.get.bind(this);
         this.getSubscriptionsForDailyReport = this.getSubscriptionsForDailyReport.bind(this);
         this.getSubscriptionsForMonthlyReport = this.getSubscriptionsForMonthlyReport.bind(this);
+        this.getSubscriptionsToTerminate = this.getSubscriptionsToTerminate.bind(this);
+        this.getSubscriptionsToBill = this.getSubscriptionsToBill.bind(this);
     }
 
     /**
@@ -73,17 +75,18 @@ const pg = require('pg'),
      * @return {Subscription} The fetched subscriptions
      */
     async getSubscriptionsToBill(_txc) {
+      console.log('In get subscriptions')
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             const now = new Date();
-            const today = `${now.getFullYear()}-${("0" + (now.getMonth() + 1)).slice(-2)}-${("0" + now.getDate()).slice(-2)}`;
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 1);
 
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query(`SELECT * FROM subscriptions WHERE date_next_payment = ${today}`);
-            if(rdr.rows.length === 0)
-                throw new exception.NotFoundException('subscriptions', 'No subscriptions to be billed today.');
+            const rdr = await dbc.query('SELECT * FROM subscriptions WHERE date_next_payment = $1', [today]);
+            if(rdr.rows.length === 0){}
+            // Return empty
             else {
-              return await subscriptionArray(rdr);
+              return await this.subscriptionArray(rdr);
             }
         }
         finally {
