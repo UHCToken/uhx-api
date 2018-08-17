@@ -25,11 +25,11 @@ const uhx = require('../uhx'),
 
 /**
  * @class
- * @summary Represents a user's subscription
+ * @summary Represents a patient's subscription
  * @swagger
  * tags:
  *  - name: subscription
- *    description: The subscription resource represents a single user's subscription to an offering of services
+ *    description: The subscription resource represents a single patient's subscription to an offering of services
  */
 module.exports.SubscriptionApiResource = class SubscriptionApiResource {
     /**
@@ -41,10 +41,31 @@ module.exports.SubscriptionApiResource = class SubscriptionApiResource {
             "permission_group": "user",
             "routes": [
                 {
-                    "path": "user/:uid/subscription",
+                    "path": "patient/:id/subscription",
                     "get": {
-                        "demand": security.PermissionType.LIST,
+                        "demand": security.PermissionType.READ,
                         "method": this.get
+                    }
+                },
+                {
+                    "path": "patient/:id/subscription",
+                    "post": {
+                        "demand": security.PermissionType.READ,
+                        "method": this.post
+                    }
+                },
+                {
+                    "path": "subscription",
+                    "put": {
+                        "demand": security.PermissionType.WRITE,
+                        "method": this.update
+                    }
+                },
+                {
+                    "path": "subscription/cancel",
+                    "post": {
+                        "demand": security.PermissionType.WRITE,
+                        "method": this.cancel
                     }
                 }
             ]
@@ -53,27 +74,27 @@ module.exports.SubscriptionApiResource = class SubscriptionApiResource {
 
      /**
      * @method
-     * @summary Get the user's subscriptions
+     * @summary Get the patient's subscriptions
      * @param {Express.Reqeust} req The request from the client 
      * @param {Express.Response} res The response from the client
      * @swagger
-     * /user/{userid}/subscription:
+     * /patient/{id}/subscription:
      *  get:
      *      tags:
      *      - "subscription"
-     *      summary: "Gets summary information about the user's subscriptions"
-     *      description: "This method will return summary information for the user's subscriptions."
+     *      summary: "Gets summary information about the patient's subscriptions"
+     *      description: "This method will return summary information for the patient's subscriptions."
      *      produces:
      *      - "application/json"
      *      parameters:
      *      - in: "path"
-     *        name: "userid"
-     *        description: "The identity of the user to create a wallet for"
+     *        name: "id"
+     *        description: "The identity of the patient to get subscriptions for"
      *        required: true
      *        type: string
      *      responses:
      *          200: 
-     *             description: "The user's subscription information"
+     *             description: "The patient's subscription information"
      *             schema: 
      *                  $ref: "#/definitions/Subscription"
      *          500:
@@ -85,11 +106,149 @@ module.exports.SubscriptionApiResource = class SubscriptionApiResource {
      *          - "read:subscription"
      */
     async get(req, res) {
-        var subscriptions = await uhx.Repositories.subscriptionRepository.get(req.params.uid);
+        var subscriptions = await uhx.Repositories.subscriptionRepository.get(req.params.id);
 
-        var retVal = subscriptions;
+        res.status(200).json(subscriptions);
+        return true
+    }
+
+    /**
+     * @method
+     * @summary Subscribes the patient to the given offering
+     * @param {Express.Reqeust} req The request from the client 
+     * @param {Express.Response} res The response from the client
+     * @swagger
+     * /patient/{id}/subscription:
+     *  post:
+     *      tags:
+     *      - "subscription"
+     *      summary: "Adds"
+     *      description: "This method will return summary information for the patient's subscriptions."
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - in: "path"
+     *        name: "patientId"
+     *        description: "The identity of the patient to get subscriptions for."
+     *        required: true
+     *        type: string
+     *      - in: "body"
+     *        name: "offeringId"
+     *        description: "The identity of offering the patient is subscribing to."
+     *        required: true
+     *        type: string
+     *      - in: "body"
+     *        name: "autoRenew"
+     *        description: "The flag to determine id the subscription will renew automatically."
+     *        required: true
+     *        type: string
+     *      responses:
+     *          200: 
+     *             description: "The patient's subscription information"
+     *             schema: 
+     *                  $ref: "#/definitions/Subscription"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "read:subscription"
+     */
+    async post(req, res) {
+        var subscriptions = await uhx.Repositories.subscriptionRepository.post(req.params.id, req.body.offeringId, req.body.autoRenew);
       
-        res.status(200).json(retVal);
+        res.status(200).json(subscriptions);
+        return true
+    }
+
+    /**
+     * @method
+     * @summary Update the patient's subscription
+     * @param {Express.Reqeust} req The request from the client 
+     * @param {Express.Response} res The response from the client
+     * @swagger
+     * /subscription:
+     *  put:
+     *      tags:
+     *      - "subscription"
+     *      summary: "Updates a give patient's subscription"
+     *      description: "This method will update the patient's subscription."
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "id"
+     *        in: "body"
+     *        description: "The identity of the patient to add the subscription"
+     *        required: true
+     *        type: string
+     *      - name: "offeringId"
+     *        in: "body"
+     *        description: "The identity of the offering the patient is subscribing to."
+     *        required: true
+     *        type: string
+     *      - name: "autoRenew"
+     *        in: "body"
+     *        description: "The flag that identifies if the subscription will be renewing automatically."
+     *        required: true
+     *        type: string
+     *      responses:
+     *          200: 
+     *             description: "The patient's subscription has been updated."
+     *             schema: 
+     *                  $ref: "#/definitions/Subscription"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "read:subscription"
+     */
+    async update(req, res) {
+        var subscription = await uhx.Repositories.subscriptionRepository.update(req.body.id, req.body.offeringId, req.body.autoRenew);
+
+        res.status(200).json(subscription);
+        return true
+    }
+
+    /**
+     * @method
+     * @summary Cancel the patient's subscription
+     * @param {Express.Reqeust} req The request from the client 
+     * @param {Express.Response} res The response from the client
+     * @swagger
+     * /subscription/cancel:
+     *  post:
+     *      tags:
+     *      - "subscription"
+     *      summary: "Cancels a given patient's subscription"
+     *      description: "This method will cancel the patient's subscription."
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "id"
+     *        in: "body"
+     *        description: "The identity of the subscription to cancel"
+     *        required: true
+     *        type: string
+     *      responses:
+     *          200: 
+     *             description: "The patient's subscription has been canceled."
+     *             schema: 
+     *                  $ref: "#/definitions/Subscription"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "read:subscription"
+     */
+    async cancel(req, res) {
+        var subscription = await uhx.Repositories.subscriptionRepository.cancel(req.body.subscriptionId);
+
+        res.status(200).json(subscription);
         return true
     }
 }

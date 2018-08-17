@@ -22,9 +22,11 @@ const ModelBase = require('./ModelBase'),
 
 /**
  * @class Offering
- * @summary Represents a service offered
- * @property {string} id The identifier for the service
- * @property {string} description The description for the service
+ * @summary Represents a group of offerings that are supplied by UHC
+ * @property {string} id The identifier for the offering
+ * @property {string} name The display name for the offering
+ * @property {string} description The description for the offering
+ * @property {Array} offerings The list of offerings available for this group
  * @property {Array} services The group of services offered
  * @swagger
  * definitions:
@@ -33,9 +35,15 @@ const ModelBase = require('./ModelBase'),
  *          id: 
  *              type: string
  *              description: The unique identifier for the offering
+ *          name: 
+ *              type: string
+ *              description: The display name for the given offering group
  *          description: 
  *              type: string
  *              description: The description of the set of offerings available
+ *          offerings: 
+ *              type: Array
+ *              description: A list of offerings for this group which includes the price, country, and currency used
  *          services: 
  *              type: Array
  *              description: A list of services available through this offering
@@ -60,7 +68,9 @@ module.exports = class Offering extends ModelBase {
      */
     fromData(dbOffering) {
         this.id = dbOffering.id;
+        this.name = dbOffering.name;
         this.description = dbOffering.description;
+        this.offerings = dbOffering.offerings;
         this.services = dbOffering.services;
         return this;
     }
@@ -72,7 +82,9 @@ module.exports = class Offering extends ModelBase {
     toData() {
         return {
             id : this.id,
+            name : this.name,
             description : this.description,
+            offerings : this.offerings,
             services : this.services
         };
     }
@@ -84,7 +96,9 @@ module.exports = class Offering extends ModelBase {
     toJSON() {
         return {
             id : this.id,
+            name : this.name,
             description : this.description,
+            offerings : this.offerings,
             services : this.services
         }
     }
