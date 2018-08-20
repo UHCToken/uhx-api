@@ -85,8 +85,9 @@ const pg = require('pg'),
 
             if(!_txc) await dbc.connect();
             const rdr = await dbc.query('SELECT * FROM subscription_lookup WHERE date_next_payment = $1', [today]);
-            if(rdr.rows.length === 0){}
-            // Return empty
+            if(rdr.rows.length === 0) {
+                return [];
+            }
             else {
               return await this.subscriptionArray(rdr);
             }
@@ -101,15 +102,22 @@ const pg = require('pg'),
      * @summary Update next billing dates of succesfully billed accounts
      * @param {UUID} patientIds Array of patients that were succesfully billed
      */
-    async updateBilledSubscriptions(subscriptions, preparedQuery, _txc) {
+    async updateBilledSubscriptions(subscriptions, updateQuery, insertQuery, _txc) {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query(`INSERT INTO subscriptions (id, offering_id, patient_id, date_next_payment)
-                                         VALUES ${preparedQuery}
-                                         ON CONFLICT (id) DO UPDATE SET date_next_payment = EXCLUDED.date_next_payment;`);
+            dbc.query(
+              `INSERT INTO subscriptions (id, offering_id, patient_id, date_next_payment)
+               VALUES ${updateQuery}
+               ON CONFLICT (id) DO UPDATE SET date_next_payment = EXCLUDED.date_next_payment;`);
 
-        } finally {
+           await dbc.query(
+             `INSERT INTO subscription_payments (subscription_id, offering_id, patient_id, date_paid, price, currency)
+              VALUES ${insertQuery}`);
+        } catch(ex) {
+          console.log(ex);
+        }
+        finally {
           if(!_txc) dbc.end();
         }
     }
@@ -124,14 +132,14 @@ const pg = require('pg'),
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             const now = new Date();
-            const today = `${now.getFullYear()}-${("0" + (now.getMonth() + 1)).slice(-2)}-${("0" + now.getDate()).slice(-2)}`;
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 1);
 
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query(`SELECT * FROM subscriptions WHERE date_terminated = ${today}`);
+            const rdr = await dbc.query('SELECT * FROM subscriptions WHERE date_terminated = $1', [today]);
             if(rdr.rows.length === 0)
-                throw new exception.NotFoundException('subscriptions', 'No subscriptions to be terminated today.');
+                return [];
             else {
-              return await subscriptionArray(rdr);
+                return await subscriptionArray(rdr);
             }
         }
         finally {

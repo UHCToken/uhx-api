@@ -61,23 +61,29 @@ module.exports = class BillingLogic {
      try {
        const subscriptions = await uhx.Repositories.subscriptionRepository.getSubscriptionsToBill();
 
-       if (!subscriptions) {
-         // No subscriptions were found to be billed today
-         // TODO: Report this somehow
+       if (subscriptions.length === 0) {
+         // No subscriptions to be billed today
        } else {
          // Call function to complete transactions
          this.billUsers(subscriptions);
 
          // Prepare update query for next payment dates
-         let preparedQuery = '';
+         let updateQuery = '';
+         let insertQuery = '';
          for (let i = 0; i < subscriptions.length; i++) {
+             insertQuery = insertQuery + `, ('${subscriptions[i].id}', '${subscriptions[i].offeringId}', '${subscriptions[i].patientId}', '${subscriptions[i].dateNextPayment}', '${subscriptions[i].price}', '${subscriptions[i].currency}')`;
+
+             // Update next payment date
              subscriptions[i].dateNextPayment = moment(subscriptions[i].dateNextPayment, 'YYYY-MM-DD').add(subscriptions[i].periodInMonths, 'months').format('YYYY-MM-DD');
-             preparedQuery = preparedQuery + `, ('${subscriptions[i].id}', '${subscriptions[i].offeringId}', '${subscriptions[i].patientId}', '${subscriptions[i].dateNextPayment}')`;
+             updateQuery = updateQuery + `, ('${subscriptions[i].id}', '${subscriptions[i].offeringId}', '${subscriptions[i].patientId}', '${subscriptions[i].dateNextPayment}')`;
          }
-         preparedQuery = preparedQuery.substring(2);
+
+         // Remove leading commas
+         updateQuery = updateQuery.substring(2);
+         insertQuery = insertQuery.substring(2);
 
          // Update next billing dates for succesfully billed users
-         await uhx.Repositories.subscriptionRepository.updateBilledSubscriptions(subscriptions, preparedQuery);
+         await uhx.Repositories.subscriptionRepository.updateBilledSubscriptions(subscriptions, updateQuery, insertQuery);
        }
      } catch(ex) {
        // TODO: Add error message

@@ -32,6 +32,8 @@ const ModelBase = require('./ModelBase'),
  * @property {Date} dateNextPayment The date of the next billing period
  * @property {number} monthsRemaining The number of months remaining for the given subscription
  * @property {number} periodInMonths The number of months between payments
+ * @property {number} price The price paid for the subscription
+ * @property {string} currency The currency that the subscription was paid for in
  * @property {boolean} autoRenew Represents if the billing cycle is auto-renewed
  * @swagger
  * definitions:
@@ -58,12 +60,15 @@ const ModelBase = require('./ModelBase'),
  *          dateNextPayment:
  *              type: Date
  *              description: The date of the next billing period
- *          monthsRemaining:
- *              type: number
- *              description: The number of months remaining for the given subscription
  *          periodInMonths:
  *              type: number
  *              description: The number of months between subscription payments
+ *          price:
+ *              type: number
+ *              description: The amount paid for the subscription
+ *          currency:
+ *              type: string
+ *              description: the currency the subscription was paid for in
  *          autoRenew:
  *              type: boolean
  *              description: Represents if the billing cycle is auto-renewed
@@ -94,8 +99,9 @@ module.exports = class Subscription extends ModelBase {
         this.dateSubscribed = dbSubscription.date_subscribed !== null ? dbSubscription.date_subscribed.toLocaleString() : null;
         this.dateTerminated = dbSubscription.date_terminated !== null ? dbSubscription.date_terminated.toLocaleString() : null;
         this.dateNextPayment = dbSubscription.date_next_payment !== null ? dbSubscription.date_next_payment.toLocaleString() : null;
-        // this.monthsRemaining = dbSubscription.months_remaining;
         this.periodInMonths = dbSubscription.period_in_months !== null ? dbSubscription.period_in_months.toLocaleString() : null;
+        this.price = dbSubscription.price !== null ? dbSubscription.price.toLocaleString() : null;
+        this.currency = dbSubscription.currency !== null ? dbSubscription.currency.toLocaleString() : null;
         this.autoRenew = dbSubscription.auto_renew;
         return this;
     }
@@ -113,8 +119,9 @@ module.exports = class Subscription extends ModelBase {
             date_subscribed: this.dateSubscribed,
             date_terminated: this.dateTerminated,
             date_next_payment: this.dateNextPayment,
-            // months_remaining: this.monthsRemaining,
             period_in_months: this.periodInMonths,
+            price: this.price,
+            currency: this.currency,
             auto_renew: this.autoRenew
         };
     }
@@ -132,8 +139,9 @@ module.exports = class Subscription extends ModelBase {
             dateSubscribed: this.dateSubscribed,
             dateTerminated: this.dateTerminated,
             dateNextPayment: this.dateNextPayment,
-            // monthsRemaining: this.monthsRemaining,
             periodInMonths: this.periodInMonths,
+            price: this.price,
+            curreny: this.currency,
             autoRenew: this.autoRenew
         }
     }

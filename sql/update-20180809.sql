@@ -4,6 +4,13 @@
 --  * ADDS OFFERINGS TABLE
 --  * ADDS SERVICE_BUNDLES TABLE
 --  * ADDS SUBSCRIPTIONS TABLE
+--  * ADDS SUBSCRIPTION LOOKUP VIEW
+--  * ADDS OFFERING LOOKUP VIEW
+--  * ADDS FIELDS_REQUIRED_FOR_SERVICE TABLE
+--  * ADDS COUNTRIES TABLE
+--  * ADDS CURRENCIES TABLE
+--  * ADDS POSSIBLE_USER_FIELDS TABLE
+--  * ADDS OFFERING_GROUPS TABLE
 
 DROP VIEW IF EXISTS subscription_lookup;
 DROP VIEW IF EXISTS offering_lookup;
@@ -140,7 +147,10 @@ SELECT
 	s.date_terminated,
 	s.auto_renew,
 	o.period_in_months,
-	og.id AS offering_group_id
+	og.id AS offering_group_id,
+	o.price,
+	c.code AS currency
 FROM subscriptions s
 LEFT JOIN offerings o ON s.offering_id = o.id
-LEFT JOIN offering_groups og ON og.id = o.offering_group_id;
+LEFT JOIN offering_groups og ON og.id = o.offering_group_id
+LEFT JOIN currencies c ON c.id = o.currency_id;
