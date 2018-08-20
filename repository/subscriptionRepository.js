@@ -42,6 +42,7 @@ const pg = require('pg'),
         this.getSubscriptionsForMonthlyReport = this.getSubscriptionsForMonthlyReport.bind(this);
         this.getSubscriptionsToTerminate = this.getSubscriptionsToTerminate.bind(this);
         this.getSubscriptionsToBill = this.getSubscriptionsToBill.bind(this);
+        this.updateBilledSubscriptions = this.updateBilledSubscriptions.bind(this);
     }
 
     /**
@@ -77,14 +78,13 @@ const pg = require('pg'),
      * @return {Subscription} The fetched subscriptions
      */
     async getSubscriptionsToBill(_txc) {
-      console.log('In get subscriptions')
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             const now = new Date();
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 1);
 
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query('SELECT * FROM subscriptions WHERE date_next_payment = $1', [today]);
+            const rdr = await dbc.query('SELECT * FROM subscription_lookup WHERE date_next_payment = $1', [today]);
             if(rdr.rows.length === 0){}
             // Return empty
             else {
@@ -93,6 +93,24 @@ const pg = require('pg'),
         }
         finally {
             if(!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Update next billing dates of succesfully billed accounts
+     * @param {UUID} patientIds Array of patients that were succesfully billed
+     */
+    async updateBilledSubscriptions(subscriptions, preparedQuery, _txc) {
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+            const rdr = await dbc.query(`INSERT INTO subscriptions (id, offering_id, patient_id, date_next_payment)
+                                         VALUES ${preparedQuery}
+                                         ON CONFLICT (id) DO UPDATE SET date_next_payment = EXCLUDED.date_next_payment;`);
+
+        } finally {
+          if(!_txc) dbc.end();
         }
     }
 
@@ -138,7 +156,7 @@ const pg = require('pg'),
             const today = new Date();
 
             const rdr = await dbc.query("INSERT INTO subscriptions (offering_id, patient_id, date_subscribed, auto_renew) VALUES ($1, $2, $3, $4) RETURNING *", [offeringId, patientId, today, autoRenew]);
-            
+
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', patientId);
             else {

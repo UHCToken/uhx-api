@@ -139,6 +139,7 @@ SELECT
 	s.date_subscribed,
 	s.date_terminated,
 	s.auto_renew,
+	o.period_in_months,
 	og.id AS offering_group_id
 FROM subscriptions s
 LEFT JOIN offerings o ON s.offering_id = o.id

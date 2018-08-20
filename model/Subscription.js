@@ -2,18 +2,18 @@
 
 /**
  * Copyright 2018 Universal Health Coin
- * 
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), 
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
  * to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
  * and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
- * 
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
- * 
+ *
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
@@ -31,12 +31,13 @@ const ModelBase = require('./ModelBase'),
  * @property {Date} dateTerminated The date the subscription will end
  * @property {Date} dateNextPayment The date of the next billing period
  * @property {number} monthsRemaining The number of months remaining for the given subscription
+ * @property {number} periodInMonths The number of months between payments
  * @property {boolean} autoRenew Represents if the billing cycle is auto-renewed
  * @swagger
  * definitions:
  *  Subscription:
  *      properties:
- *          id: 
+ *          id:
  *              type: string
  *              description: The unique identifier for the subscription
  *          patientId:
@@ -60,6 +61,9 @@ const ModelBase = require('./ModelBase'),
  *          monthsRemaining:
  *              type: number
  *              description: The number of months remaining for the given subscription
+ *          periodInMonths:
+ *              type: number
+ *              description: The number of months between subscription payments
  *          autoRenew:
  *              type: boolean
  *              description: Represents if the billing cycle is auto-renewed
@@ -91,6 +95,7 @@ module.exports = class Subscription extends ModelBase {
         this.dateTerminated = dbSubscription.date_terminated !== null ? dbSubscription.date_terminated.toLocaleString() : null;
         this.dateNextPayment = dbSubscription.date_next_payment !== null ? dbSubscription.date_next_payment.toLocaleString() : null;
         // this.monthsRemaining = dbSubscription.months_remaining;
+        this.periodInMonths = dbSubscription.period_in_months !== null ? dbSubscription.period_in_months.toLocaleString() : null;
         this.autoRenew = dbSubscription.auto_renew;
         return this;
     }
@@ -109,6 +114,7 @@ module.exports = class Subscription extends ModelBase {
             date_terminated: this.dateTerminated,
             date_next_payment: this.dateNextPayment,
             // months_remaining: this.monthsRemaining,
+            period_in_months: this.periodInMonths,
             auto_renew: this.autoRenew
         };
     }
@@ -127,6 +133,7 @@ module.exports = class Subscription extends ModelBase {
             dateTerminated: this.dateTerminated,
             dateNextPayment: this.dateNextPayment,
             // monthsRemaining: this.monthsRemaining,
+            periodInMonths: this.periodInMonths,
             autoRenew: this.autoRenew
         }
     }

@@ -21,7 +21,8 @@
 const uhx = require('../uhx'),
     exception = require('../exception'),
     subscriptionRepository = require('../repository/subscriptionRepository'),
-    schedule = require('node-schedule')
+    schedule = require('node-schedule'),
+    moment = require('moment');
 
 /**
   * @class
@@ -36,6 +37,7 @@ module.exports = class BillingLogic {
    constructor() {
      // Bind methods
      this.dailyBilling = this.dailyBilling.bind(this);
+     this.billUsers = this.billUsers.bind(this);
 
      // Schedule billing to be done daily at 9pm
      schedule.scheduleJob('0 19 * * *', () => {
@@ -57,15 +59,25 @@ module.exports = class BillingLogic {
     */
    async dailyBilling() {
      try {
-       console.log('Before SQL')
        const subscriptions = await uhx.Repositories.subscriptionRepository.getSubscriptionsToBill();
-       console.log('After SQL')
+
        if (!subscriptions) {
          // No subscriptions were found to be billed today
-         // TODO: Throw exception
-         console.log('No subscriptions found.');
+         // TODO: Report this somehow
        } else {
-         console.log(subscriptions);
+         // Call function to complete transactions
+         this.billUsers(subscriptions);
+
+         // Prepare update query for next payment dates
+         let preparedQuery = '';
+         for (let i = 0; i < subscriptions.length; i++) {
+             subscriptions[i].dateNextPayment = moment(subscriptions[i].dateNextPayment, 'YYYY-MM-DD').add(subscriptions[i].periodInMonths, 'months').format('YYYY-MM-DD');
+             preparedQuery = preparedQuery + `, ('${subscriptions[i].id}', '${subscriptions[i].offeringId}', '${subscriptions[i].patientId}', '${subscriptions[i].dateNextPayment}')`;
+         }
+         preparedQuery = preparedQuery.substring(2);
+
+         // Update next billing dates for succesfully billed users
+         await uhx.Repositories.subscriptionRepository.updateBilledSubscriptions(subscriptions, preparedQuery);
        }
      } catch(ex) {
        // TODO: Add error message
@@ -73,7 +85,21 @@ module.exports = class BillingLogic {
      }
    }
 
-   // Bill users that are paying today
+   /**
+    * @method
+    * @summary Transfers currency from users accounts to subscription wallet using a queue
+    * @param {[Subscription]} subscriptions Array of subscriptions to be billed
+    * @returns {[Subscription], [Subscription]} Array of succesful billings, array of failed billngs
+    */
+   async billUsers(subscriptions) {
+     try {
+       // TODO: MONEY TRANSFER
+       return subscriptions;
+     } catch (ex) {
+       // TODO: Add error message
+       console.log(ex)
+     }
+   }
 
    // Add billed users to table holding users that have paid this month
    // according to result of money transfer
@@ -81,8 +107,6 @@ module.exports = class BillingLogic {
    // Pull subscriptions that are being terminated
 
    // Terminate subscriptions that end today
-
-   // Update subscriptions for people who have paid
 
    // Update terminated subscriptions
 }
