@@ -83,7 +83,7 @@ module.exports = class ProviderAddressRepository {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if (!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM provider_addresses WHERE deactivation_time IS NULL AND provider_id = $1", [providerId]);
+            const rdr = await dbc.query("SELECT * FROM provider_addresses WHERE deactivation_time IS NULL AND provider_id = $1 ORDER BY GREATEST(creation_time) ASC", [providerId]);
             if (rdr.rows.length == 0)
                 return null;
             else {
@@ -125,15 +125,18 @@ module.exports = class ProviderAddressRepository {
                         WHERE provider_addresses.latitude BETWEEN ($1::NUMERIC - $3::NUMERIC) AND ($1::NUMERIC + $3::NUMERIC)
                         AND provider_addresses.longitude BETWEEN ($2::NUMERIC - $3::NUMERIC) AND ($2::NUMERIC + $3::NUMERIC)
                         ) AS provider_addresses
-                    ) SUB
+                    ) AS addresses 
+                INNER JOIN providers ON addresses.provider_id = providers.id
                 WHERE distance <= $4
-                AND deactivation_time IS NULL
-                AND visible = true`;
+                AND addresses.deactivation_time IS NULL
+                AND providers.deactivation_time IS NULL
+                AND addresses.visible = true
+                AND providers.visible = true`;
 
             var sqlArgs = [filter.lat, filter.lon, filter.distance * 0.02 || 0.5, filter.distance || 25, filter.limit || 25];
             if (filter.serviceType) {
                 sqlQuery += `
-                     AND id IN (SELECT provider_address_id FROM provider_address_types WHERE service_type = $6)`;
+                     AND addresses.id IN (SELECT provider_address_id FROM provider_address_types WHERE service_type = $6)`;
                 sqlArgs.push(filter.serviceType);
             }
 

@@ -39,7 +39,8 @@ const UserRepository = require('./userRepository'),
 CarePlanRepository = require('./carePlanRepository'),
     CareServiceRepository = require('./careServiceRepository'),
     CareRelationshipRepository = require('./careRelationshipRepository'),
-    pg = require('pg'),
+CountryRepository = require('./countryRepository'),    
+pg = require('pg'),
     uhx = require('../uhx'),
     exception = require('../exception');
 
@@ -312,6 +313,17 @@ class UhcRepositories {
         if (!this._providerServiceRepository)
             this._providerServiceRepository = new ProviderServiceRepository(this.connectionString);
         return this._providerServiceRepository;
+    }
+
+    /**
+     * @property
+     * @summary Gets the country repository
+     * @type {CountryRepository}
+     */
+    get countryRepository() {
+        if (!this.__countryRepository)
+            this._countryRepository = new CountryRepository(this.connectionString);
+        return this._countryRepository;
     }
 
     /**

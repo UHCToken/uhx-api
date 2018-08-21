@@ -32,10 +32,10 @@ const ModelBase = require('./ModelBase');
  *      title:
  *        type: string
  *        description: chat title
- *      providerId
+ *      providerId:
  *        type: string
  *        description: userId of provider
-*       patientId
+ *      patientId:
  *        type: string
  *        description: userId of patient
  */
