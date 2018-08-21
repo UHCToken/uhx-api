@@ -75,7 +75,7 @@ module.exports = class CountryRepository {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if (!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM countries WHERE code = $1", [code]);
+            const rdr = await dbc.query("SELECT * FROM countries WHERE code = $1", [code.toLowerCase()]);
             if (rdr.rows.length == 0)
                 return null;
             else

@@ -25,14 +25,14 @@ INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('
 INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('4339ef73-25e7-43fd-9080-8f7eb55182eb', '066e692f-8369-4d1d-b2b6-cb899d817e62', 31);
 INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('4339ef73-25e7-43fd-9080-8f7eb55182eb', 'e3d6f6b6-b81f-47d3-abfc-cf2fbc5f934e', 31);
 INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('4339ef73-25e7-43fd-9080-8f7eb55182eb', 'e75a8a23-9abe-408c-8a8b-80769632e4db', 22);
-INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('4339ef73-25e7-43fd-9080-8f7eb55182eb', 'a0479c91-ed6a-490e-8e75-95d281ba60b7', 22);
+INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('4339ef73-25e7-43fd-9080-8f7eb55182eb', 'a0479c91-ed6a-490e-8e75-95d281ba60b7', 11);
 
 INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('285cb044-bf99-4409-b418-7edc5c012ded', '1836f5e7-c0b2-4d3c-8da5-df50cd46040e', 22);
 INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('285cb044-bf99-4409-b418-7edc5c012ded', '22c8ebb1-d488-4b52-8dfc-95697bc65c8b', 22);
 INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('285cb044-bf99-4409-b418-7edc5c012ded', '066e692f-8369-4d1d-b2b6-cb899d817e62', 22);
 INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('285cb044-bf99-4409-b418-7edc5c012ded', 'e3d6f6b6-b81f-47d3-abfc-cf2fbc5f934e', 22);
 INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('285cb044-bf99-4409-b418-7edc5c012ded', 'e75a8a23-9abe-408c-8a8b-80769632e4db', 22);
-INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('285cb044-bf99-4409-b418-7edc5c012ded', 'a0479c91-ed6a-490e-8e75-95d281ba60b7', 22);
+INSERT INTO group_permissions (group_id, permission_set_id, acl_flags) VALUES ('285cb044-bf99-4409-b418-7edc5c012ded', 'a0479c91-ed6a-490e-8e75-95d281ba60b7', 11);
 
 -- ADD TEL EXT COLUMN TO PROVIDERS AND PATIENTS
 ALTER TABLE providers ADD COLUMN tel_ext VARCHAR(64);

@@ -382,6 +382,33 @@ class PatientApiResource {
 
         return true;
     }
+
+    /**
+     * @method
+     * @summary Determines additional access control on the patient resource
+     * @param {security.Principal} principal The JWT principal data that has authorization information
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to the client
+     * @returns {boolean} An indicator of whether the patient has access to the resource
+     */
+    async acl(principal, req, res) {
+
+        if (!(principal instanceof security.Principal)) {
+            uhx.log.error("ACL requires a security principal to be passed");
+            return false;
+        }
+
+        if (req.params.uid)
+            var id = req.params.uid;
+        else if (req.params.patientid){
+            var patient = await uhx.Repositories.patientRepository.get(req.params.patientid);
+            var id = patient.userId;
+        }
+        // if the token has OWNER set for PATIENT permission then this user must be SELF
+        return (principal.grant.patient & security.PermissionType.OWNER && id == principal.session.userId) // the permission on the principal is for OWNER only
+            ^ !(principal.grant.patient & security.PermissionType.OWNER); // XOR the owner grant flag is not set.
+
+    }
 }
 
 // Module exports

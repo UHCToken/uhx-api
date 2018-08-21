@@ -48,7 +48,7 @@ class ProviderAddressApiResource {
             "permission_group": "providerAddress",
             "routes": [
                 {
-                    "path": "provideraddress",
+                    "path": "providerAddress",
                     "get": {
                         "demand": security.PermissionType.READ,
                         "method": this.query
@@ -59,7 +59,7 @@ class ProviderAddressApiResource {
                     }
                 },
                 {
-                    "path": "provideraddress/:addressid",
+                    "path": "providerAddress/:addressid",
                     "get": {
                         "demand": security.PermissionType.READ,
                         "method": this.get
@@ -74,10 +74,17 @@ class ProviderAddressApiResource {
                     }
                 },
                 {
-                    "path": "provideraddress/provider/:providerid",
+                    "path": "providerAddress/provider/:providerid",
                     "get": {
                         "demand": security.PermissionType.READ,
                         "method": this.getAllForProvider
+                    }
+                },
+                {
+                    "path": "providerAddress/place/latlon",
+                    "get": {
+                        "demand": security.PermissionType.READ,
+                        "method": this.getPlaceByLatLon
                     }
                 }
             ]
@@ -87,14 +94,14 @@ class ProviderAddressApiResource {
     /**
      * @method
      * @summary Allows for a query of all provider addresses with filters
-     * @param {Express.Reqeust} req The request from the client 
+     * @param {Express.Request} req The request from the client 
      * @param {Express.Response} res The response from the client
      * @swagger
      * /provideraddress:
      *  get:
      *      tags:
      *      - "provideraddress"
-     *      summary: "Gets filted address results"
+     *      summary: "Gets filtered address results"
      *      description: "This method will fetch all addresses and filter the results"
      *      produces:
      *      - "application/json"
@@ -113,7 +120,7 @@ class ProviderAddressApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "read:user"
+     *          - "read:providerAddress"
      */
     async query(req, res) {
         // Get the latitude and longitude for the query
@@ -130,7 +137,8 @@ class ProviderAddressApiResource {
             for (var adr in addresses) {
                 // Load service types and provider details
                 await addresses[adr].loadAddressServiceTypes();
-                await addresses[adr].loadProviderDetails();
+                await addresses[adr].loadProviderDetails();     
+
                 // Load services
                 if (req.query.serviceType)
                     await addresses[adr].loadAddressServices(req.query.serviceType);
@@ -175,9 +183,9 @@ class ProviderAddressApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "write:user"
+     *          - "write:providerAddress"
      *      - app_auth:
-     *          - "write:user"
+     *          - "write:providerAddress"
      */
     async post(req, res) {
 
@@ -202,7 +210,7 @@ class ProviderAddressApiResource {
     /**
      * @method
      * @summary Get a single provider address
-     * @param {Express.Reqeust} req The request from the client 
+     * @param {Express.Request} req The request from the client 
      * @param {Express.Response} res The response from the client
      * @swagger
      * /provideraddress/{addressid}:
@@ -234,7 +242,7 @@ class ProviderAddressApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "read:user"
+     *          - "read:providerAddress"
      */
     async get(req, res) {
 
@@ -252,7 +260,7 @@ class ProviderAddressApiResource {
     /**
      * @method
      * @summary Get all addresses for the provider
-     * @param {Express.Reqeust} req The request from the client 
+     * @param {Express.Request} req The request from the client 
      * @param {Express.Response} res The response from the client
      * @swagger
      * /provideraddress/{providerid}:
@@ -280,7 +288,7 @@ class ProviderAddressApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "read:user"
+     *          - "read:providerAddress"
      */
     async getAllForProvider(req, res) {
 
@@ -344,8 +352,7 @@ class ProviderAddressApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "write:user"
-     *          - "read:user"
+     *          - "write:providerAddress"
      */
     async put(req, res) {
 
@@ -404,8 +411,7 @@ class ProviderAddressApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "write:user"
-     *          - "read:user"
+     *          - "write:providerAddress"
      */
     async delete(req, res) {
         req.body.id = req.params.addressid;
@@ -413,6 +419,42 @@ class ProviderAddressApiResource {
         return true;
     }
 
+    /**
+     * @method
+     * @summary Gets an address name for a latitude and longitude
+     * @param {Express.Request} req The request from the client 
+     * @param {Express.Response} res The response from the client
+     * @swagger
+     * /provideraddress/place:
+     *  get:
+     *      tags:
+     *      - "provideraddress"
+     *      summary: "Gets an address name for a latitude and longitude"
+     *      description: "This method will fetch an address for a latitude and longitude from google"
+     *      produces:
+     *      - "application/json"
+     *      responses:
+     *          200: 
+     *             description: "The requested resource was fetched successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/ProviderAddress"
+     *          404:
+     *              description: "The specified provider cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "read:providerAddress"
+     */
+    async getPlaceByLatLon(req, res) {
+        res.status(200).json(await uhx.GoogleMaps.getPlace(req.query.lat, req.query.lon));
+        return true;
+    }
+    
 }
 
 // Module exports
