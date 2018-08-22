@@ -38,6 +38,9 @@ const ModelBase = require('./ModelBase');
  *      patientId:
  *        type: string
  *        description: userId of patient
+ *      name:
+ *        type: string
+ *        description: Provider Name
  */
 module.exports = class ChatRoom extends ModelBase {
   
@@ -58,8 +61,9 @@ module.exports = class ChatRoom extends ModelBase {
   fromData(dbMessage) {
     this.id = dbMessage.id;
     this.title = dbMessage.title;
-    this.providerId = dbMessage.providerId;
-    this.patientId = dbMessage.patientId;
+    this.providerid = dbMessage.providerid;
+    this.patientid = dbMessage.patientid;
+    this.name = dbMessage.name;
     return this;
   }
 
@@ -71,8 +75,9 @@ module.exports = class ChatRoom extends ModelBase {
     return {
       id: this.id,
       title: this.title,
-      providerId: this.providerId,
-      patientId: this.patientId
+      providerid: this.providerid,
+      patientid: this.patientid,
+      name: this.name
     }
   }
 }

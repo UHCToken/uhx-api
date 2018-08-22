@@ -29,14 +29,14 @@ const ChatMessage = require('../model/ChatMessage'),
  * @class
  * @summary Represents Chat Object, with socket.io for listening, and routes for getting/creating chatrooms and chats
  */
-module.exports = class Chat {
+module.exports.ChatApiResource = class ChatApiResource {
 
   get routes() {
     return {
-      permission_group: "chat",
+      permission_group: "user",
       routes: [
         {
-          "path": "chat:uid",
+          "path": "chat/:uid",
           "get" : {
               demand: security.PermissionType.LIST,
               method: this.getChatRooms
@@ -47,7 +47,7 @@ module.exports = class Chat {
           }
         },
         {
-          "path": "chat:cid/messages",
+          "path": "chat/:cid/messages",
           "get" : {
               demand: security.PermissionType.LIST,
               method: this.getChatMessages
@@ -58,7 +58,7 @@ module.exports = class Chat {
           }
         },
         {
-          "path": "listen:cid",
+          "path": "listen/:cid",
           "get" : {
               demand: security.PermissionType.LIST,
               method: this.initChatSocket
@@ -121,10 +121,10 @@ module.exports = class Chat {
    * @param {Express.Response} res The HTTP response going to the client
    */
   async getChatRooms(req, res) {
-    if(!req.params.gid)
+    if(!req.params.uid)
         throw new exception.Exception("Missing chat user id parameter", exception.ErrorCodes.MISSING_PROPERTY);
 
-    res.status(200).json(await uhx.Repositories.chatRepository.getChatRooms(req.params.patientId));
+    res.status(200).json(await uhx.Repositories.chatRepository.getChatRooms(req.params.uid));
     return true;
   }
 
@@ -169,11 +169,15 @@ module.exports = class Chat {
    * @param {Express.Response} res The HTTP response going to the client
    */
   async getChatMessages(req, res) {
-    if(!req.params.gid)
+    if(!req.params.cid)
         throw new exception.Exception("Missing chat room id parameter", exception.ErrorCodes.MISSING_PROPERTY);
 
-    res.status(200).json(await uhx.Repositories.chatRepository.getChatMessages(req.params.chatRoomId));
-    return true;
+    try {
+      res.status(200).json(await uhx.Repositories.chatRepository.getChatMessages(req.params.cid));
+      return true;
+    }
+    catch (e) {
+      throw new exception.Exception('There is an error.... ', exception.ErrorCodes.UNKNOWN);
+    }
   }
-
 }

@@ -55,7 +55,7 @@ module.exports = class ChatRepository {
 
     try {
       await dbc.connect();
-      await dbc.query('INSERT INTO chat_room (c_id, c_namespace, c_title, c_providerid, c_patientid) VALUES ($1,$2,$3,$4,$5) RETURNING *', 
+      await dbc.query('INSERT INTO chat_room (id, namespace, title, providerid, patientid) VALUES ($1,$2,$3,$4,$5) RETURNING *', 
                               [chatRoom.id, chatRoom.namespace, chatRoom.title, chatRoom.providerId, chatRoom.patientId]);
     }
     catch(err){uhx.log.debug(err)}
@@ -74,10 +74,12 @@ module.exports = class ChatRepository {
     try {
       let userChats = [];
       await dbc.connect();
-      let userChatsFromDB = await dbc.query('SELECT * FROM chat_room WHERE c_patientid = $1', [userId])
-      for(var r in userChatsFromDB.rows)
-        userChats.push(new ChatRoom().fromData(userChatsFromDB.rows[r]));
+      let userChatsFromDB = await dbc.query('SELECT cr.id, cr.title, cr.providerid, cr.patientid, p.name FROM public.chat_room as cr LEFT JOIN providers as p ON CAST(cr.providerid as text) = CAST(p.id as text) WHERE cr.patientid = $1', [userId])
 
+      for(var r in userChatsFromDB.rows) {
+        userChats.push(new ChatRoom().fromData(userChatsFromDB.rows[r]));
+      }
+        
       return userChats;
     }
     catch(err){console.log(err)}
@@ -97,7 +99,7 @@ module.exports = class ChatRepository {
 
     try {
       await dbc.connect();
-      await dbc.query('INSERT INTO chat_message (cm_id, cm_chatroom_id, cm_author, cm_datesent, cm_viewedstatus, cm_body) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *', 
+      await dbc.query('INSERT INTO chat_message (id, chatroom_id, author, datesent, viewedstatus, body) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *', 
                               [chatMessage.id, chatRoomId, chatMessage.author, chatMessage.dateSent, chatMessage.viewedStatus, chatMessage.body]);
     }
     catch (err) {console.log(error)}
@@ -116,11 +118,13 @@ module.exports = class ChatRepository {
     try {
       let chatRoomMessages = [];
       await dbc.connect();
-      let messagesFromDB = await dbc.query('SELECT * FROM chat_message WHERE cm_chatroom_id = $1', [chatRoomId])
+      let messagesFromDB = await dbc.query('SELECT * FROM chat_message WHERE chatroom_id = $1', [chatRoomId])
+//SELECT cr.id, cr.title, cr.providerid, cr.patientid, p.name FROM public.chat_room as cr LEFT JOIN providers as p ON CAST(cr.providerid as text) = CAST(p.id as text) WHERE cr.patientid
+      for(var r in messagesFromDB.rows) {
+        chatRoomMessages.push(new ChatMessage().fromData(messagesFromDB.rows[r]));
+      }
 
-      for(var r in messagesFromDB.rows)
-      chatRoomMessages.push(new ChatRoom().fromData(messagesFromDB.rows[r]));
-
+      console.log(chatRoomMessages);
       return chatRoomMessages;
     }
     catch (err) {console.log(error)}
