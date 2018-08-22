@@ -68,16 +68,21 @@ module.exports = class UserLogic {
         if (providerExists)
             throw new exception.Exception("User has a provider profile", exception.ErrorCodes.ARGUMENT_EXCEPTION);
 
-        try {
-            var retVal = await uhx.Repositories.providerRepository.insert(provider, principal);
-            await uhx.Repositories.groupRepository.addUser(uhx.Config.security.sysgroups.providers, retVal.userId, principal);
-            if (serviceTypes)
-                await uhx.UserLogic.updateProviderServiceTypes(provider.id, serviceTypes, principal);
-            return retVal;
-        }
-        catch (e) {
-            uhx.log.error(`Error adding provider: ${e.message}`);
-            throw new exception.Exception("Error adding provider", e.code || exception.ErrorCodes.UNKNOWN, e);
+        if (((principal.grant["provider"] && security.PermissionType.OWNER && provider.userId == principal.session.userId) == 1) || (principal.grant["provider"] & security.PermissionType.LIST)) {
+
+            try {
+                var retVal = await uhx.Repositories.providerRepository.insert(provider, principal);
+                await uhx.Repositories.groupRepository.addUser(uhx.Config.security.sysgroups.providers, retVal.userId, principal);
+                if (serviceTypes)
+                    await uhx.UserLogic.updateProviderServiceTypes(provider.id, serviceTypes, principal);
+                return retVal;
+            }
+            catch (e) {
+                uhx.log.error(`Error adding provider: ${e.message}`);
+                throw new exception.Exception("Error adding provider", e.code || exception.ErrorCodes.UNKNOWN, e);
+            }
+        } else {
+            return new exception.Exception("Invalid security permissions.", exception.ErrorCodes.SECURITY_ERROR);
         }
     }
 
@@ -89,7 +94,12 @@ module.exports = class UserLogic {
      * @returns {Provider} The updated provider
      */
     async updateProvider(provider, serviceTypes, principal) {
-        if (principal.grant["user"] & security.PermissionType.OWNER) {
+        var providerExists = await uhx.Repositories.providerRepository.get(provider.id);
+
+        if (!providerExists)
+            throw new exception.Exception("Provider not found", exception.ErrorCodes.NOT_FOUND);
+
+        if (((principal.grant["provider"] && security.PermissionType.OWNER && providerExists.userId == principal.session.userId) == 1) || (principal.grant["provider"] & security.PermissionType.LIST)) {
             try {
 
                 if (serviceTypes)
@@ -111,22 +121,9 @@ module.exports = class UserLogic {
                 uhx.log.error("Error updating provider: " + e.message);
                 throw new exception.Exception("Error updating provider", exception.ErrorCodes.UNKNOWN, e);
             }
-        } else { // Admin
-            try {
-
-                if (serviceTypes)
-                    await uhx.UserLogic.updateProviderServiceTypes(provider.id, serviceTypes, principal);
-
-                delete (provider.userId);
-
-                return await uhx.Repositories.transaction(async (_txc) => {
-
-                    return await uhx.Repositories.providerRepository.update(provider, null, _txc);
-                });
-            } catch (ex) {
-                uhx.log.error("Error updating provider: " + ex.message);
-                throw new exception.Exception("Error updating provider", exception.ErrorCodes.UNKNOWN, ex);
-            }
+        }
+        else {
+            return new exception.Exception("Invalid security permissions.", exception.ErrorCodes.SECURITY_ERROR);
         }
     }
 
@@ -176,28 +173,39 @@ module.exports = class UserLogic {
         if (addressExists)
             throw new exception.Exception("This address exists", exception.ErrorCodes.ARGUMENT_EXCEPTION);
 
-        var providerExists = await uhx.Repositories.providerRepository.checkIfExists(address.providerId);
+        var providerExists = await uhx.Repositories.providerRepository.get(address.providerId);
+
         if (!providerExists)
             throw new exception.Exception("Provider Id does not exist", exception.ErrorCodes.ARGUMENT_EXCEPTION);
 
-        delete (address.latitude);
-        delete (address.longitude);
+        if (((principal.grant["providerAddress"] && security.PermissionType.OWNER && providerExists.userId == principal.session.userId) == 1) || (principal.grant["providerAddress"] & security.PermissionType.LIST)) {
 
-        // Get the latitude and longitude
-        var geometry = await uhx.GoogleMaps.getLatLon(address);
-        address.latitude = geometry.lat;
-        address.longitude = geometry.lon;
-        address.placeId = geometry.placeId;
+            delete (address.latitude);
+            delete (address.longitude);
 
-        try {
-            var newAddress = await uhx.Repositories.providerAddressRepository.insert(address, principal);
-            if (serviceTypes)
-                await uhx.UserLogic.updateAddressServiceTypes(address.id, serviceTypes, principal);
-            return newAddress;
-        }
-        catch (e) {
-            uhx.log.error(`Error adding provider address: ${e.message}`);
-            throw new exception.Exception("Error adding provider address", e.code || exception.ErrorCodes.UNKNOWN, e);
+            // Get the latitude and longitude
+            var geometry = await uhx.GoogleMaps.getLatLon(address);
+            address.latitude = parseFloat(geometry.lat.toFixed(6));
+            address.longitude = parseFloat(geometry.lon.toFixed(6));
+
+            // Randomly reposition the latitude and longitude if the exact same one already exists
+            while (await uhx.Repositories.providerAddressRepository.checkIfLatLonExists(address.latitude.toFixed(6), address.longitude.toFixed(6))) {
+                address.latitude += Math.random() < 0.5 ? -0.00001 : 0.00001;
+                address.longitude += Math.random() < 0.5 ? -0.00001 : 0.00001;
+            }
+
+            try {
+                var newAddress = await uhx.Repositories.providerAddressRepository.insert(address, principal);
+                if (serviceTypes)
+                    await uhx.UserLogic.updateAddressServiceTypes(address.id, serviceTypes, principal);
+                return newAddress;
+            }
+            catch (e) {
+                uhx.log.error(`Error adding provider address: ${e.message}`);
+                throw new exception.Exception("Error adding provider address", e.code || exception.ErrorCodes.UNKNOWN, e);
+            }
+        } else {
+            return new exception.Exception("Invalid security permissions.", exception.ErrorCodes.SECURITY_ERROR);
         }
     }
 
@@ -210,35 +218,43 @@ module.exports = class UserLogic {
      */
     async updateProviderAddress(address, serviceTypes, principal) {
 
-        var oldAddress = await uhx.Repositories.providerAddressRepository.get(address.id);
-        if (!oldAddress)
-            throw new exception.Exception("This address does not exist", exception.ErrorCodes.ARGUMENT_EXCEPTION);
+        var userId = await uhx.Repositories.providerAddressRepository.getUserIdByAddress(address.id);
 
-        if (serviceTypes)
-            await uhx.UserLogic.updateAddressServiceTypes(address.id, serviceTypes, principal);
+        if (!userId)
+            throw new exception.Exception("Address not found", exception.ErrorCodes.NOT_FOUND);
 
-        // Delete fields which can't be set by clients 
-        delete (address.providerId);
-        delete (address.latitude);
-        delete (address.longitude);
+        if (((principal.grant["providerAddress"] && security.PermissionType.OWNER && userId == principal.session.userId) == 1) || (principal.grant["providerAddress"] & security.PermissionType.LIST)) {
 
-        if ((address.street && (address.street != oldAddress.street)) || (address.city && (address.city != oldAddress.city)) || (address.stateProv && (address.stateProv != oldAddress.stateProv)) || (address.country && (address.country != oldAddress.country)) || (address.postalZip && (address.postalZip != oldAddress.postalZip))) {
-            // Load new/old address data
-            var newAddress = {};
-            newAddress.street = address.street || oldAddress.street;
-            newAddress.city = address.city || oldAddress.city;
-            newAddress.stateProv = address.stateProv || oldAddress.stateProv;
-            newAddress.country = address.country || oldAddress.country;
-            newAddress.postalZip = address.postalZip || oldAddress.postalZip;
+            if (serviceTypes)
+                await uhx.UserLogic.updateAddressServiceTypes(address.id, serviceTypes, principal);
 
-            // Get the latitude and longitude
-            var geometry = await uhx.GoogleMaps.getLatLon(newAddress);
-            address.latitude = geometry.lat;
-            address.longitude = geometry.lon;
-            address.placeId = geometry.placeId;
-        }
+            // Delete fields which can't be set by clients 
+            delete (address.providerId);
+            delete (address.latitude);
+            delete (address.longitude);
 
-        if (principal.grant["user"] & security.PermissionType.OWNER) {
+            var oldAddress = await uhx.Repositories.providerAddressRepository.get(address.id);
+
+            if ((address.street && (address.street != oldAddress.street)) || (address.city && (address.city != oldAddress.city)) || (address.stateProv && (address.stateProv != oldAddress.stateProv)) || (address.country && (address.country != oldAddress.country)) || (address.postalZip && (address.postalZip != oldAddress.postalZip))) {
+                // Load new/old address data
+                var newAddress = {};
+                newAddress.street = address.street || oldAddress.street;
+                newAddress.city = address.city || oldAddress.city;
+                newAddress.stateProv = address.stateProv || oldAddress.stateProv;
+                newAddress.country = address.country || oldAddress.country;
+                newAddress.postalZip = address.postalZip || oldAddress.postalZip;
+
+                // Get the latitude and longitude
+                var geometry = await uhx.GoogleMaps.getLatLon(newAddress);
+                address.latitude = parseFloat(geometry.lat.toFixed(6));
+                address.longitude = parseFloat(geometry.lon.toFixed(6));
+
+                while (await uhx.Repositories.providerAddressRepository.checkIfLatLonExists(address.latitude.toFixed(6), address.longitude.toFixed(6))) {
+                    address.latitude += Math.random() < 0.5 ? -0.00001 : 0.00001;
+                    address.longitude += Math.random() < 0.5 ? -0.00001 : 0.00001;
+                }
+            }
+
             try {
                 return await uhx.Repositories.providerAddressRepository.update(address);
             }
@@ -246,15 +262,8 @@ module.exports = class UserLogic {
                 uhx.log.error("Error updating provider address: " + e.message);
                 throw new exception.Exception("Error updating provider address", exception.ErrorCodes.UNKNOWN, e);
             }
-        } else { // Admin logic
-            try {
-
-                return await uhx.Repositories.providerAddressRepository.update(address);
-            }
-            catch (e) {
-                uhx.log.error("Error updating provider address: " + e.message);
-                throw new exception.Exception("Error updating provider address", exception.ErrorCodes.UNKNOWN, e);
-            }
+        } else {
+            return new exception.Exception("Invalid security permissions.", exception.ErrorCodes.SECURITY_ERROR);
         }
     }
 
@@ -292,15 +301,24 @@ module.exports = class UserLogic {
      * @returns {ProviderAddress} The provider address that was deactivated
      */
     async deleteProviderAddress(address, principal, _txc) {
-        if (!(await uhx.Repositories.providerAddressRepository.get(address.id)))
+
+        var userId = await uhx.Repositories.providerAddressRepository.getUserIdByAddress(address.id);
+
+        if (!userId)
             throw new exception.Exception("Address not found", exception.ErrorCodes.NOT_FOUND);
 
-        try {
-            return await uhx.Repositories.providerAddressRepository.delete(address.id, _txc);
-        }
-        catch (e) {
-            uhx.log.error("Error deleting address: " + e.message);
-            throw new exception.Exception("Error deleting address", exception.ErrorCodes.UNKNOWN, e);
+        if (((principal.grant["providerAddress"] && security.PermissionType.OWNER && userId == principal.session.userId) == 1) || (principal.grant["providerAddress"] & security.PermissionType.LIST)) {
+
+            try {
+                return await uhx.Repositories.providerAddressRepository.delete(address.id, _txc);
+            }
+            catch (e) {
+                uhx.log.error("Error deleting address: " + e.message);
+                throw new exception.Exception("Error deleting address", exception.ErrorCodes.UNKNOWN, e);
+            }
+
+        } else {
+            return new exception.Exception("Invalid security permissions.", exception.ErrorCodes.SECURITY_ERROR);
         }
     }
 
@@ -314,24 +332,32 @@ module.exports = class UserLogic {
      */
     async addProviderServices(addressId, services, principal) {
         var retVal = [];
-        var address = await uhx.Repositories.providerAddressRepository.get(addressId);
-        if (!address)
+        var userId = await uhx.Repositories.providerAddressRepository.getUserIdByAddress(addressId);
+
+        if (!userId)
             throw new exception.Exception("Address not found", exception.ErrorCodes.NOT_FOUND);
 
-        return await uhx.Repositories.transaction(async (_txc) => {
-            for (var s in services) {
-                services[s].addressId = address.id;
+        if (((principal.grant["providerService"] && security.PermissionType.OWNER && userId == principal.session.userId) == 1) || (principal.grant["providerService"] & security.PermissionType.LIST)) {
 
-                try {
-                    retVal.push(await uhx.UserLogic.addProviderService(services[s], principal, _txc));
+            var address = await uhx.Repositories.providerAddressRepository.get(addressId);
+
+            return await uhx.Repositories.transaction(async (_txc) => {
+                for (var s in services) {
+                    services[s].addressId = address.id;
+
+                    try {
+                        retVal.push(await uhx.UserLogic.addProviderService(services[s], principal, _txc));
+                    }
+                    catch (e) {
+                        uhx.log.error(`Error adding services: ${e.message}`);
+                        throw new exception.Exception("Error adding services", e.code || exception.ErrorCodes.UNKNOWN, e);
+                    }
                 }
-                catch (e) {
-                    uhx.log.error(`Error adding services: ${e.message}`);
-                    throw new exception.Exception("Error adding services", e.code || exception.ErrorCodes.UNKNOWN, e);
-                }
-            }
-            return retVal;
-        });
+                return retVal;
+            });
+        } else {
+            return new exception.Exception("Invalid security permissions.", exception.ErrorCodes.SECURITY_ERROR);
+        }
     }
 
     /**
@@ -351,7 +377,7 @@ module.exports = class UserLogic {
             if (await uhx.Repositories.providerServiceRepository.serviceTypeExists(services[s].id, services[s].addressId))
                 await services[s].loadServiceTypeDetails();
             else
-                delete (services[s]);
+                services.splice(s, 1);
         }
         return services;
     }
@@ -367,29 +393,38 @@ module.exports = class UserLogic {
      */
     async editProviderServices(addressId, services, action, principal) {
         var retVal = [];
-        var address = await uhx.Repositories.providerAddressRepository.get(addressId);
-        if (!address)
+        var userId = await uhx.Repositories.providerAddressRepository.getUserIdByAddress(addressId);
+
+        if (!userId)
             throw new exception.Exception("Address not found", exception.ErrorCodes.NOT_FOUND);
 
-        return await uhx.Repositories.transaction(async (_txc) => {
+        if (((principal.grant["providerService"] && security.PermissionType.OWNER && userId == principal.session.userId) == 1) || (principal.grant["providerService"] & security.PermissionType.LIST)) {
 
-            for (var s in services) {
-                services[s].addressId = address.id;
-                try {
-                    if (action[s] == 'insert')
-                        retVal.push(await uhx.UserLogic.addProviderService(services[s], principal, _txc));
-                    else if (action[s] == 'update')
-                        retVal.push(await uhx.UserLogic.updateProviderService(services[s], principal, _txc));
-                    else if (action[s] == 'delete')
-                        retVal.push(await uhx.UserLogic.deleteProviderService(services[s], principal, _txc));
+            var address = await uhx.Repositories.providerAddressRepository.get(addressId);
+
+            return await uhx.Repositories.transaction(async (_txc) => {
+
+                for (var s in services) {
+                    services[s].addressId = address.id;
+                    try {
+                        if (action[s] == 'insert')
+                            retVal.push(await uhx.UserLogic.addProviderService(services[s], principal, _txc));
+                        else if (action[s] == 'update')
+                            retVal.push(await uhx.UserLogic.updateProviderService(services[s], principal, _txc));
+                        else if (action[s] == 'delete')
+                            retVal.push(await uhx.UserLogic.deleteProviderService(services[s], principal, _txc));
+                    }
+                    catch (e) {
+                        uhx.log.error(`Error adding services: ${e.message}`);
+                        throw new exception.Exception("Error adding services", e.code || exception.ErrorCodes.UNKNOWN, e);
+                    }
                 }
-                catch (e) {
-                    uhx.log.error(`Error adding services: ${e.message}`);
-                    throw new exception.Exception("Error adding services", e.code || exception.ErrorCodes.UNKNOWN, e);
-                }
-            }
-            return retVal;
-        });
+                return retVal;
+            });
+
+        } else {
+            return new exception.Exception("Invalid security permissions.", exception.ErrorCodes.SECURITY_ERROR);
+        }
     }
 
     /**
@@ -438,19 +473,26 @@ module.exports = class UserLogic {
         if (!(await uhx.Repositories.providerServiceRepository.get(service.id)))
             throw new exception.Exception("Service not found", exception.ErrorCodes.NOT_FOUND);
 
-        try {
-            // Delete fields which can't be set by clients 
-            delete (service.providerId);
-            delete (service.addressId);
-            delete (service.creationTime);
-            delete (service.updatedTime);
-            delete (service.deactivationTime);
+        var userId = await uhx.Repositories.providerServiceRepository.getUserIdByService(service.id);
 
-            return await uhx.Repositories.providerServiceRepository.update(service, _txc);
-        }
-        catch (e) {
-            uhx.log.error("Error updating service: " + e.message);
-            throw new exception.Exception("Error updating service", exception.ErrorCodes.UNKNOWN, e);
+        if (((principal.grant["providerService"] && security.PermissionType.OWNER && userId == principal.session.userId) == 1) || (principal.grant["providerService"] & security.PermissionType.LIST)) {
+
+            try {
+                // Delete fields which can't be set by clients 
+                delete (service.providerId);
+                delete (service.addressId);
+                delete (service.creationTime);
+                delete (service.updatedTime);
+                delete (service.deactivationTime);
+
+                return await uhx.Repositories.providerServiceRepository.update(service, _txc);
+            }
+            catch (e) {
+                uhx.log.error("Error updating service: " + e.message);
+                throw new exception.Exception("Error updating service", exception.ErrorCodes.UNKNOWN, e);
+            }
+        } else {
+            return new exception.Exception("Invalid security permissions.", exception.ErrorCodes.SECURITY_ERROR);
         }
     }
 
@@ -464,12 +506,19 @@ module.exports = class UserLogic {
         if (!(await uhx.Repositories.providerServiceRepository.get(service.id)))
             throw new exception.Exception("Service not found", exception.ErrorCodes.NOT_FOUND);
 
-        try {
-            return await uhx.Repositories.providerServiceRepository.delete(service.id, _txc);
-        }
-        catch (e) {
-            uhx.log.error("Error deleting service: " + e.message);
-            throw new exception.Exception("Error deleting service", exception.ErrorCodes.UNKNOWN, e);
+        var userId = await uhx.Repositories.providerServiceRepository.getUserIdByService(service.id);
+
+        if (((principal.grant["providerService"] && security.PermissionType.OWNER && userId == principal.session.userId) == 1) || (principal.grant["providerService"] & security.PermissionType.LIST)) {
+
+            try {
+                return await uhx.Repositories.providerServiceRepository.delete(service.id, _txc);
+            }
+            catch (e) {
+                uhx.log.error("Error deleting service: " + e.message);
+                throw new exception.Exception("Error deleting service", exception.ErrorCodes.UNKNOWN, e);
+            }
+        } else {
+            return new exception.Exception("Invalid security permissions.", exception.ErrorCodes.SECURITY_ERROR);
         }
     }
 

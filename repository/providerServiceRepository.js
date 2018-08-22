@@ -37,6 +37,7 @@ module.exports = class ProviderServiceRepository {
     constructor(connectionString) {
         this._connectionString = connectionString;
         this.get = this.get.bind(this);
+        this.getUserIdBySerivce = this.getUserIdByService.bind(this);
         this.serviceTypeExists = this.serviceTypeExists.bind(this);
         this.getAllForAddress = this.getAllForAddress.bind(this);
         this.getAllForAddressByType = this.getAllForAddressByType.bind(this);
@@ -62,6 +63,33 @@ module.exports = class ProviderServiceRepository {
                 return null;
             else
                 return new ProviderService().fromData(rdr.rows[0]);
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Retrieves the user id of a provider address service
+     * @param {uuid} id Gets the specified provider address service
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {string} The retrieved user id
+     */
+    async getUserIdByService(id, _txc) {
+
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+            const rdr = await dbc.query(
+                `SELECT users.id FROM users
+                JOIN providers ON users.id = providers.user_id
+                JOIN provider_address_services ON providers.id = provider_address_services.provider_id
+                WHERE provider_address_services.id = $1`, [id]);
+            if (rdr.rows.length == 0)
+                return null;
+            else
+                return rdr.rows[0].id;
         }
         finally {
             if (!_txc) dbc.end();

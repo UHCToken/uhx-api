@@ -45,31 +45,31 @@ class ServiceTypeApiResource {
      */
     get routes() {
         return {
-            "permission_group": "user",
+            "permission_group": "serviceType",
             "routes": [
                 {
-                    "path": "servicetype",
+                    "path": "serviceType",
                     "get": {
-                        "demand": security.PermissionType.WRITE,
+                        "demand": security.PermissionType.LIST,
                         "method": this.getAll
                     },
                     "post": {
-                        "demand": security.PermissionType.WRITE,
+                        "demand": security.PermissionType.READ | security.PermissionType.WRITE,
                         "method": this.post
                     }
                 },
                 {
-                    "path": "servicetype/:uid",
+                    "path": "serviceType/:uid",
                     "get": {
                         "demand": security.PermissionType.READ,
                         "method": this.get
                     },
                     "put": {
-                        "demand": security.PermissionType.WRITE | security.PermissionType.READ,
+                        "demand": security.PermissionType.READ | security.PermissionType.WRITE,
                         "method": this.put
                     },
                     "delete": {
-                        "demand": security.PermissionType.WRITE | security.PermissionType.READ,
+                        "demand": security.PermissionType.READ | security.PermissionType.WRITE,
                         "method": this.delete
                     }
                 }
@@ -106,13 +106,13 @@ class ServiceTypeApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "read:user"
+     *          - "read:serviceType"
      */
     async getAll(req, res) {
-        if (req.principal.grant["user"] & security.PermissionType.OWNER)
-            res.status(200).json(await uhx.Repositories.serviceTypeRepository.getAll(false));
-        else //admin
+        if (req.principal.grant["serviceType"] & security.PermissionType.WRITE)
             res.status(200).json(await uhx.Repositories.serviceTypeRepository.getAll(true));
+        else // not admin
+            res.status(200).json(await uhx.Repositories.serviceTypeRepository.getAll(false));
         return true;
     }
 
@@ -154,9 +154,9 @@ class ServiceTypeApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "write:user"
+     *          - "write:serviceType"
      *      - app_auth:
-     *          - "write:user"
+     *          - "write:serviceType"
      */
     async post(req, res) {
 
@@ -218,17 +218,17 @@ class ServiceTypeApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "write:user"
-     *          - "read:user"
+     *          - "write:serviceType"
+     *          - "read:serviceType"
      */
     async put(req, res) {
         if (!req.body)
             throw new exception.Exception("Missing body", exception.ErrorCodes.MISSING_PAYLOAD);
 
-        if (!req.body.name)
+        if (!req.body.type_name)
             throw new exception.Exception("Must have a name", exception.ErrorCodes.MISSING_PROPERTY);
 
-        res.status(200).json(await uhx.Repositories.serviceTypeRepository.update(req.params.uid, req.body.name, req.body.description));
+        res.status(200).json(await uhx.Repositories.serviceTypeRepository.update(req.params.uid, req.body.type_name, req.body.description));
         return true;
     }
 
@@ -267,7 +267,7 @@ class ServiceTypeApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "read:user"
+     *          - "read:serviceType"
      */
     async get(req, res) {
         res.status(200).json(await uhx.Repositories.serviceTypeRepository.get(req.params.uid));
@@ -309,8 +309,8 @@ class ServiceTypeApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "write:user"
-     *          - "read:user"
+     *          - "write:serviceType"
+     *          - "read:serviceType"
      */
     async delete(req, res) {
         res.status(201).json(await uhx.Repositories.serviceTypeRepository.delete(req.params.uid));
