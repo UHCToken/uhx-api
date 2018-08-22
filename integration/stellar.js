@@ -84,6 +84,7 @@ module.exports = class StellarClient {
         this.toTransaction = this.toTransaction.bind(this);
         this.setOptions = this.setOptions.bind(this);
         this.execute = this.execute.bind(this);
+        this.sendEscrowTransaction = this.sendEscrowTransaction.bind(this);
     }
 
     /**
@@ -859,6 +860,64 @@ module.exports = class StellarClient {
 
 
             return new model.Transaction(escrowResult.ledger, model.TransactionType.Payment, null, new Date(), await payorWallet.loadUser(), await payeeWallet.loadUser(), amount, null, escrowResult._links.transaction.href, model.TransactionStatus.Complete);
+        }
+        catch (e) {
+            uhx.log.error(`Account payment has failed: ${e.message}`);
+            throw new StellarException(e);
+        }
+    }
+
+        /**
+     * @method
+     * @summary Signs and sends funds from an escrow
+     * @param {Wallet} escrowWallet The wallet from which the payment should be made
+     * @param {Wallet} payeeWallet The wallet to which the payment should be made
+     * @param {Array} wallets that are being used to sign the escrow transaction
+     * @param {MonetaryAmount} amount The amount of the payment
+     * @param {string} ref The id of the batch or ID that is being used for this payment
+     * @returns {Transaction} The transaction information for the operation
+     */
+    async sendEscrowTransaction(escrowWallet, payeeWallet, signers, amount, ref) {
+
+        try {
+
+            uhx.log.info(`releaseFunds() : ${escrowWallet.address} > ${payeeWallet.address} [${amount.value} ${amount.code}]`);
+            
+            if (escrowWallet.address == payeeWallet.address)
+                throw new exception.BusinessRuleViolationException("Cannot send to self");
+
+            // Load escrow stellar account
+            var escrowStellarAcct = await this.server.loadAccount(escrowWallet.address);
+
+            // Check for minimum balance
+            var escrowBalance = escrowStellarAcct.balances.find(o=>o.asset_type == "native").balance;
+            var minBalance = escrowStellarAcct.balances.length * 0.5 + 0.50001
+            if (((escrowBalance - amount.value) < minBalance) && amount.code == "XLM")
+                throw new exception.BusinessRuleViolationException("Payment would exceed the minimum required balance");
+
+            var escrowTx = new Stellar.TransactionBuilder(escrowStellarAcct);
+            var code = this.getAssetByCode(amount.code);
+            // Create payment transaction
+            escrowTx.addOperation(Stellar.Operation.payment({
+                destination: payeeWallet.address,
+                asset: code,
+                amount: amount.value
+            }))
+
+
+            escrowTx = escrowTx.build();
+
+            signers.forEach(wallet => {
+                escrowTx.sign(Stellar.Keypair.fromSecret(wallet.seed));
+            });
+
+            // Submit transaction
+            var ref = null;
+            var escrowResult = await this.server.submitTransaction(escrowTx);
+            uhx.log.info(`Payment ${escrowWallet.address} > ${payeeWallet.address} (${amount.value} ${amount.code}) success`);
+
+
+            return new model.Transaction(escrowResult.ledger, model.TransactionType.Payment, null, new Date(), await payeeWallet.loadUser(), await escrowWallet.loadUser(), amount, null, escrowResult._links.transaction.href, model.TransactionStatus.Complete);
         }
         catch (e) {
             uhx.log.error(`Account payment has failed: ${e.message}`);

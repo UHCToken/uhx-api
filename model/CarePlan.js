@@ -72,10 +72,11 @@
         this.creationTime = dbCarePlan.creation_time;
         this.createdBy = dbCarePlan.created_by;
         this.completionTime = dbCarePlan.completion_time;
-        this.userId = dbCarePlan.user_id;
         this.total = dbCarePlan.total;
         this.status = dbCarePlan.status;
         this.careRelationshipId = dbCarePlan.care_relationship_id;
+        this.providerName = dbCarePlan.provider_name;
+        this.patientName = dbCarePlan.patient_name;
         return this;
     }
 
@@ -91,7 +92,6 @@
             creation_time: this.creationTime,
             created_by: this.createdBy,
             completion_time: this.completionTime,
-            user_id: this.userId,
             asset_id: this.assetId,
             total: this.total,
             care_relationship_id: this.careRelationshipId,

@@ -69,7 +69,8 @@
     fromData(dbCareService) {
         this.id = dbCareService.id;
         this.amount = dbCareService.amount;
-        this.info = dbCareService.info;
+        this.description = dbCareService.description;
+        this.name = dbCareService.name;
         this.creationTime = dbCareService.creation_time;
         this.createdBy = dbCareService.created_by;
         this.code = dbCareService.code;
@@ -87,7 +88,8 @@
         return {
             id: this.id,
             amount: this.amount,
-            info: this.info,
+            description : this.description,
+            name : this.name,
             creation_time: this.creationTime,
             created_by: this.createdBy,
             code: this.code,

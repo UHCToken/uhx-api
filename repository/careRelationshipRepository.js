@@ -177,10 +177,10 @@ module.exports = class CareRelationshipRepository {
 
             // Get by ID
             if(status && status != "*"){
-                var rdr = await dbc.query("SELECT * FROM care_relationships WHERE user_id = $1 AND status=$2", [patientId, status]);
+                var rdr = await dbc.query("SELECT * FROM care_relationships WHERE patient_id = $1 AND status=$2", [patientId, status]);
             }
             else{
-                var rdr = await dbc.query("SELECT * FROM care_relationships WHERE user_id = $1", [patientId]);
+                var rdr = await dbc.query("SELECT * FROM care_relationships WHERE patient_id = $1", [patientId]);
             }
             if (rdr.rows.length == 0)
                 throw new exception.NotFoundException("care_relationships", patientId);

@@ -29,8 +29,8 @@ const uhx = require('../uhx'),
  * @summary Represents a user payment service
  * @swagger
  * tags:
- *  - name: "wallet"
- *    description: "The wallet resource represents a single user's wallet (stellar or other blockchain account, etc.)"
+ *  - name: "carePlan"
+ *    description: "The carePlan resource represents care plans created for services between two parties"
  */
 class CarePlanApiResource {
 
@@ -68,6 +68,24 @@ class CarePlanApiResource {
                     "post": {
                         "demand": security.PermissionType.WRITE,
                         "method": this.complete
+                    },
+                    "get": {
+                        "demand": security.PermissionType.READ,
+                        "method": this.get
+                    },
+                },
+                {
+                    "path": "fund",
+                    "post": {
+                        "demand": security.PermissionType.WRITE,
+                        "method": this.fund
+                    }
+                },
+                {
+                    "path": "confirm",
+                    "post": {
+                        "demand": security.PermissionType.WRITE,
+                        "method": this.confirm
                     }
                 },
                 {
@@ -177,7 +195,7 @@ class CarePlanApiResource {
     }
 
     /**
-     * @summary Gets the specified wallet
+     * @summary Gets the detailed care plan with services
      * @method
      * @param {Express.Request} req The HTTP request from the client
      * @param {Express.Response} res The HTTP response to the client
@@ -200,6 +218,32 @@ class CarePlanApiResource {
 
         var serviceInvoice = await uhx.SecurityLogic.completeServiceInvoice(req.params.id, req.body, req.principal);
         res.status(200).json(serviceInvoice);
+        return true;
+    }
+
+    /**
+     * @summary Gets the specified wallet
+     * @method
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to the client
+     */
+    async fund(req, res) {
+
+        var carePlan = await uhx.CareLogic.fundCarePlan(req.body, req.principal);
+        res.status(200).json(carePlan);
+        return true;
+    }
+
+        /**
+     * @summary Gets the specified wallet
+     * @method
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to the client
+     */
+    async confirm(req, res) {
+
+        var carePlan = await uhx.CareLogic.confirmCarePlan(req.body, req.principal);
+        res.status(200).json(carePlan);
         return true;
     }
 
