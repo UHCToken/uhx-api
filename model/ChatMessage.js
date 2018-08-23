@@ -67,7 +67,7 @@ module.exports = class ChatMessage extends ModelBase {
   fromData(dbMessage) {
     this.id = dbMessage.id;
     this.chatRoomId = dbMessage.chatroom_id;
-    this.author = dbMessage.author;
+    this.authorId = dbMessage.authorid;
     this.authorName = dbMessage.authorname;
     this.dateSent = dbMessage.datesent;
     this.viewedStatus = dbMessage.viewedstatus;

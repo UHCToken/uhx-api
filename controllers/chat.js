@@ -76,13 +76,13 @@ module.exports.ChatApiResource = class ChatApiResource {
    * @param {Express.Response} res The HTTP response going to the client
    */
   async initChatSocket(req, res) {
-
+    const chatId = req.params.cid
     //Create unique chatroom namespace from chatID
-    let chat = io.of(req.params.chatRoomId)
+    let chat = io.of(chatId)
     //Web sockets listening...
-    chat.listen(8080);  //TODO: Configure Port
+    io.listen(8080);  //TODO: Configure Port
 
-    chat.on('connection', (socket) => {
+    io.on('connection', (socket) => {
       console.log('-------------------connected and stuff--------------------');
 
       socket.on('SEND_MESSAGE', function(data){
@@ -156,10 +156,17 @@ module.exports.ChatApiResource = class ChatApiResource {
     if(!req.body)
       throw new exception.Exception("Missing body", exception.ErrorCodes.MISSING_PAYLOAD);
 
+    console.log(req.body);
+
     let chatRoomId = req.body.chatRoomId;
-    let chatMessage = new ChatMessage().copy(req.body.chatMessage)
-    res.status(201).json(uhx.Repositories.chatRepository.createChatMessage(chatRoomId, chatMessage));
-    return true;
+    let chatMessage = req.body
+    try {
+      res.status(201).json(uhx.Repositories.chatRepository.createChatMessage(chatRoomId, chatMessage));
+      return true;
+    }
+    catch (e) {
+      throw new exception.Exception(`Error: ${e}`, exception.ErrorCodes.UNKNOWN);
+    }
   }
 
   /**
