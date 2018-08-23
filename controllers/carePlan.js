@@ -75,14 +75,21 @@ class CarePlanApiResource {
                     },
                 },
                 {
-                    "path": "fund",
+                    "path": "carePlan/:id/fund",
                     "post": {
                         "demand": security.PermissionType.WRITE,
                         "method": this.fund
                     }
                 },
                 {
-                    "path": "confirm",
+                    "path": "carePlan/:id/decline",
+                    "post": {
+                        "demand": security.PermissionType.WRITE,
+                        "method": this.fund
+                    }
+                },
+                {
+                    "path": "carePlan/:id/confirm",
                     "post": {
                         "demand": security.PermissionType.WRITE,
                         "method": this.confirm
@@ -242,7 +249,7 @@ class CarePlanApiResource {
      */
     async confirm(req, res) {
 
-        var carePlan = await uhx.CareLogic.confirmCarePlan(req.body, req.principal);
+        var carePlan = await uhx.CareLogic.confirmCarePlan(req.params, req.principal);
         res.status(200).json(carePlan);
         return true;
     }

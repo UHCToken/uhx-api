@@ -205,8 +205,16 @@ module.exports = class CareLogic {
                     "memo": "Fund Escrow"
                 };
                 var transaction = new model.Transaction().copy(transaction);
+                var patientWallet = await uhx.Repositories.walletRepository.getByUserAndNetworkId(patient.userId, "1");
+                var patientBalance = await uhx.StellarClient.getAccount(patientWallet);
+                var assetBalance = patientBalance.balances.find((o)=>o.code == "XLM");
+                
+                if(!assetBalance || (assetBalance.value-2) < carePlan.total){ 
+                    throw new exception.Exception("Not enough assets to fulfill this funding", exception.ErrorCodes.INSUFFICIENT_FUNDS);
+                }
                 var transactions = await uhx.TokenLogic.createTransaction([transaction], principal);
                 var carePlan = await uhx.Repositories.carePlanRepository.get(carePlan.id)
+                
                 carePlan.status = STATUS_FUNDED;
                 carePlan = await uhx.Repositories.carePlanRepository.update(carePlan, principal)
                 return(carePlan);
@@ -273,7 +281,7 @@ module.exports = class CareLogic {
                     throw new exception.BusinessRuleViolationException(new exception.RuleViolation("Principal must be a party involved in the care plan", exception.ErrorCodes.NOT_SUPPORTED, exception.RuleViolationSeverity.ERROR));
                 }
             }
-            else if((patient.id == careRelationship.patientId && updatedCarePlan.status == STATUS_RECEIVED) || provider.id == careRelationship.providerId && updatedCarePlan.status == STATUS_PROVIDED){
+            else if((patient.id == careRelationship.patientId && updatedCarePlan.status == STATUS_PROVIDED) || provider.id == careRelationship.providerId && updatedCarePlan.status == STATUS_RECEIVED){
                 var transaction = await this.releaseFunds(careRelationship.providerId, updatedCarePlan.total, principal);
                 updatedCarePlan.status = STATUS_COMPLETED;
                 updatedCarePlan = await uhx.Repositories.carePlanRepository.update(updatedCarePlan, principal)
