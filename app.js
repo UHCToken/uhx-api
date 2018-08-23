@@ -43,6 +43,8 @@
     swagger = require('./controllers/js-doc'),
     stellarFederation = require('./federation/stellar-fed.js'),
     airdrop = require('./controllers/airdrop'),
+    subscription = require('./controllers/subscription'),
+    offering = require('./controllers/offering'),
     toobusy = require('toobusy-js'),
     https = require('https'),
     helmet = require('helmet'),
@@ -96,6 +98,8 @@ restApi.addResource(new reports.StatisticsApiResource());
 restApi.addResource(new transaction.TransactionApiResource());
 restApi.addResource(new stellarFederation.StellarFederationApiResource());
 restApi.addResource(new airdrop.AirdropApiResource());
+restApi.addResource(new subscription.SubscriptionApiResource());
+restApi.addResource(new offering.OfferingApiResource());
 
 uhx.init();
 uhx.initWorker();

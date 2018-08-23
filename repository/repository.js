@@ -36,6 +36,8 @@ const UserRepository = require('./userRepository'),
     ProviderAddressRepository = require('./providerAddressRepository'),
     ProviderServiceRepository = require('./providerServiceRepository'),
     ServiceTypeRepository = require('./serviceTypeRepository'),
+    SubscriptionRepository = require('./subscriptionRepository'),
+    OfferingRepository = require('./offeringRepository'),
 CarePlanRepository = require('./carePlanRepository'),
     CareServiceRepository = require('./careServiceRepository'),
     CareRelationshipRepository = require('./careRelationshipRepository'),
@@ -335,6 +337,28 @@ class UhcRepositories {
         if (!this._serviceTypeRepository)
             this._serviceTypeRepository = new ServiceTypeRepository(this.connectionString);
         return this._serviceTypeRepository;
+    }
+
+    /**
+     * @property
+     * @summary Gets the subscription repository
+     * @type {SubscriptionRepository}
+     */
+    get subscriptionRepository() {
+        if (!this._subscriptionRepository)
+            this._subscriptionRepository = new SubscriptionRepository(this.connectionString);
+        return this._subscriptionRepository;
+    }
+
+    /**
+     * @property
+     * @summary Gets the offering repository
+     * @type {OfferingRepository}
+     */
+    get offeringRepository() {
+        if (!this._offeringRepository)
+            this._offeringRepository = new OfferingRepository(this.connectionString);
+        return this._offeringRepository;
     }
 }
 
