@@ -36,8 +36,11 @@ const UserRepository = require('./userRepository'),
     ProviderAddressRepository = require('./providerAddressRepository'),
     ProviderServiceRepository = require('./providerServiceRepository'),
     ServiceTypeRepository = require('./serviceTypeRepository'),
-    CountryRepository = require('./countryRepository'),
-    pg = require('pg'),
+CarePlanRepository = require('./carePlanRepository'),
+    CareServiceRepository = require('./careServiceRepository'),
+    CareRelationshipRepository = require('./careRelationshipRepository'),
+CountryRepository = require('./countryRepository'),    
+pg = require('pg'),
     uhx = require('../uhx'),
     exception = require('../exception');
 
@@ -134,6 +137,40 @@ class UhcRepositories {
             this._applicationRepository = new ApplicationRepository(this.connectionString);
         return this._applicationRepository;
     }
+
+        /**
+     * @property
+     * @summary Gets the service invoice repository
+     * @type {CarePlanRepository}
+     */
+    get carePlanRepository() {
+        if(!this._carePlanRepository)
+            this._carePlanRepository = new CarePlanRepository(this.connectionString);
+        return this._carePlanRepository;
+    }
+
+    /**
+     * @property
+     * @summary Gets the care service invoice repository
+     * @type {CareServiceRepository}
+     */
+    get careServiceRepository() {
+        if(!this._careServiceRepository)
+            this._careServiceRepository = new CareServiceRepository(this.connectionString);
+        return this._careServiceRepository;
+    }
+
+    /**
+     * @property
+     * @summary Gets the care relationship repository
+     * @type {CareRelationshipRepository}
+     */
+    get careRelationshipRepository() {
+        if(!this._careRelationshipRepository)
+            this._careRelationshipRepository = new CareRelationshipRepository(this.connectionString);
+        return this._careRelationshipRepository;
+    }
+
 
     /**
      * @property

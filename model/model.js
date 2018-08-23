@@ -35,7 +35,10 @@
     Transaction = require('./Transaction'),
     Wallet = require('./Wallet'),
     Balance = require('./Balance'),
-    Invoice = require('./Invoice');
+    Invoice = require('./Invoice'),
+    CareService = require('./CareService'),
+    CareRelationship = require('./CareRelationship'),
+    CarePlan = require('./CarePlan');
 
 /**
  * @enum
@@ -80,6 +83,9 @@ module.exports.Wallet = Wallet
 module.exports.Utils = new ModelUtil();
 module.exports.Wallet = Wallet;
 module.exports.Invoice = Invoice;
+module.exports.CarePlan = CarePlan;
+module.exports.CareRelationship = CareRelationship;
+module.exports.CareService = CareService;
 module.exports.Balance = Balance;
 module.exports.MonetaryAmount = MonetaryAmount;
 module.exports.Transaction = Transaction;

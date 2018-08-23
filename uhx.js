@@ -21,6 +21,7 @@
 const config = require('./config'),
     repositories = require('./repository/repository'),
     SecurityLogic = require('./logic/SecurityLogic'),
+    CareLogic = require('./logic/CareLogic'),
     TokenLogic = require('./logic/TokenLogic'),
     UserLogic = require('./logic/UserLogic'),
     winston = require('winston'),
@@ -46,6 +47,7 @@ var repository = new repositories.UhcRepositories(config.db.server);
 module.exports.SecurityLogic = new SecurityLogic();
 module.exports.TokenLogic = new TokenLogic();
 module.exports.UserLogic = new UserLogic();
+module.exports.CareLogic = new CareLogic();
 module.exports.Config = config;
 module.exports.Repositories = repository;
 module.exports.log = winston;
