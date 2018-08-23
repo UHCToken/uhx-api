@@ -267,12 +267,12 @@ module.exports = class CareLogic {
             var patient = await uhx.Repositories.patientRepository.get(principal.session.userId);
             
             if(updatedCarePlan.status == STATUS_FUNDED && updatedCarePlan.status != STATUS_RECEIVED && updatedCarePlan.status != STATUS_PROVIDED){
-                if(patient.id == careRelationship.patientId){
+                if(patient && patient.id == careRelationship.patientId){
                     updatedCarePlan.status = STATUS_RECEIVED;
                     updatedCarePlan = await uhx.Repositories.carePlanRepository.update(updatedCarePlan, principal)
                     return updatedCarePlan;
                 }
-                else if(provider.id == careRelationship.providerId){
+                else if(provider && provider.id == careRelationship.providerId){
                     updatedCarePlan.status = STATUS_PROVIDED;
                     updatedCarePlan = await uhx.Repositories.carePlanRepository.update(updatedCarePlan, principal)
                     return updatedCarePlan;
@@ -281,7 +281,7 @@ module.exports = class CareLogic {
                     throw new exception.BusinessRuleViolationException(new exception.RuleViolation("Principal must be a party involved in the care plan", exception.ErrorCodes.NOT_SUPPORTED, exception.RuleViolationSeverity.ERROR));
                 }
             }
-            else if((patient.id == careRelationship.patientId && updatedCarePlan.status == STATUS_PROVIDED) || provider.id == careRelationship.providerId && updatedCarePlan.status == STATUS_RECEIVED){
+            else if((patient && patient.id == careRelationship.patientId && updatedCarePlan.status == STATUS_PROVIDED) || (provider && provider.id == careRelationship.providerId && updatedCarePlan.status == STATUS_RECEIVED)){
                 var transaction = await this.releaseFunds(careRelationship.providerId, updatedCarePlan.total, principal);
                 updatedCarePlan.status = STATUS_COMPLETED;
                 updatedCarePlan = await uhx.Repositories.carePlanRepository.update(updatedCarePlan, principal)
