@@ -4,18 +4,18 @@
 
 /**
  * Copyright 2018 Universal Health Coin
- * 
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), 
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
  * to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
  * and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
- * 
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
- * 
+ *
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
@@ -37,7 +37,7 @@ const uhx = require('../uhx'),
     Purchase = require("../model/Purchase");
 
 const uuidRegex = /[A-F0-9]{8}-(?:[A-F0-9]{4}\-){3}[A-F0-9]{12}/i;
-    
+
 /**
  * @class
  * @summary Represents logic related to tokens
@@ -84,7 +84,7 @@ module.exports = class TokenLogic {
     }
 
     /**
-     * 
+     *
      * @param {Asset} asset The asset being updated
      * @param {SecurityPrincipal} principal The principal being update
      */
@@ -104,7 +104,7 @@ module.exports = class TokenLogic {
                         // TODO: Top-up account
                     }
                 }
-                
+
                 return retVal;
             });
         }
@@ -279,7 +279,7 @@ module.exports = class TokenLogic {
             var currentOffer = await uhx.Repositories.assetRepository.getActiveOffer(asset.id);
             if(!currentOffer)
                 throw new exception.BusinessRuleViolationException(new exception.RuleViolation("The requested asset is not for sale at the moment", exception.ErrorCodes.NO_OFFER, exception.RuleViolationSeverity.ERROR));
-            
+
             // Price?
             var retVal  = new AssetQuote().copy({
                 assetId: asset.id,
@@ -304,7 +304,7 @@ module.exports = class TokenLogic {
                     ];
 
                 var exchange = await new Bittrex().getExchange(path);
-                retVal.rate.value =  currentOffer.price.value/(exchange.reduce((a,b)=>a+b) / exchange.length); 
+                retVal.rate.value =  currentOffer.price.value/(exchange.reduce((a,b)=>a+b) / exchange.length);
                 retVal.expiry = new Date(new Date().getTime() + uhx.Config.stellar.market_offer_validity);
             }
             else { // Just a market rate offer
@@ -338,10 +338,10 @@ module.exports = class TokenLogic {
         try {
 
             return await uhx.Repositories.transaction(async (_txc) => {
-                
+
                 // Create stellar client
                 var stellarClient = uhx.StellarClient;
-                
+
                 // Verify user
                 var user = await uhx.Repositories.userRepository.get(userId, _txc);
 
@@ -351,7 +351,7 @@ module.exports = class TokenLogic {
                     // Create a wallet
                     var wallet = await stellarClient.generateAccount();
                     wallet.userId = user.id;
-                    // Insert 
+                    // Insert
                     wallet = await uhx.Repositories.walletRepository.insert(wallet, null, _txc);
                 }
 
@@ -381,7 +381,7 @@ module.exports = class TokenLogic {
 
             var purchase = purchaseInfo;
             // Is this a user purchase or an admin purchase? Clean inputs based on permission level
-            if(principal.grant["purchase"] & security.PermissionType.OWNER) // Principal is only allowed to buy for themselves 
+            if(principal.grant["purchase"] & security.PermissionType.OWNER) // Principal is only allowed to buy for themselves
             {
                 if(purchaseInfo.amount || purchaseInfo.buyer)
                     throw new exception.ArgumentException("prohibited field supplied");
@@ -395,10 +395,10 @@ module.exports = class TokenLogic {
                     state: 1 // PENDING
                 });
             }
-            else 
+            else
                 purchase = new Purchase().copy({
                     type: model.TransactionType.Purchase,
-                    quoteId: purchaseInfo.quoteId, 
+                    quoteId: purchaseInfo.quoteId,
                     assetId: purchaseInfo.assetId,
                     quantity: purchaseInfo.quantity,
                     invoicedAmount: purchaseInfo.invoicedAmount,
@@ -410,14 +410,14 @@ module.exports = class TokenLogic {
                     state: purchaseInfo.state || 1,
                     escrowTerm: purchaseInfo.escrowTerm
                 });
-            
+
 
             // Execute the steps to create the purchase
             return await uhx.Repositories.transaction(async (_txc) => {
-                
+
                 // If the purchase is PENDING it needs to be processed - We need a quote and to deduct user account
                 if(purchase.state == model.TransactionStatus.Pending) {
-                    // 1. Does the quote exist and is it still valid? 
+                    // 1. Does the quote exist and is it still valid?
                     var quote = await purchase.loadQuote(_txc);
                     var asset = await purchase.loadAsset(_txc);
                     if(quote.assetId != asset.id)
@@ -439,12 +439,12 @@ module.exports = class TokenLogic {
                     var offering = await uhx.Repositories.assetRepository.getActiveOffer(purchase.assetId, _txc);
                     if(!offering)
                         throw new exception.Exception(`No current offer is active for this transaction`, exception.ErrorCodes.NO_OFFER);
-                    
+
 
                     // 5. Verify the asset wallet has sufficient balance for the transaction
                     var offerWallet = await uhx.StellarClient.getAccount(await offering.loadWallet(_txc));
                     var sourceBalance = offerWallet.balances.find((o)=>o.code == asset.code);
-                    if(!sourceBalance || sourceBalance.value < purchase.quantity) 
+                    if(!sourceBalance || sourceBalance.value < purchase.quantity)
                         throw new exception.Exception("Not enough assets on offering to fulfill this order", exception.ErrorCodes.INSUFFICIENT_FUNDS);
                     purchase.distributorWalletId = offerWallet.id;
 
@@ -456,7 +456,7 @@ module.exports = class TokenLogic {
                         if(exchange[0] * purchase.invoicedAmount.value > claims["kyc.limit"])
                             throw new exception.BusinessRuleViolationException(new exception.RuleViolation(`The estimated trade value of ${exchange[0] * purchase.amount.value} exceeds this account's AML limit`, exception.ErrorCodes.AML_CHECK, exception.RuleViolationSeverity.ERROR));
                     }
-                    
+
                     // 3. Insert purchase as a transaction and as a purchase
                     purchase._payorWalletId = offerWallet.id;
                     purchase._payeeWalletId = (await buyer.loadStellarWallet(_txc)).id;
@@ -466,11 +466,11 @@ module.exports = class TokenLogic {
                     purchase.amount = new MonetaryAmount(purchase.quantity, asset.code);
                     purchase = await uhx.Repositories.transactionRepository.insert(purchase, principal, _txc);
                     purchase = await uhx.Repositories.transactionRepository.insertPurchase(purchase, principal, _txc);
-                    
+
                     // 7. Attempt to execute purchase
                     var linkedTxns = [];
                     purchase.state = await require("../payment_processor/" + purchase.invoicedAmount.code)(purchase, offerWallet, linkedTxns);
-                    
+
                     for(var i in linkedTxns)
                         await uhx.Repositories.transactionRepository.insert(linkedTxns[i], principal, _txc);
 
@@ -481,8 +481,8 @@ module.exports = class TokenLogic {
                     linkedTxns.push(purchase);
 
                     return linkedTxns;
-                } 
-                else if(purchase.state == model.TransactionStatus.Active) // We are just recording an ACTIVE purchase which means we just want to deposit 
+                }
+                else if(purchase.state == model.TransactionStatus.Active) // We are just recording an ACTIVE purchase which means we just want to deposit
                 {
                     // 1. Load the buyer & asset
                     var buyer = await purchase.loadBuyer(_txc);
@@ -494,17 +494,17 @@ module.exports = class TokenLogic {
                         var offering = await uhx.Repositories.assetRepository.getActiveOffer(purchase.assetId, _txc);
                         if(!offering)
                             throw new exception.Exception(`No current offer is active for this transaction`, exception.ErrorCodes.NO_OFFER);
-                        
+
                         // 2a. Verify the asset wallet has sufficient balance for the transaction
                         sourceWallet = await offering.loadWallet(_txc);
                     }
-                    else 
+                    else
                         sourceWallet = await purchase.loadDistributionWallet(_txc);
 
                     // 3. Verify balance
                     sourceWallet = await uhx.StellarClient.getAccount(sourceWallet);
                     var sourceBalance = sourceWallet.balances.find((o)=>o.code == asset.code);
-                    if(!sourceBalance || sourceBalance.value < purchase.quantity) 
+                    if(!sourceBalance || sourceBalance.value < purchase.quantity)
                         throw new exception.Exception("Not enough assets on offering to fulfill this order", exception.ErrorCodes.INSUFFICIENT_FUNDS);
                     purchase.distributorWalletId = sourceWallet.id;
 
@@ -513,23 +513,23 @@ module.exports = class TokenLogic {
                     purchase._payeeWalletId = (await buyer.loadStellarWallet(_txc)).id;
                     await purchase.loadPayee(_txc);
                     await purchase.loadPayor(_txc);
-                    
+
                     purchase = await uhx.Repositories.transactionRepository.insert(purchase, principal, _txc);
                     purchase = await uhx.Repositories.transactionRepository.insertPurchase(purchase, principal, _txc);
-                    
+
                     // 5. Now just dump the asset into the user's wallet
                     try {
 
                         var buyerWallet = await buyer.loadStellarWallet(_txc);
                         // If the user wallet is not active, activate it with 2 XLM
-                        if(!await uhx.StellarClient.isActive(buyerWallet)) 
+                        if(!await uhx.StellarClient.isActive(buyerWallet))
                         {
                             if(purchaseInfo.autoActivate)
                                 buyerWallet = await uhx.StellarClient.activateAccount(buyerWallet, "1.6", sourceWallet);
                             else
                                 throw new exception.BusinessRuleViolationException(new exception.RuleViolation("Buyer's Stellar account is not active", exception.ErrorCodes.INVALID_ACCOUNT, exception.RuleViolationSeverity.ERROR));
                         }
-                        
+
                         // If the buyer wallet does not have a trust line, trust the asset
                         buyerWallet = await uhx.StellarClient.getAccount(buyerWallet);
                         if(!buyerWallet.balances.find(o=>o.code == asset.code))
@@ -556,13 +556,13 @@ module.exports = class TokenLogic {
                     purchase = await uhx.Repositories.transactionRepository.insertPurchase(purchase, principal, _txc);
                 }
                 return [purchase];
-                    
+
             });
         }
         catch(e) {
             uhx.log.error(`Error completing purchase: ${e.message}`);
 
-            while(e.code == exception.ErrorCodes.DATA_ERROR && e.cause) 
+            while(e.code == exception.ErrorCodes.DATA_ERROR && e.cause)
                 e = e.cause[0];
             throw new exception.Exception("Error completing purchase", e.code || exception.ErrorCodes.UNKNOWN, e);
         }
@@ -579,8 +579,8 @@ module.exports = class TokenLogic {
 
         try {
 
-            // First we want to fetch the transaction history from stellar 
-            if(userId) // user querying for self 
+            // First we want to fetch the transaction history from stellar
+            if(userId) // user querying for self
             {
                 var user = await uhx.Repositories.userRepository.get(userId);
                 var userWallet = await user.loadStellarWallet();
@@ -595,7 +595,7 @@ module.exports = class TokenLogic {
                 var wallet = null;
                 if(filter.payorId)
                     wallet = await txFilter.loadPayorWallet();
-                else 
+                else
                     wallet = await txFilter.loadPayeeWallet();
 
                 var transactionHistory = await uhx.StellarClient.getTransactionHistory(wallet, filter);
@@ -618,19 +618,19 @@ module.exports = class TokenLogic {
                             await transactionHistory[t].loadAsset(_txc);
                     }
                     return transactionHistory;
-    
+
                 });
             }
 
         }
         catch(e) {
             uhx.log.error(`Error getting transaction history: ${e.message}`);
-            while(e.code == exception.ErrorCodes.DATA_ERROR && e.cause) 
+            while(e.code == exception.ErrorCodes.DATA_ERROR && e.cause)
                 e = e.cause[0];
             throw new exception.Exception("Error fetching transaction history", e.code || exception.ErrorCodes.UNKNOWN, e);
         }
     }
-    
+
     /**
      * @method
      * @summary Creates a transaction
@@ -639,19 +639,18 @@ module.exports = class TokenLogic {
      * @returns {Array} The created to planned transactions
      */
     async createTransaction(transactions, principal) {
-
         try {
-           
+
             // Validate that purchases are done with purchase API
             if(transactions.find(o=>o.type == model.TransactionType.Purchase))
                 throw new exception.BusinessRuleViolationException(new exception.RuleViolation("Purchases must be made with the Purchase API not Transaction API", exception.ErrorCodes.NOT_SUPPORTED, exception.RuleViolationSeverity.ERROR));
 
             // First we will validate each transaction based on principal use
-            if(principal.grant["transaction"] & security.PermissionType.OWNER) // Principal is only allowed to create where they are the payor for themselves 
+            if(principal.grant && principal.grant["transaction"] & security.PermissionType.OWNER) // Principal is only allowed to create where they are the payor for themselves
             {
                 if(transactions.find(o=>o.state != model.TransactionStatus.Pending || o.payorId && o.payorId == principal.session.userId))
                     throw new exception.BusinessRuleViolationException(new exception.RuleViolation("User can only create PENDING transactions for your own account", exception.ErrorCodes.ARGUMENT_EXCEPTION, exception.RuleViolationSeverity.ERROR));
-                
+
                 // Copy the transactions and make them safe
                 transactions = transactions.map(t=>new Transaction(t.id, t.type, t.memo, null, principal.session.userId, t.payee || t.payeeId, t.amount, null, null, model.TransactionStatus.Pending));
             }
@@ -660,7 +659,7 @@ module.exports = class TokenLogic {
                 transactions = transactions.map(t=> new Transaction(t.id, t.type, t.memo, t.postingDate, t.payor || t.payorId, t.payee || t.payeeId, t.amount, null, null, t.state));
             }
 
-            // We need to plan out the drop of accounts ... All transactions with 
+            // We need to plan out the drop of accounts ... All transactions with
             return await uhx.Repositories.transaction(async (_txc) => {
 
                 // First, insert all of the transactions
@@ -676,13 +675,13 @@ module.exports = class TokenLogic {
 
                 // Spawn transaction executions in a file
                 // TODO: Verify balances before transacting with Stellar
-                
+
                 // Execute the transaction batch
                 var batchId = transactions[0].batchId;
                 if(transactions.length > 4)
                     uhx.WorkerPool.anyp({action: 'processTransactions', batchId: batchId, sessionId: principal.session.id });
                 else {
-                    // Update the transactions 
+                    // Update the transactions
                     for(var i in transactions) {
                         await uhx.StellarClient.execute(transactions[i]);
                         await uhx.Repositories.transactionRepository.update(transactions[i], principal, _txc);
@@ -695,7 +694,7 @@ module.exports = class TokenLogic {
         }
         catch(e) {
             uhx.log.error(`Error creating transaction: ${e.message}`);
-            while(e.code == exception.ErrorCodes.DATA_ERROR && e.cause) 
+            while(e.code == exception.ErrorCodes.DATA_ERROR && e.cause)
                 e = e.cause[0];
             throw new exception.Exception("Error creating transaction", e.code || exception.ErrorCodes.UNKNOWN, e);
         }
@@ -715,7 +714,7 @@ module.exports = class TokenLogic {
 
         try {
             // Only owner of Ether can transfer Ether
-            if (principal.grant["transaction"] & security.PermissionType.OWNER) // Principal is only allowed to create where they are the payor for themselves 
+            if (principal.grant["transaction"] & security.PermissionType.OWNER) // Principal is only allowed to create where they are the payor for themselves
             {
                 // Set the payor
                 var payor = await uhx.Repositories.walletRepository.getByUserAndNetworkId(principal.session.userId, 2);
@@ -753,7 +752,7 @@ module.exports = class TokenLogic {
 
         try {
             // Only owner of bitcoin can transfer bitcoin
-            if (principal.grant["transaction"] & security.PermissionType.OWNER) // Principal is only allowed to create where they are the payor for themselves 
+            if (principal.grant["transaction"] & security.PermissionType.OWNER) // Principal is only allowed to create where they are the payor for themselves
             {
                 // Set the payor
                 var payor = await uhx.Repositories.walletRepository.getByUserAndNetworkId(principal.session.userId, 3);
@@ -782,7 +781,7 @@ module.exports = class TokenLogic {
      * @summary Plans an airdrop
      * @param {Airdrop} dropSpec The airdrop to be planned
      * @param {SecurityPrincipal} principal The user that is planning the drop
-     * @returns {Airdrop} The airdrop transactions that need to occur 
+     * @returns {Airdrop} The airdrop transactions that need to occur
      */
     async planAirdrop(dropSpec, assetId, principal) {
 
@@ -793,16 +792,16 @@ module.exports = class TokenLogic {
             // Drop spec
             if(!dropSpec.amount)
                 throw new exception.ArgumentException("amount missing");
-            
+
             // Payor wallet!!!
             var payorWallet = null;
             if(!dropSpec.payorId) // no payor , by default should be the asset being dropped
             {
                 var asset = await uhx.Repositories.assetRepository.get(assetId);
                 payorWallet = await uhx.Repositories.assetRepository.getActiveOffer(asset.id);
-                if(!payorWallet)                    
+                if(!payorWallet)
                     payorWallet = await asset.loadDistributorWallet();
-                else 
+                else
                     payorWallet = await payorWallet.loadWallet();
             }
             else if(uuidRegex.test(dropSpec.payorId))
@@ -812,30 +811,30 @@ module.exports = class TokenLogic {
                 payorWallet = await uhx.Repositories.walletRepository.getByPublicKey(dropSpec.payorId);
 
             // Function that distributes the asset
-            var distributeFn = 
+            var distributeFn =
                 /** @param {User} u */
                 async(u) => {
                     var w = await u.loadStellarWallet();
                     if(!w) return;
-                    else 
+                    else
                         w = await uhx.StellarClient.isActive(w);
 
                     var txns = [];
                     // Is the account active? If not and auto-activate add transaction for that
-                    if((!w || !w.balances || w.balances.length == 0)) 
+                    if((!w || !w.balances || w.balances.length == 0))
                     {
                         w = await u.loadStellarWallet();
                         if(dropSpec.autoActivate) {
                             txns.push(new Transaction(null, model.TransactionType.AccountManagement, "Activate account for airdrop", null, payorWallet, u, new MonetaryAmount(1.6, "XLM"), new MonetaryAmount(0.0000100, "XLM"), null, model.TransactionStatus.Pending));
                             txns.push(new Transaction(null, model.TransactionType.Trust, "Trust air-dropped asset", null, u, u, new MonetaryAmount(0, dropSpec.amount.code), new MonetaryAmount(0.0000100, "XLM"), null, model.TransactionStatus.Pending));
                             w.balances = [];
-                        }                            
-                        else 
+                        }
+                        else
                             dropSpec.issues.push(new exception.RuleViolation(`Cannot airdrop to ${u.name} because Stellar account is inactive`, exception.ErrorCodes.INVALID_ACCOUNT, exception.RuleViolationSeverity.WARNING));
-                            
+
                     }
                     // Does the user have a trust line?
-                    else if(!w.balances.find(o=>o.code == dropSpec.amount.code))    
+                    else if(!w.balances.find(o=>o.code == dropSpec.amount.code))
                     {
                         // We will need to trust, does the user have enough XLM to trust?
                         var minBalance = (1.1 + w.balances.length * 0.5);
@@ -867,8 +866,8 @@ module.exports = class TokenLogic {
                                 break;
                             case "min": {
                                 var bal = w.balances.find(o=>o.code == dropSpec.distribution.min.code);
-                                
-                                if(bal && Number(bal.value) >= Number(dropSpec.distribution.min.value)) 
+
+                                if(bal && Number(bal.value) >= Number(dropSpec.distribution.min.value))
                                     amt =  dropSpec.amount;
                                 else
                                     return;
@@ -877,14 +876,14 @@ module.exports = class TokenLogic {
                             }
                             case "each": {
                                 var bal = w.balances.find(o=>o.code == dropSpec.distribution.min.code);
-                                if(bal) 
+                                if(bal)
                                 {
                                     var value = Number(bal.value);
                                     if(!dropSpec.distribution.allowPartial)
                                         value = Math.trunc(value);
                                     value = value * Number(dropSpec.amount.value);
                                     amt = new MonetaryAmount(value, dropSpec.amount.code);
-                                } 
+                                }
                                 else
                                     return;
                                 break;
@@ -908,7 +907,7 @@ module.exports = class TokenLogic {
                     };
                     promises.push(scanFn(0));
                     break;
-                case "each": 
+                case "each":
                     break;
                 case "min":
                     break;
@@ -937,7 +936,7 @@ module.exports = class TokenLogic {
         }
     }
 
-    
+
     /**
      * @method
      * @summary Gets all balances for the user wallet
@@ -1010,7 +1009,7 @@ module.exports = class TokenLogic {
 
     /**
      * @method
-     * @summary Gets the specified transaction from the local database or from the block chain 
+     * @summary Gets the specified transaction from the local database or from the block chain
      * @param {String} txId The identifier of the transaction to retrieve
      * @param {SecurityPrincipal} principal The user who is making the request
      */
@@ -1031,13 +1030,13 @@ module.exports = class TokenLogic {
                         await transaction.loadAsset(_txc);
                     return transaction;
                 });
-                
+
                 // Security check
                 if((principal.grant["transaction"] & security.PermissionType.OWNER) &&
                     txInfo.payorId != principal.session.userId &&
                     txInfo.payeeId != principal.session.userId)
                     throw new security.SecurityException(new security.Permission("transaction", security.PermissionType.READ));
-                
+
                     return txInfo;
 
             }
@@ -1047,7 +1046,7 @@ module.exports = class TokenLogic {
         }
         catch(e) {
             uhx.log.error(`Error retrieving transaction: ${e.message}`);
-            while(e.code == exception.ErrorCodes.DATA_ERROR && e.cause) 
+            while(e.code == exception.ErrorCodes.DATA_ERROR && e.cause)
                 e = e.cause[0];
             throw new exception.Exception("Error retrieving transaction", e.code || exception.ErrorCodes.UNKNOWN, e);
 

@@ -45,6 +45,9 @@ const ModelBase = require('./ModelBase'),
  *          patientId:
  *              type: string
  *              description: The id of the patient
+ *          userId:
+ *              type: string
+ *              desription: The id of the user associated with this patient
  *          offeringId:
  *              type: string
  *              description: The id of the group of services this subscription is subscribed to
@@ -94,6 +97,7 @@ module.exports = class Subscription extends ModelBase {
     fromData(dbSubscription) {
         this.id = dbSubscription.id || dbSubscription.subscription_id;
         this.patientId = dbSubscription.patient_id;
+        this.userId = dbSubscription.user_id;
         this.offeringId = dbSubscription.offering_id;
         this.offeringGroupId = dbSubscription.offering_group_id;
         this.dateSubscribed = dbSubscription.date_subscribed !== null ? dbSubscription.date_subscribed.toLocaleString() : null;
@@ -114,6 +118,7 @@ module.exports = class Subscription extends ModelBase {
         return {
             id : this.id,
             patient_id : this.patientId,
+            user_id : this.userId,
             offering_id: this.offeringId,
             offering_group_id: this.offeringGroupId,
             date_subscribed: this.dateSubscribed,
@@ -134,6 +139,7 @@ module.exports = class Subscription extends ModelBase {
         return {
             id : this.id,
             patientId : this.patientId,
+            userId : this.userId,
             offeringId: this.offeringId,
             offeringGroupId: this.offeringGroupId,
             dateSubscribed: this.dateSubscribed,

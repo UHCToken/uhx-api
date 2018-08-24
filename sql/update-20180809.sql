@@ -142,6 +142,7 @@ SELECT
 	s.id AS subscription_id,
 	s.offering_id,
 	s.patient_id,
+	u.id AS user_id,
 	s.date_next_payment,
 	s.date_subscribed,
 	s.date_terminated,
@@ -153,4 +154,6 @@ SELECT
 FROM subscriptions s
 LEFT JOIN offerings o ON s.offering_id = o.id
 LEFT JOIN offering_groups og ON og.id = o.offering_group_id
-LEFT JOIN currencies c ON c.id = o.currency_id;
+LEFT JOIN currencies c ON c.id = o.currency_id
+LEFT JOIN patients p ON p.id = s.patient_id
+LEFT JOIN users u ON p.user_id = u.id;;

@@ -18,7 +18,8 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
-const pg = require('pg'),
+const uhx = require('../uhx'),
+    pg = require('pg'),
     exception = require('../exception'),
     model = require('../model/model');
 
@@ -40,7 +41,6 @@ const pg = require('pg'),
         this.update = this.update.bind(this);
         this.getSubscriptionsForDailyReport = this.getSubscriptionsForDailyReport.bind(this);
         this.getSubscriptionsForMonthlyReport = this.getSubscriptionsForMonthlyReport.bind(this);
-        this.getSubscriptionsToTerminate = this.getSubscriptionsToTerminate.bind(this);
         this.getSubscriptionsToBill = this.getSubscriptionsToBill.bind(this);
         this.updateBilledSubscriptions = this.updateBilledSubscriptions.bind(this);
     }
@@ -80,12 +80,16 @@ const pg = require('pg'),
     async getSubscriptionsToBill(_txc) {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
+            if(!_txc) await dbc.connect();
+            // Today's date
             const now = new Date();
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 1);
 
-            if(!_txc) await dbc.connect();
+            // Get subscriptions to bill today
             const rdr = await dbc.query('SELECT * FROM subscription_lookup WHERE date_next_payment = $1', [today]);
+
             if(rdr.rows.length === 0) {
+                // No subscriptions to bill
                 return [];
             }
             else {
@@ -102,48 +106,25 @@ const pg = require('pg'),
      * @summary Update next billing dates of succesfully billed accounts
      * @param {UUID} patientIds Array of patients that were succesfully billed
      */
-    async updateBilledSubscriptions(subscriptions, updateQuery, insertQuery, _txc) {
+    async updateBilledSubscriptions(updateValues, insertValues, _txc) {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
+            // Update subscription data
             dbc.query(
-              `INSERT INTO subscriptions (id, offering_id, patient_id, date_next_payment)
-               VALUES ${updateQuery}
+              `INSERT INTO subscriptions (id, offering_id, patient_id, date_next_payment, date_terminated)
+               VALUES ${updateValues}
                ON CONFLICT (id) DO UPDATE SET date_next_payment = EXCLUDED.date_next_payment;`);
 
+           // Track succesful payments made
            await dbc.query(
              `INSERT INTO subscription_payments (subscription_id, offering_id, patient_id, date_paid, price, currency)
-              VALUES ${insertQuery}`);
+              VALUES ${insertValues}`);
         } catch(ex) {
-          console.log(ex);
+          uhx.log.error(`Could not update billed subscriptions: ${ex}`);
         }
         finally {
           if(!_txc) dbc.end();
-        }
-    }
-
-    /**
-     * @method
-     * @summary Retrieve the subset of subscribers that should be terminated today
-     * @param {Client} _txc The postgresql connection with an active transaction to run in
-     * @return {Subscription} The fetched subscriptions
-     */
-    async getSubscriptionsToTerminate(_txc) {
-        const dbc = _txc || new pg.Client(this._connectionString);
-        try {
-            const now = new Date();
-            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 1);
-
-            if(!_txc) await dbc.connect();
-            const rdr = await dbc.query('SELECT * FROM subscriptions WHERE date_terminated = $1', [today]);
-            if(rdr.rows.length === 0)
-                return [];
-            else {
-                return await subscriptionArray(rdr);
-            }
-        }
-        finally {
-            if(!_txc) dbc.end();
         }
     }
 
