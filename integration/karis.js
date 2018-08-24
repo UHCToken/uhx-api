@@ -34,12 +34,12 @@ module.exports = class KarisService {
 
     constructor() {
         Number.prototype.pad = function(size) {
-            const s = String(this);
+            let s = String(this);
             while (s.length < (size || 2)) {s = "0" + s;}
             return s;
         }
 
-        this.sendKarisReport(null, "test"); 
+        // this.sendDailyLog();
 
         // Starts a schedule to send daily logs to Karis every day at 9 pm
         schedule.scheduleJob('* * 19 * *', () => {
@@ -58,29 +58,28 @@ module.exports = class KarisService {
      */
     async sendDailyLog() {
         try {
-            const subscriptions = await subscriptionRepository.getSubscriptionsForDailyReport();
+            const subscriptions = await uhx.Repositories.subscriptionRepository.getSubscriptionsForDailyReport();
 
             if (!subscriptions) {
                 // No subscriptions found
             } else {
-                reports = [];
+                const reports = [];
 
                 for (let i = 0; i < subscriptions.length; i++) {
-                    const subscription = subscriptions[i];
-                    const user = await userRepository.get(subscription.userId);
+                    const patient = await uhx.Repositories.patientRepository.get(subscriptions[i].patientId);
 
-                    reports.push(new model.Karis().fromData(user, subscription));
+                    reports.push(new model.Karis().fromData(patient, subscriptions[i]));
                 }
 
                 const now = new Date();
                 const clientCode = config.karis.clientCode;
-                const fileDateDisplay = (now.getMonth() + 1).pad() + now.getDate().pad() + now.getFullYear;
-                const filename = clientCode + "_" + fileDateDisplay;
+                const fileDateDisplay = (now.getMonth() + 1).pad() + now.getDate().pad() + now.getFullYear();
+                const filename = "reports\\karis\\daily\\" + clientCode + "_" + fileDateDisplay;
 
                 this.sendKarisReport(reports, filename);
             }
         } catch(ex) {
-
+            console.log(ex);
         }
     }
 
@@ -90,23 +89,22 @@ module.exports = class KarisService {
      */
     async sendMonthlyCensus() {
         try {
-
-            const subscriptions = await subscriptionRepository.getSubscriptionsForMonthlyReport();
+            const subscriptions = await uhx.Repositories.subscriptionRepository.getSubscriptionsForMonthlyReport();
 
             if (!subscriptions) {
                 // No subscriptions found
             } else {
-                reports = [];
+                const reports = [];
 
                 for (let i = 0; i < subscriptions.length; i++) {
                     const subscription = subscriptions[i];
-                    const user = await userRepository.get(subscription.userId);
+                    const user = await uhx.Repositories.userRepository.get(subscription.userId);
 
                     reports.push(new model.Karis().fromData(user, subscription));
                 }
 
-                const fileDateDisplay = (now.getMonth() + 1).pad() + now.getDate().pad() + now.getFullYear;
-                const filename = "UNIVERSALHEALTHCOINCENSUS_" + fileDateDisplay;
+                const fileDateDisplay = (now.getMonth() + 1).pad() + now.getDate().pad() + now.getFullYear();
+                const filename = "reports\\karis\\monthly\\UNIVERSALHEALTHCOINCENSUS_" + fileDateDisplay;
 
                 this.sendKarisReport(reports, filename);
             }
@@ -123,7 +121,78 @@ module.exports = class KarisService {
      */
     sendKarisReport(reports, filename) {
         const csvFilename = filename + ".csv";
+        
+        const fields = [{
+            label: 'Member Number',
+            value: 'memberNumber'
+        },{
+            label: 'Member Full Name',
+            value: 'memberFullName'
+        },{
+            label: 'Member First Name',
+            value: 'memberFirstName'
+        },{
+            label: 'Member Last Name',
+            value: 'memberLastName'
+        },{
+            label: 'Address Line 1',
+            value: 'addressLine1'
+        },{
+            label: 'Address Line 2',
+            value: ''
+        },{
+            label: 'City',
+            value: 'city'
+        },{
+            label: 'State',
+            value: 'state'
+        },{
+            label: 'Zip Code',
+            value: 'zipcode'
+        },{
+            label: 'Phone Number',
+            value: 'phoneNumber'
+        },{
+            label: 'Fax Number',
+            value: 'faxNumber'
+        },{
+            label: 'Email Address',
+            value: 'email'
+        },{
+            label: 'Gender',
+            value: 'gender'
+        },{
+            label: 'Effective Date',
+            value: 'effectiveDate'
+        },{
+            label: 'Termination Date',
+            value: 'terminationDate'
+        },{
+            label: 'Birthdate',
+            value: 'dob'
+        },{
+            label: 'Client Code',
+            value: 'clientCode'
+        },{
+            label: 'Group Code',
+            value: 'groupCode'
+        },{
+            label: 'Plan Code',
+            value: 'planCode'
+        },{
+            label: 'Member Affiliation or ID Card',
+            value: 'memberAffiliation'
+        }];
 
+        const json2csvParser = new Json2csvParser({ fields, quote: "" });
+        const csv = json2csvParser.parse(reports);
 
+        fs.writeFile(csvFilename, csv, 'utf8', function (err) {
+        if (err) {
+            console.log('Some error occured - file either not saved or corrupted file saved.');
+        } else{
+            console.log('It\'s saved!');
+        }
+        });
     }
 }
