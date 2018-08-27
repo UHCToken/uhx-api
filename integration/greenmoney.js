@@ -215,7 +215,7 @@ module.exports = class GreenMoney {
     */
     async getInvoicesForUser(userId, principal) {
         try {
-            if ((principal._session.userId == userId && principal.grant["invoice"] && security.PermissionType.OWNER) || (principal.grant["user"] & security.PermissionType.LIST)) {
+            if ((principal._session.userId == userId && principal.grant["invoice"] && security.PermissionType.OWNER) || (principal.grant["invoice"] & security.PermissionType.LIST)) {
                 // Gets all invoices from database
                 var invoices = await uhx.Repositories.invoiceRepository.getAllForUser(userId);
 

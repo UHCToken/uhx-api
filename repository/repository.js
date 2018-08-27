@@ -38,7 +38,11 @@ const UserRepository = require('./userRepository'),
     ServiceTypeRepository = require('./serviceTypeRepository'),
     SubscriptionRepository = require('./subscriptionRepository'),
     OfferingRepository = require('./offeringRepository'),
-    pg = require('pg'),
+CarePlanRepository = require('./carePlanRepository'),
+    CareServiceRepository = require('./careServiceRepository'),
+    CareRelationshipRepository = require('./careRelationshipRepository'),
+CountryRepository = require('./countryRepository'),    
+pg = require('pg'),
     uhx = require('../uhx'),
     exception = require('../exception');
 
@@ -135,6 +139,40 @@ class UhcRepositories {
             this._applicationRepository = new ApplicationRepository(this.connectionString);
         return this._applicationRepository;
     }
+
+        /**
+     * @property
+     * @summary Gets the service invoice repository
+     * @type {CarePlanRepository}
+     */
+    get carePlanRepository() {
+        if(!this._carePlanRepository)
+            this._carePlanRepository = new CarePlanRepository(this.connectionString);
+        return this._carePlanRepository;
+    }
+
+    /**
+     * @property
+     * @summary Gets the care service invoice repository
+     * @type {CareServiceRepository}
+     */
+    get careServiceRepository() {
+        if(!this._careServiceRepository)
+            this._careServiceRepository = new CareServiceRepository(this.connectionString);
+        return this._careServiceRepository;
+    }
+
+    /**
+     * @property
+     * @summary Gets the care relationship repository
+     * @type {CareRelationshipRepository}
+     */
+    get careRelationshipRepository() {
+        if(!this._careRelationshipRepository)
+            this._careRelationshipRepository = new CareRelationshipRepository(this.connectionString);
+        return this._careRelationshipRepository;
+    }
+
 
     /**
      * @property
@@ -277,6 +315,17 @@ class UhcRepositories {
         if (!this._providerServiceRepository)
             this._providerServiceRepository = new ProviderServiceRepository(this.connectionString);
         return this._providerServiceRepository;
+    }
+
+    /**
+     * @property
+     * @summary Gets the country repository
+     * @type {CountryRepository}
+     */
+    get countryRepository() {
+        if (!this.__countryRepository)
+            this._countryRepository = new CountryRepository(this.connectionString);
+        return this._countryRepository;
     }
 
     /**

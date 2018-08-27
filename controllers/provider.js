@@ -45,7 +45,7 @@ class ProviderApiResource {
      */
     get routes() {
         return {
-            "permission_group": "user",
+            "permission_group": "provider",
             "routes": [
                 {
                     "path": "provider",
@@ -126,9 +126,9 @@ class ProviderApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "write:user"
+     *          - "write:provider"
      *      - app_auth:
-     *          - "write:user"
+     *          - "write:provider"
      */
     async post(req, res) {
 
@@ -174,7 +174,7 @@ class ProviderApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "list:user"
+     *          - "list:provider"
      */
     async getAll(req, res) {
         res.status(200).json(await uhx.Repositories.providerRepository.getAllProviders());
@@ -228,16 +228,19 @@ class ProviderApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "write:user"
-     *          - "read:user"
+     *          - "write:provider"
+     *          - "read:provider"
      */
     async put(req, res) {
         req.body.id = req.params.providerid;
 
         var provider = await uhx.UserLogic.updateProvider(new model.Provider().copy(req.body), req.body.serviceTypes, req.principal);
-        if (provider)
+        if (provider && !(provider instanceof exception.Exception)) {
             await provider.loadProviderServiceTypes();
-        res.status(201).json(provider);
+            var status = 201;
+        } else
+            var status = 500;
+        res.status(status).json(provider);
         return true;
     }
 
@@ -276,7 +279,7 @@ class ProviderApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "read:user"
+     *          - "read:provider"
      */
     async get(req, res) {
         var provider = await uhx.Repositories.providerRepository.get(req.params.providerid);
@@ -336,15 +339,22 @@ class ProviderApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "write:user"
+     *          - "write:provider"
      */
     async upload(req, res) {
-        var result = await uhx.ObjectStorage.uploadProfileImage(req, res, 'provider');
-        var status = result instanceof exception.Exception ? 500 : 201;
 
-        res.status(status).json(result);
+        if (!req.params.uid)
+            throw new exception.Exception("Missing identifier", exception.ErrorCodes.MISSING_PROPERTY);
 
-        return true;
+        if ((req.principal.grant.provider & security.PermissionType.OWNER && req.params.uid == req.principal.session.userId) == 1) {
+            var result = await uhx.ObjectStorage.uploadProfileImage(req, res, 'provider');
+            var status = result instanceof exception.Exception ? 500 : 201;
+            res.status(status).json(result);
+            return true;
+        } else {
+            throw new exception.Exception("Invalid security permissions.", exception.ErrorCodes.SECURITY_ERROR);
+            return false;
+        }
     }
 
     /**
@@ -382,7 +392,7 @@ class ProviderApiResource {
  *                  $ref: "#/definitions/Exception"
  *      security:
  *      - uhx_auth:
- *          - "read:user"
+ *          - "read:provider"
  */
     async getProfilePicture(req, res) {
         var image = await uhx.ObjectStorage.getProfileImage(req, res, 'provider');
@@ -394,7 +404,7 @@ class ProviderApiResource {
 
         return true;
     }
-}
 
+}
 // Module exports
 module.exports.ProviderApiResource = ProviderApiResource;

@@ -39,7 +39,10 @@
     Offering = require('./Offering'),
     Service = require('./Service'),
     Balance = require('./Balance'),
-    Invoice = require('./Invoice');
+    Invoice = require('./Invoice'),
+    CareService = require('./CareService'),
+    CareRelationship = require('./CareRelationship'),
+    CarePlan = require('./CarePlan');
 
 /**
  * @enum
@@ -87,6 +90,9 @@ module.exports.Subscription = Subscription;
 module.exports.Offering = Offering;
 module.exports.Service = Service;
 module.exports.Karis = Karis;
+module.exports.CarePlan = CarePlan;
+module.exports.CareRelationship = CareRelationship;
+module.exports.CareService = CareService;
 module.exports.Balance = Balance;
 module.exports.MonetaryAmount = MonetaryAmount;
 module.exports.Transaction = Transaction;
