@@ -159,11 +159,11 @@ module.exports = class BillingLogic {
           let payorPurchasingBalance = payorStellarAccount.balances.find(o=>o.asset_type == subscriptions[i].currency).balance;
 
           if ((payorStellarBalance - 0.0001) < minStellarBalance)
-              uhx.log.info(`Payment cannot be completed. Patient ${subscriptions[i].patientId} has insufficient XLM.`);
+              uhx.log.info(`Subscription payment cannot be completed. Patient ${subscriptions[i].patientId} has insufficient XLM.`);
 
               // TODO: Add to database of failed transactions
           else if ((payorPurchasingBalance - subscriptions[i].price) < 0)
-              uhx.log.info(`Payment cannot be completed. Patient ${subscriptions[i].patientId} has insufficent ${(subscriptions[i].currency == 'native' ? 'XLM' : subscriptions[i].currency)}`);
+              uhx.log.info(`Subscription payment cannot be completed. Patient ${subscriptions[i].patientId} has insufficent ${(subscriptions[i].currency == 'native' ? 'XLM' : subscriptions[i].currency)}`);
 
               // TODO: Add to database of failed transactions
           else {
