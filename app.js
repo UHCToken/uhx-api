@@ -46,7 +46,8 @@
     helmet = require('helmet'),
     http = require('http'),
     skipper = require("skipper"),
-    chat = require('./controllers/chat');
+    chat = require('./controllers/chat'),
+    io = require('socket.io')(http);
     
     toobusy.maxLag(10000);
 // Startup application
@@ -109,3 +110,9 @@ else {
 }
 
 uhx.log.info(`UhX API started on ${uhx.Config.api.scheme} port ${uhx.Config.api.port}`);
+
+io.listen(8080);  //TODO: Configure Port
+
+io.on('connection', function(socket) { 
+    console.log(`OMG OMGOMGOMGOMGOG`)
+})

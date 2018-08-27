@@ -75,12 +75,13 @@ module.exports.ChatApiResource = class ChatApiResource {
    * @param {Express.Request} req http req from the client
    * @param {Express.Response} res The HTTP response going to the client
    */
-  async initChatSocket(req, res) {
+  initChatSocket(req, res) {
     const chatId = req.params.cid
+    console.log(chatId);
     //Create unique chatroom namespace from chatID
-    let chat = io.of(chatId)
+    // let chat = io.of(chatId)
     //Web sockets listening...
-    io.listen(8080);  //TODO: Configure Port
+    io.listen(uhx.Config.api.port + 1);  //TODO: Configure Port
 
     io.on('connection', (socket) => {
       console.log('-------------------connected and stuff--------------------');
@@ -100,7 +101,7 @@ module.exports.ChatApiResource = class ChatApiResource {
         let chatMessage = new ChatMessage().copy(chatMessageFromData);
 
         //Emit to chat
-        chat.emit('RECEIVE_MESSAGE', data);
+        // chat.emit('RECEIVE_MESSAGE', data);
 
       })
 
