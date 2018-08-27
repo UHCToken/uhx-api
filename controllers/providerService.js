@@ -45,17 +45,17 @@ class ProviderServiceApiResource {
      */
     get routes() {
         return {
-            "permission_group": "user",
+            "permission_group": "providerService",
             "routes": [
                 {
-                    "path": "addressservice",
+                    "path": "addressService",
                     "get": {
                         "demand": security.PermissionType.READ,
                         "method": this.query
                     }
                 },
                 {
-                    "path": "addressservice/:addressid",
+                    "path": "addressService/:addressid",
                     "get": {
                         "demand": security.PermissionType.READ,
                         "method": this.getAll
@@ -70,7 +70,7 @@ class ProviderServiceApiResource {
                     }
                 },
                 {
-                    "path": "addressservice/service/:serviceid",
+                    "path": "addressService/service/:serviceid",
                     "get": {
                         "demand": security.PermissionType.READ,
                         "method": this.get
@@ -117,7 +117,7 @@ class ProviderServiceApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "list:user"
+     *          - "list:providerService"
      */
     async query(req, res) {
         throw new exception.NotImplementedException();
@@ -153,10 +153,10 @@ class ProviderServiceApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "read:user"
+     *          - "read:providerService"
      */
     async getAll(req, res) {
-         var services = await uhx.UserLogic.getAllServices(req.params.addressid);
+        var services = await uhx.UserLogic.getAllServices(req.params.addressid);
 
         res.status(200).json(services);
         return true;
@@ -205,9 +205,9 @@ class ProviderServiceApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "write:user"
+     *          - "write:providerService"
      *      - app_auth:
-     *          - "write:user"
+     *          - "write:providerService"
      */
     async addServices(req, res) {
         if (!req.body)
@@ -217,9 +217,11 @@ class ProviderServiceApiResource {
             req.body = [req.body];
 
         var newServices = await uhx.UserLogic.addProviderServices(req.params.addressid, req.body.map(o => new model.ProviderService().copy(o)), req.principal);
-        if (newServices) {
+        if (newServices && !(newServices instanceof exception.Exception)) {
             var services = await uhx.UserLogic.getAllServices(req.params.addressid);
-        }
+        } else
+            var services = newServices;
+
         res.status(201).json(services);
 
         return true;
@@ -268,9 +270,9 @@ class ProviderServiceApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "write:user"
+     *          - "write:providerService"
      *      - app_auth:
-     *          - "write:user"
+     *          - "write:providerService"
      */
     async updateServices(req, res) {
         if (!req.body)
@@ -280,9 +282,11 @@ class ProviderServiceApiResource {
             req.body = [req.body];
 
         var editedServices = await uhx.UserLogic.editProviderServices(req.params.addressid, req.body.map(o => new model.ProviderService().copy(o)), req.body.map(o => o.action), req.principal);
-        if (editedServices) {
+        if (editedServices && !(editedServices instanceof exception.Exception)) {
             var services = await uhx.UserLogic.getAllServices(req.params.addressid);
-        }
+        } else
+            var services = editedServices;
+
         res.status(201).json(services);
 
         return true;
@@ -323,7 +327,7 @@ class ProviderServiceApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "read:user"
+     *          - "read:providerService"
      */
     async get(req, res) {
         var service = await uhx.Repositories.providerServiceRepository.get(req.params.serviceid);
@@ -380,8 +384,8 @@ class ProviderServiceApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "write:user"
-     *          - "read:user"
+     *          - "write:providerService"
+     *          - "read:providerService"
      */
     async put(req, res) {
         req.body.id = req.params.serviceid;
@@ -396,7 +400,7 @@ class ProviderServiceApiResource {
      * @param {Express.Response} res The response to the client
      * @swagger
      * /addressservice/{serviceid}:
-     *  put:
+     *  delete:
      *      tags:
      *      - "addressservice"
      *      summary: "Deactivates an existing provider address service in the UhX API"
@@ -436,8 +440,8 @@ class ProviderServiceApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "write:user"
-     *          - "read:user"
+     *          - "write:providerService"
+     *          - "read:providerService"
      */
     async delete(req, res) {
         req.body.id = req.params.serviceid;

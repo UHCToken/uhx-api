@@ -21,6 +21,7 @@
 const config = require('./config'),
     repositories = require('./repository/repository'),
     SecurityLogic = require('./logic/SecurityLogic'),
+    CareLogic = require('./logic/CareLogic'),
     TokenLogic = require('./logic/TokenLogic'),
     UserLogic = require('./logic/UserLogic'),
     winston = require('winston'),
@@ -32,6 +33,7 @@ const config = require('./config'),
     poolio = require('poolio'),
     Web3Client = require("./integration/web3"),
     BitcoinClient = require("./integration/bitcoin"),
+    KarisService = require("./integration/karis"),
     worker = require('./worker');
 
 winston.level = config.logging.level;
@@ -46,6 +48,7 @@ var repository = new repositories.UhcRepositories(config.db.server);
 module.exports.SecurityLogic = new SecurityLogic();
 module.exports.TokenLogic = new TokenLogic();
 module.exports.UserLogic = new UserLogic();
+module.exports.CareLogic = new CareLogic();
 module.exports.Config = config;
 module.exports.Repositories = repository;
 module.exports.log = winston;
@@ -60,6 +63,8 @@ module.exports.init = () => {
         module.exports.BitcoinClient = new BitcoinClient(config.bitcoin.testnet_use, config.bitcoin.server);
         winston.info("GreenMoney Initialized...");
         module.exports.GreenMoney = new GreenMoney();
+        winston.info("Karis Initialized...");
+        module.exports.Karis = new KarisService();
         winston.info("ObjectStorage Initialized...");
         module.exports.ObjectStorage = new ObjectStorage();
         winston.info("Google Maps Initialized...");

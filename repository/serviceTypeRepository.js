@@ -134,7 +134,7 @@ module.exports = class ServiceTypeRepository {
         if (!id)
             throw new exception.Exception("Target object must carry an identifier", exception.ErrorCodes.ARGUMENT_EXCEPTION);
 
-        if (!name || !desc)
+        if (!name)
             throw new exception.Exception("Missing values", exception.ErrorCodes.ARGUMENT_EXCEPTION);
 
         const dbc = _txc || new pg.Client(this._connectionString);

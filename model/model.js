@@ -29,13 +29,20 @@
     ModelUtil = require('./ModelUtil'),
     Application = require('./Application'),
     Session = require('./Session'),
+    Karis = require('./Karis'),
     PermissionSet = require('./PermissionSet'),
     PermissionSetInstance = require('./PermissionSetInstance'),
     MonetaryAmount = require('./MonetaryAmount'),
     Transaction = require('./Transaction'),
     Wallet = require('./Wallet'),
+    Subscription = require('./Subscription'),
+    Offering = require('./Offering'),
+    Service = require('./Service'),
     Balance = require('./Balance'),
-    Invoice = require('./Invoice');
+    Invoice = require('./Invoice'),
+    CareService = require('./CareService'),
+    CareRelationship = require('./CareRelationship'),
+    CarePlan = require('./CarePlan');
 
 /**
  * @enum
@@ -78,8 +85,14 @@ module.exports.PermissionSet = PermissionSet;
 module.exports.PermissionSetInstance = PermissionSetInstance;
 module.exports.Wallet = Wallet
 module.exports.Utils = new ModelUtil();
-module.exports.Wallet = Wallet;
 module.exports.Invoice = Invoice;
+module.exports.Subscription = Subscription;
+module.exports.Offering = Offering;
+module.exports.Service = Service;
+module.exports.Karis = Karis;
+module.exports.CarePlan = CarePlan;
+module.exports.CareRelationship = CareRelationship;
+module.exports.CareService = CareService;
 module.exports.Balance = Balance;
 module.exports.MonetaryAmount = MonetaryAmount;
 module.exports.Transaction = Transaction;

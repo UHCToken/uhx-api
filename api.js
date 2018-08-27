@@ -93,7 +93,7 @@ class RouteHandler {
                     }
                 }
                 catch(e) {
-                    uhx.log.error(`Error validting security - ${e}`);
+                    uhx.log.error(`Error validating security - ${e}`);
                     if(e instanceof exception.Exception)
                         throw new exception.Exception("Error validating security", exception.ErrorCodes.SECURITY_ERROR, e);
                     else 

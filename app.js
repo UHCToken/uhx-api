@@ -37,10 +37,14 @@
     asset = require('./controllers/asset'),
     invitation = require('./controllers/invitation'),
     transaction = require('./controllers/transaction'),
+    careRelationship = require('./controllers/careRelationship'),
+    carePlan = require('./controllers/carePlan'),
     reports = require('./controllers/stats'),
     swagger = require('./controllers/js-doc'),
     stellarFederation = require('./federation/stellar-fed.js'),
     airdrop = require('./controllers/airdrop'),
+    subscription = require('./controllers/subscription'),
+    offering = require('./controllers/offering'),
     toobusy = require('toobusy-js'),
     https = require('https'),
     helmet = require('helmet'),
@@ -90,10 +94,14 @@ restApi.addResource(new group.GroupApiResource());
 restApi.addResource(new permission.PermissionApiResource());
 restApi.addResource(new asset.AssetApiResource());
 restApi.addResource(new invitation.InvitationApiResource());
+restApi.addResource(new carePlan.CarePlanApiResource());
+restApi.addResource(new careRelationship.CareRelationshipApiResource());
 restApi.addResource(new reports.StatisticsApiResource());
 restApi.addResource(new transaction.TransactionApiResource());
 restApi.addResource(new stellarFederation.StellarFederationApiResource());
 restApi.addResource(new airdrop.AirdropApiResource());
+restApi.addResource(new subscription.SubscriptionApiResource());
+restApi.addResource(new offering.OfferingApiResource());
 restApi.addResource(new chat.ChatApiResource());
 
 uhx.init();
