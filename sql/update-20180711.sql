@@ -1,5 +1,3 @@
-INSERT INTO GROUPS(id, name, created_by) VALUES ('a219447e-70a0-415c-b681-7a21ce80bffb', 'PROVIDERS', '3c673456-23b1-4263-9deb-df46770852c9');
-
 CREATE TABLE IF NOT EXISTS care_relationships (
     id uuid NOT NULL DEFAULT uuid_generate_v4(),
     creation_time TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
