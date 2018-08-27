@@ -51,10 +51,6 @@ module.exports.ChatApiResource = class ChatApiResource {
           "get" : {
               demand: security.PermissionType.LIST,
               method: this.getChatMessages
-          },
-          "post" : {
-              demand: security.PermissionType.WRITE,
-              method: this.createChatMessage
           }
         },
         {
@@ -76,41 +72,36 @@ module.exports.ChatApiResource = class ChatApiResource {
    * @param {Express.Response} res The HTTP response going to the client
    */
   initChatSocket(req, res) {
-    const chatId = req.params.cid
-    console.log(chatId);
-    //Create unique chatroom namespace from chatID
-    // let chat = io.of(chatId)
-    //Web sockets listening...
-    io.listen(uhx.Config.api.port + 1);  //TODO: Configure Port
+    const chatId = req.params.cid;
 
-    io.on('connection', (socket) => {
+    io.listen(8080);  //TODO: Configure Port
+    let chat = io.of(chatId);  //Create unique chatroom namespace from chatID
+
+    // Web sockets listening...
+    // io.listen(uhx.Config.api.port + 1);  //TODO: Configure Port
+
+    chat.on('connection', (socket) => {
       console.log('-------------------connected and stuff--------------------');
 
-      socket.on('SEND_MESSAGE', function(data){
-
-        let chatMessageFromData = {
-          id: data.chatMessage.id,
-          chatRoomId: data.chatMessage.chatRoomId,
-          author: data.chatMessage.author,
-          dateSent: data.chatMessage.dateSent,
-          viewedStatus: data.chatMessage.viewedStatus.toString(),
-          body: data.chatMessage.body 
+      socket.on('SEND_MESSAGE', async function(data){
+        const chatMessage = data.message;
+        const chatRoomId = data.message.chatRoomId;
+        try {
+          await uhx.Repositories.chatRepository.createChatMessage(chatRoomId, chatMessage);
+        }
+        catch (e) {
+          throw new exception.Exception(`Error: ${e}`, exception.ErrorCodes.UNKNOWN);
         }
 
-        //Create new Room or Message
-        let chatMessage = new ChatMessage().copy(chatMessageFromData);
-
         //Emit to chat
-        // chat.emit('RECEIVE_MESSAGE', data);
+        socket.emit('RECEIVE_MESSAGE', {message: chatMessage});
 
       })
 
       socket.on('disconnect', () => {
           console.log('user disconnected')
-          //TODO: Program disconnect stuff
-          // socket.removeAllListeners('send message');
-          // socket.removeAllListeners('disconnect');
-          // io.removeAllListeners('connection');
+          chat.removeAllListeners();
+          chat.server.close();
       })
     });
   }
@@ -144,30 +135,6 @@ module.exports.ChatApiResource = class ChatApiResource {
     chatroom.id = `${new Date(MM/DD/YYYY)}${chatroom.providerId}${chatRoom.patientId}`
     res.status(201).json(uhx.Repositories.chatRepository.createChatRoom(chatRoom));
     return true;
-  }
-
-
-  /**
-   * @method
-   * @summary Creates a new chat message
-   * @param {Express.Request} req http req from the client
-   * @param {Express.Response} res The HTTP response going to the client
-   */
-  async createChatMessage(req, res) {
-    if(!req.body)
-      throw new exception.Exception("Missing body", exception.ErrorCodes.MISSING_PAYLOAD);
-
-    console.log(req.body);
-
-    let chatRoomId = req.body.chatRoomId;
-    let chatMessage = req.body
-    try {
-      res.status(201).json(uhx.Repositories.chatRepository.createChatMessage(chatRoomId, chatMessage));
-      return true;
-    }
-    catch (e) {
-      throw new exception.Exception(`Error: ${e}`, exception.ErrorCodes.UNKNOWN);
-    }
   }
 
   /**
