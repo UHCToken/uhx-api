@@ -43,11 +43,13 @@ CREATE TABLE IF NOT EXISTS care_services (
     amount NUMERIC(20, 7) NOT NULL,
     code VARCHAR(256) NOT NULL,
     name VARCHAR(256),
-    info VARCHAR(256),
+    description VARCHAR(256),
     created_by UUID NOT NULL,
     care_plan_id UUID NOT NULL,
+    asset_id UUID NOT NULL,
     CONSTRAINT pk_care_service_id PRIMARY KEY (id),
     CONSTRAINT fk_care_plan FOREIGN KEY (care_plan_id) REFERENCES care_plans(id),
+    CONSTRAINT fk_asset_id FOREIGN KEY (asset_id) REFERENCES assets(id),
     CONSTRAINT fk_care_service_created_by FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
