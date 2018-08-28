@@ -31,8 +31,10 @@ const ModelBase = require('./ModelBase'),
  * @property {Date} dateTerminated The date the subscription was terminated
  * @property {Date} dateExpired The date the subscription will end
  * @property {Date} dateNextPayment The date of the next billing period
- * @property {number} monthsRemaining The number of months remaining for the given subscription
+ * @property {number} periodInMonths The number of months remaining
  * @property {boolean} autoRenew Represents if the billing cycle is auto-renewed
+ * @property {number} price The cost of the subscription for the given offering
+ * @property {string} currency The currency code for the given offering
  * @swagger
  * definitions:
  *  Subscription:
@@ -64,6 +66,15 @@ const ModelBase = require('./ModelBase'),
  *          autoRenew:
  *              type: boolean
  *              description: Represents if the billing cycle is auto-renewed
+ *          periodInMonths:
+ *              type: number
+ *              description: The number of months the subscription is for
+ *          price:
+ *              type: number
+ *              description: The cost of the subscription based on the offering
+ *          currency:
+ *              type: string
+ *              description: The currency code for the given offering
  */
 module.exports = class Subscription extends ModelBase {
 
@@ -92,7 +103,10 @@ module.exports = class Subscription extends ModelBase {
         this.dateTerminated = dbSubscription.date_terminated !== null ? dbSubscription.date_terminated.toLocaleString() : null;
         this.dateExpired = dbSubscription.date_expired !== null ? dbSubscription.date_expired.toLocaleString() : null;
         this.dateNextPayment = dbSubscription.date_next_payment !== null ? dbSubscription.date_next_payment.toLocaleString() : null;
+        this.periodInMonths = dbSubscription.period_in_months;
         this.autoRenew = dbSubscription.auto_renew;
+        this.price = dbSubscription.price;
+        this.currency = dbSubscription.currency;
         return this;
     }
 
@@ -110,7 +124,10 @@ module.exports = class Subscription extends ModelBase {
             date_terminated: this.dateTerminated,
             date_expired: this.dateExpired,
             date_next_payment: this.dateNextPayment,
-            auto_renew: this.autoRenew
+            period_in_months: this.periodInMonths,
+            auto_renew: this.autoRenew,
+            price: this.price,
+            currency: this.currency
         };
     }
 
@@ -128,7 +145,10 @@ module.exports = class Subscription extends ModelBase {
             dateTerminated: this.dateTerminated,
             dateExpired: this.dateExpired,
             dateNextPayment: this.dateNextPayment,
-            autoRenew: this.autoRenew
+            periodInMonths: this.periodInMonths,
+            autoRenew: this.autoRenew,
+            price: this.price,
+            currency: this.currency
         }
     }
 }
