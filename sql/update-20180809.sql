@@ -12,6 +12,7 @@
 --  * ADDS POSSIBLE_USER_FIELDS TABLE
 --  * ADDS OFFERING_GROUPS TABLE
 
+DROP TABLE IF EXISTS subscription_payments;
 DROP VIEW IF EXISTS subscription_lookup;
 DROP VIEW IF EXISTS offering_lookup;
 DROP TABLE IF EXISTS service_bundles;
@@ -109,6 +110,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
 	date_subscribed DATE, -- DATE WHEN SUBSCRIPTION STARTS
 	date_terminated DATE, -- DATE WHEN SUBSCRIPTION ENDS
   auto_renew BOOLEAN, -- 1 FOR ENABLED, 0 FOR DISABLED
+	date_expired DATE, -- DATE WHEN THE SUBSCRIPTION EXPIRES
 	CONSTRAINT pk_subscription PRIMARY KEY (id),
 	CONSTRAINT fk_subscription_offering FOREIGN KEY (offering_id) REFERENCES offerings(id),
 	CONSTRAINT fk_subscription_patient FOREIGN KEY (patient_id) REFERENCES patients(id)
@@ -150,10 +152,11 @@ SELECT
 	o.period_in_months,
 	og.id AS offering_group_id,
 	o.price,
-	c.code AS currency
+	c.code AS currency,
+	s.date_expired
 FROM subscriptions s
 LEFT JOIN offerings o ON s.offering_id = o.id
 LEFT JOIN offering_groups og ON og.id = o.offering_group_id
 LEFT JOIN currencies c ON c.id = o.currency_id
 LEFT JOIN patients p ON p.id = s.patient_id
-LEFT JOIN users u ON p.user_id = u.id;;
+LEFT JOIN users u ON p.user_id = u.id;

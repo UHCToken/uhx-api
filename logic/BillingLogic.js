@@ -48,27 +48,23 @@ module.exports = class BillingLogic {
        this.dailyBilling();
      });
 
-     // Schedule reporting to be done monthly on the first at 2am
-     schedule.scheduleJob('0 2 1 * *', () => {
-       //this.monthlyReport();
-     });
-
      // TODO: Remove this test code
     this.dailyBilling();
    }
 
    /**
     * @method
-    * @summary Bills all subscribers that renew their subscription today.
+    * @summary Bills all subscribers that have auto renew enabled, and are set to be billed today.
     */
    async dailyBilling() {
      try {
        uhx.log.info(`Billing Subscriptions...`);
        const subscriptions = await uhx.Repositories.subscriptionRepository.getSubscriptionsToBill();
+       const todaysDate = moment().format('YYYY-MM-DD');
 
        if (subscriptions.length === 0) {
          // No subscriptions to be billed today
-         uhx.log.info(`No Subscriptions Billed on ${moment().format('YYYY-MM-DD')}`);
+         uhx.log.info(`No Subscriptions Billed on ${todaysDate}`);
        } else {
          // Call function to complete transactions
          uhx.log.info(`Attempting to Bill ${subscriptions.length} Accounts...`);
@@ -84,21 +80,22 @@ module.exports = class BillingLogic {
                                                '${billedSubscriptions[i].patientId}',
                                                '${billedSubscriptions[i].dateNextPayment}',
                                                '${billedSubscriptions[i].price}',
-                                               '${billedSubscriptions[i].currency}')`;
+                                               '${billedSubscriptions[i].currency}',
+                                               '${billedSubscriptions[i].status}')`;
 
              // Update next payment date
              billedSubscriptions[i].dateNextPayment = moment(billedSubscriptions[i].dateNextPayment, 'YYYY-MM-DD')
                           .add(billedSubscriptions[i].periodInMonths, 'months').format('YYYY-MM-DD');
 
             // Update date terminated
-            billedSubscriptions[i].dateTerminated = moment(billedSubscriptions[i].dateTerminated, 'YYYY-MM-DD')
+            billedSubscriptions[i].dateExpired = moment(billedSubscriptions[i].dateExpired, 'YYYY-MM-DD')
                           .add(billedSubscriptions[i].periodInMonths, 'months').format('YYYY-MM-DD');
 
              updateValues = updateValues + `, ('${billedSubscriptions[i].id}',
                                                '${billedSubscriptions[i].offeringId}',
                                                '${billedSubscriptions[i].patientId}',
                                                '${billedSubscriptions[i].dateNextPayment}',
-                                               '${billedSubscriptions[i].dateTerminated}')`;
+                                               '${billedSubscriptions[i].dateExpired}')`;
          }
 
          // Remove leading commas in query
@@ -108,9 +105,13 @@ module.exports = class BillingLogic {
          // Update next billing dates for succesfully billed users
          if (billedSubscriptions.length >= 1) {
             uhx.log.info('Updating next payment dates for billed subscriptions...')
-            await uhx.Repositories.subscriptionRepository.updateBilledSubscriptions(updateValues, insertValues);
+            uhx.Repositories.subscriptionRepository.updateBilledSubscriptions(updateValues, insertValues);
          }
        }
+
+       uhx.log.info('Terminating subscriptions that expire today...');
+       uhx.Repositories.subscriptionRepository.terminateSubscriptions(todaysDate);
+
      } catch(ex) {
        // TODO: Add error message
        console.log(ex)
@@ -149,15 +150,16 @@ module.exports = class BillingLogic {
           let payorWallet = await newTransaction.loadPayorWallet();
           await newTransaction.loadPayeeWallet();
 
-          // Check if users have enough funds before executing transactions
+          // Load user account and balances
           let payorStellarAccount = await uhx.StellarClient.server.loadAccount(payorWallet.address);
           let minStellarBalance = payorStellarAccount.balances.length * 0.5 + 1.0001;
-
           let payorStellarBalance = payorStellarAccount.balances.find(o=>o.asset_type == "native").balance;
-          if (subscriptions[i].currency == 'XLM')
-              subscriptions[i].currency = 'native';
+
+          // Amount in purchasing currency
+          subscriptions[i].currency = subscriptions[i].currency == 'XLM' ? 'native' : subscriptions[i].currency
           let payorPurchasingBalance = payorStellarAccount.balances.find(o=>o.asset_type == subscriptions[i].currency).balance;
 
+          // Check if users have enough funds before executing transactions
           if ((payorStellarBalance - 0.0001) < minStellarBalance)
               uhx.log.info(`Subscription payment cannot be completed. Patient ${subscriptions[i].patientId} has insufficient XLM.`);
 
@@ -178,16 +180,22 @@ module.exports = class BillingLogic {
               const payeeId = transactions[i].payeeId;
               await uhx.Repositories.transactionRepository.insert(transactions[i], {session: {userId: payeeId}});
               // Execute transactions
-              await uhx.StellarClient.execute(transactions[i]);
+              const transaction = await uhx.StellarClient.execute(transactions[i]);
+
+              // Save status of payment
+              if (transaction.state === model.TransactionStatus.Complete)
+                  billedSubscriptions[i].status = 'complete';
+              else
+                  billedSubscriptions[i].status = 'failed';
+
               // Update transactions
               await uhx.Repositories.transactionRepository.update(transactions[i], {session: {userId: payeeId}});
        }
 
        return billedSubscriptions;
      } catch (ex) {
-       uhx.log.error(`Problem billing subscriptions: ${ex}`);
-       uhx.log.error(`Subscriptions to be billed: ${subscriptions}`);
-       uhx.log.error(`Subscriptions that were billed: ${billedSubscriptions}`);
+       uhx.log.error(`Error billing subscriptions: ${ex}`);
+       uhx.log.error(`Subscriptions attempted to be billed: ${subscriptions.toString()}`);
      }
    }
 }

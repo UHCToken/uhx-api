@@ -95,8 +95,9 @@ const uhx = require('../uhx'),
             else {
               return await this.subscriptionArray(rdr);
             }
-        }
-        finally {
+        } catch (er) {
+            uhx.log.error(`Could not pull subscriptions to bill: ${ex}`);
+        } finally {
             if(!_txc) dbc.end();
         }
     }
@@ -112,19 +113,40 @@ const uhx = require('../uhx'),
             if(!_txc) await dbc.connect();
             // Update subscription data
             dbc.query(
-              `INSERT INTO subscriptions (id, offering_id, patient_id, date_next_payment, date_terminated)
+              `INSERT INTO subscriptions (id, offering_id, patient_id, date_next_payment, date_expired)
                VALUES ${updateValues}
                ON CONFLICT (id) DO UPDATE SET date_next_payment = EXCLUDED.date_next_payment;`);
 
            // Track succesful payments made
-           await dbc.query(
-             `INSERT INTO subscription_payments (subscription_id, offering_id, patient_id, date_paid, price, currency)
+            await dbc.query(
+             `INSERT INTO subscription_payments (subscription_id, offering_id, patient_id, date_paid, price, currency, transaction_result)
               VALUES ${insertValues}`);
         } catch(ex) {
           uhx.log.error(`Could not update billed subscriptions: ${ex}`);
         }
         finally {
           if(!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Update termination date of all subscriptions expiring today
+     * @param {[UUID]} ids Subscription ids that should be terminated
+     * @param {String} todaysDate Todays date, for termination date value 
+     */
+    async terminateSubscriptions(today, _txc) {
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+
+            if(!_txc) await dbc.connect();
+
+            await dbc.query('UPDATE subscriptions SET date_terminated=$1 WHERE date_expired=$1 AND auto_renew=false', [today]);
+
+        } catch (ex) {
+            uhx.log.error(`Could not pull subscriptions to terminate: ${ex}`);
+        } finally {
+            if(!_txc) dbc.end();
         }
     }
 

@@ -59,7 +59,7 @@ const ModelBase = require('./ModelBase'),
  *              description: The date the subscription began
  *          dateTerminated:
  *              type: Date
- *              description: The date the subscription ends
+ *              description: The date the subscription was manually terminated
  *          dateNextPayment:
  *              type: Date
  *              description: The date of the next billing period
@@ -69,6 +69,9 @@ const ModelBase = require('./ModelBase'),
  *          price:
  *              type: number
  *              description: The amount paid for the subscription
+ *          dateExpired:
+ *              type: Date
+ *              description: The date that the subscription expires
  *          currency:
  *              type: string
  *              description: the currency the subscription was paid for in
@@ -103,6 +106,7 @@ module.exports = class Subscription extends ModelBase {
         this.dateSubscribed = dbSubscription.date_subscribed !== null ? dbSubscription.date_subscribed.toLocaleString() : null;
         this.dateTerminated = dbSubscription.date_terminated !== null ? dbSubscription.date_terminated.toLocaleString() : null;
         this.dateNextPayment = dbSubscription.date_next_payment !== null ? dbSubscription.date_next_payment.toLocaleString() : null;
+        this.dateExpired = dbSubscription.date_expired !== null ? dbSubscription.date_expired.toLocaleString() : null;
         this.periodInMonths = dbSubscription.period_in_months !== null ? dbSubscription.period_in_months.toLocaleString() : null;
         this.price = dbSubscription.price !== null ? dbSubscription.price.toLocaleString() : null;
         this.currency = dbSubscription.currency !== null ? dbSubscription.currency.toLocaleString() : null;
@@ -124,6 +128,7 @@ module.exports = class Subscription extends ModelBase {
             date_subscribed: this.dateSubscribed,
             date_terminated: this.dateTerminated,
             date_next_payment: this.dateNextPayment,
+            date_expired: this.dateExpired,
             period_in_months: this.periodInMonths,
             price: this.price,
             currency: this.currency,
@@ -146,6 +151,7 @@ module.exports = class Subscription extends ModelBase {
             dateTerminated: this.dateTerminated,
             dateNextPayment: this.dateNextPayment,
             periodInMonths: this.periodInMonths,
+            dateExpired: this.dateExpired,
             price: this.price,
             curreny: this.currency,
             autoRenew: this.autoRenew
