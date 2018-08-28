@@ -146,7 +146,7 @@ const pg = require('pg'),
             const today = new Date();
             const rdr = await dbc.query("UPDATE subscriptions SET date_next_payment = null, date_terminated = $1 WHERE id = $2 RETURNING *", [today, subscriptionId]);
             if(rdr.rows.length === 0)
-                throw new exception.NotFoundException('subscriptions', patientId);
+                throw new exception.NotFoundException('subscriptions', subscriptionId);
             else {
                 return new model.Subscription().fromData(rdr.rows[0]);
             }
@@ -169,7 +169,7 @@ const pg = require('pg'),
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 1);
 
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM subscriptions WHERE date_subscribed >= $1 AND date_terminated IS NULL OR date_terminated >= $1", [today]);
+            const rdr = await dbc.query("SELECT * FROM subscriptions WHERE date_terminated IS NULL OR date_terminated = $1", [today]);
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', 'No Subscriptions found.');
             else {

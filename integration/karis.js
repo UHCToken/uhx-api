@@ -39,7 +39,7 @@ module.exports = class KarisService {
             return s;
         }
 
-        // this.sendDailyLog();
+        this.sendDailyLog();
 
         // Starts a schedule to send daily logs to Karis every day at 9 pm
         schedule.scheduleJob('* * 19 * *', () => {
@@ -188,11 +188,11 @@ module.exports = class KarisService {
         const csv = json2csvParser.parse(reports);
 
         fs.writeFile(csvFilename, csv, 'utf8', function (err) {
-        if (err) {
-            console.log('Some error occured - file either not saved or corrupted file saved.');
-        } else{
-            console.log('It\'s saved!');
-        }
+            if (err) {
+                console.log('Some error occured - file either not saved or corrupted file saved.');
+            } else{
+                console.log('It\'s saved!');
+            }
         });
     }
 }
