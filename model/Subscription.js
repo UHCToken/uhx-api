@@ -28,7 +28,8 @@ const ModelBase = require('./ModelBase'),
  * @property {string} offeringId The offering id of the subscription
  * @property {string} offeringGroupId The offering group id of the subscription
  * @property {Date} dateSubscribed The date the subscription begins
- * @property {Date} dateTerminated The date the subscription will end
+ * @property {Date} dateTerminated The date the subscription was terminated
+ * @property {Date} dateExpired The date the subscription will end
  * @property {Date} dateNextPayment The date of the next billing period
  * @property {number} monthsRemaining The number of months remaining for the given subscription
  * @property {boolean} autoRenew Represents if the billing cycle is auto-renewed
@@ -53,13 +54,13 @@ const ModelBase = require('./ModelBase'),
  *              description: The date the subscription began
  *          dateTerminated:
  *              type: Date
- *              description: The date the subscription ends
+ *              description: The date the subscription was terminated
+ *          dateExpired:
+ *              type: Date
+ *              description: The date the subscription expires
  *          dateNextPayment:
  *              type: Date
  *              description: The date of the next billing period
- *          monthsRemaining:
- *              type: number
- *              description: The number of months remaining for the given subscription
  *          autoRenew:
  *              type: boolean
  *              description: Represents if the billing cycle is auto-renewed
@@ -89,8 +90,8 @@ module.exports = class Subscription extends ModelBase {
         this.offeringGroupId = dbSubscription.offering_group_id;
         this.dateSubscribed = dbSubscription.date_subscribed !== null ? dbSubscription.date_subscribed.toLocaleString() : null;
         this.dateTerminated = dbSubscription.date_terminated !== null ? dbSubscription.date_terminated.toLocaleString() : null;
+        this.dateExpired = dbSubscription.date_expired !== null ? dbSubscription.date_expired.toLocaleString() : null;
         this.dateNextPayment = dbSubscription.date_next_payment !== null ? dbSubscription.date_next_payment.toLocaleString() : null;
-        // this.monthsRemaining = dbSubscription.months_remaining;
         this.autoRenew = dbSubscription.auto_renew;
         return this;
     }
@@ -107,8 +108,8 @@ module.exports = class Subscription extends ModelBase {
             offering_group_id: this.offeringGroupId,
             date_subscribed: this.dateSubscribed,
             date_terminated: this.dateTerminated,
+            date_expired: this.dateExpired,
             date_next_payment: this.dateNextPayment,
-            // months_remaining: this.monthsRemaining,
             auto_renew: this.autoRenew
         };
     }
@@ -125,8 +126,8 @@ module.exports = class Subscription extends ModelBase {
             offeringGroupId: this.offeringGroupId,
             dateSubscribed: this.dateSubscribed,
             dateTerminated: this.dateTerminated,
+            dateExpired: this.dateExpired,
             dateNextPayment: this.dateNextPayment,
-            // monthsRemaining: this.monthsRemaining,
             autoRenew: this.autoRenew
         }
     }
