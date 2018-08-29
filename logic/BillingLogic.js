@@ -26,7 +26,8 @@ const uhx = require('../uhx'),
     Transaction = require('../model/Transaction'),
     MonetaryAmount = require('../model/MonetaryAmount'),
     uuidv4 = require('uuid/v4'),
-    model = require("../model/model");
+    model = require("../model/model"),
+    config = require('../config');
 
 /**
   * @class
@@ -110,7 +111,7 @@ module.exports = class BillingLogic {
        }
 
        uhx.log.info('Terminating subscriptions that expire today...');
-       uhx.Repositories.subscriptionRepository.terminateSubscriptions(todaysDate);
+       uhx.Repositories.subscriptionRepository.terminateTodaysSubscriptions(todaysDate);
 
      } catch(ex) {
        // TODO: Add error message
@@ -129,16 +130,16 @@ module.exports = class BillingLogic {
        // Generate batch ID and transaction array
        let transactions = [];
        let billedSubscriptions = [];
+       let toppedUpPayors = [];
        const batchId = uuidv4();
 
        // Loop through subscription data, create transactions for each with sufficient funds
        for (let i = 0; i < subscriptions.length; i++) {
           let t = subscriptions[i];
-          let newTransaction = new Transaction(uuidv4(), model.TransactionType.Payment, `Payment-subscription: ${subscriptions[i].id}`, new Date(), null, null, new MonetaryAmount(t.price, t.currency), null, null, model.TransactionStatus.Pending);
+          let newTransaction = new Transaction(null, model.TransactionType.Payment, `Payment-subscription: ${subscriptions[i].id}`, new Date(), null, null, new MonetaryAmount(t.price, t.currency), null, null, model.TransactionStatus.Pending);
 
-          // TODO: Move subscription payee ID to configuration
           newTransaction.payorId = t.userId;
-          newTransaction.payeeId = '56d4327a-4b58-4d3d-b518-7fda456cc1b0';
+          newTransaction.payeeId = config.subscription.paymentAccount;
           newTransaction.batchId = batchId;
           newTransaction.id = uuidv4();
 
@@ -148,26 +149,40 @@ module.exports = class BillingLogic {
           
           // Load wallet information
           let payorWallet = await newTransaction.loadPayorWallet();
-          await newTransaction.loadPayeeWallet();
+          let payeeWallet = await newTransaction.loadPayeeWallet();
 
           // Load user account and balances
           let payorStellarAccount = await uhx.StellarClient.server.loadAccount(payorWallet.address);
-          let minStellarBalance = payorStellarAccount.balances.length * 0.5 + 1.0001;
+          let minStellarBalance = payorStellarAccount.balances.length * 0.5 + 1.1;
           let payorStellarBalance = payorStellarAccount.balances.find(o=>o.asset_type == "native").balance;
 
           // Amount in purchasing currency
           subscriptions[i].currency = subscriptions[i].currency == 'XLM' ? 'native' : subscriptions[i].currency
-          let payorPurchasingBalance = payorStellarAccount.balances.find(o=>o.asset_type == subscriptions[i].currency).balance;
+          let payorPurchasingBalance = payorStellarAccount.balances.find(o=>o.asset_code == subscriptions[i].currency).balance;
 
-          // Check if users have enough funds before executing transactions
-          if ((payorStellarBalance - 0.0001) < minStellarBalance)
-              uhx.log.info(`Subscription payment cannot be completed. Patient ${subscriptions[i].patientId} has insufficient XLM.`);
+          // If user does not have enough XLM, top up funds for transactions
+          // Does not top up the same user more than once per run through
+          if (((payorStellarBalance - 0.0001) < minStellarBalance) && (toppedUpPayors.indexOf(newTransaction.payorId) > -1)) {
+              uhx.log.info(`Patient ${subscriptions[i].patientId} has insufficient XLM to complete subscription transaction, topping up their XLM.`);
+              let topUpValue = minStellarBalance - payorStellarBalance;
+              // TODO: Switch to top up account
+              let topUpTransaction = new Transaction(null, model.TransactionType.Deposit, 'Top-up account', new Date(), null, null, new MonetaryAmount(topUpValue, 'XLM'), new MonetaryAmount(0.0000100, 'XLM'), null, model.TransactionStatus.Pending);
+              
+              // Reverse payor and payee for top up transaction
+              topUpTransaction.payorId = newTransaction.payeeId;
+              topUpTransaction.payeeId = newTransaction.payorId;
+              topUpTransaction._payeeWallet = payorWallet;
+              topUpTransaction._payorWallet = payeeWallet;
+              
+              //
+              toppedUpPayors.push(newTransaction.payorId);
+              transactions.push(topUpTransaction);
+          }
 
-              // TODO: Add to database of failed transactions
-          else if ((payorPurchasingBalance - subscriptions[i].price) < 0)
+          if ((payorPurchasingBalance - subscriptions[i].price) < 0)
               uhx.log.info(`Subscription payment cannot be completed. Patient ${subscriptions[i].patientId} has insufficent ${(subscriptions[i].currency == 'native' ? 'XLM' : subscriptions[i].currency)}`);
 
-              // TODO: Add to database of failed transactions
+              // TODO: Terminate subscription of user since they cannot pay for subscription
           else {
               // User has enough XLM and payment currency, push the transaction object 
               transactions.push(newTransaction);

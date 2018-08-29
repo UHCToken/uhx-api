@@ -43,6 +43,7 @@ const uhx = require('../uhx'),
         this.getSubscriptionsForMonthlyReport = this.getSubscriptionsForMonthlyReport.bind(this);
         this.getSubscriptionsToBill = this.getSubscriptionsToBill.bind(this);
         this.updateBilledSubscriptions = this.updateBilledSubscriptions.bind(this);
+        this.terminateTodaysSubscriptions = this.terminateTodaysSubscriptions.bind(this);
     }
 
     /**
@@ -135,7 +136,7 @@ const uhx = require('../uhx'),
      * @param {[UUID]} ids Subscription ids that should be terminated
      * @param {String} todaysDate Todays date, for termination date value 
      */
-    async terminateSubscriptions(today, _txc) {
+    async terminateTodaysSubscriptions(today, _txc) {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
 
