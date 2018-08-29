@@ -62,6 +62,7 @@ module.exports = class BillingLogic {
        uhx.log.info(`Billing Subscriptions...`);
        const subscriptions = await uhx.Repositories.subscriptionRepository.getSubscriptionsToBill();
        const todaysDate = moment().format('YYYY-MM-DD');
+       let subscriptionsToTerminate;
 
        if (subscriptions.length === 0) {
          // No subscriptions to be billed today
@@ -69,7 +70,9 @@ module.exports = class BillingLogic {
        } else {
          // Call function to complete transactions
          uhx.log.info(`Attempting to Bill ${subscriptions.length} Accounts...`);
-         const billedSubscriptions = await this.billUsers(subscriptions);
+         const billingResults = await this.billUsers(subscriptions);
+         const billedSubscriptions = billingResults.billedSubscriptions;
+         subscriptionsToTerminate = billingResults.subscriptionsToTerminate;
 
          // Prepare update query for next payment dates
          let updateValues = '';
@@ -111,7 +114,7 @@ module.exports = class BillingLogic {
        }
 
        uhx.log.info('Terminating subscriptions that expire today...');
-       uhx.Repositories.subscriptionRepository.terminateTodaysSubscriptions(todaysDate);
+       uhx.Repositories.subscriptionRepository.terminateSubscriptions(todaysDate, subscriptionsToTerminate);
 
      } catch(ex) {
        // TODO: Add error message
@@ -131,6 +134,7 @@ module.exports = class BillingLogic {
        let transactions = [];
        let billedSubscriptions = [];
        let toppedUpPayors = [];
+       let subscriptionsToTerminate = [];
        const batchId = uuidv4();
 
        // Loop through subscription data, create transactions for each with sufficient funds
@@ -179,10 +183,12 @@ module.exports = class BillingLogic {
               transactions.push(topUpTransaction);
           }
 
-          if ((payorPurchasingBalance - subscriptions[i].price) < 0)
+          if ((payorPurchasingBalance - subscriptions[i].price) < 0) {
               uhx.log.info(`Subscription payment cannot be completed. Patient ${subscriptions[i].patientId} has insufficent ${(subscriptions[i].currency == 'native' ? 'XLM' : subscriptions[i].currency)}`);
 
-              // TODO: Terminate subscription of user since they cannot pay for subscription
+              // Terminate subscription of user since they cannot pay for subscription
+              subscriptionsToTerminate.push(`'${subscriptions[i].id}'`);
+          }
           else {
               // User has enough XLM and payment currency, push the transaction object 
               transactions.push(newTransaction);
@@ -207,7 +213,10 @@ module.exports = class BillingLogic {
               await uhx.Repositories.transactionRepository.update(transactions[i], {session: {userId: payeeId}});
        }
 
-       return billedSubscriptions;
+       return {
+         billedSubscriptions: billedSubscriptions,
+         subscriptionsToTerminate: subscriptionsToTerminate
+       };
      } catch (ex) {
        uhx.log.error(`Error billing subscriptions: ${ex}`);
        uhx.log.error(`Subscriptions attempted to be billed: ${subscriptions.toString()}`);

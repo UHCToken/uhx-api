@@ -43,7 +43,7 @@ const uhx = require('../uhx'),
         this.getSubscriptionsForMonthlyReport = this.getSubscriptionsForMonthlyReport.bind(this);
         this.getSubscriptionsToBill = this.getSubscriptionsToBill.bind(this);
         this.updateBilledSubscriptions = this.updateBilledSubscriptions.bind(this);
-        this.terminateTodaysSubscriptions = this.terminateTodaysSubscriptions.bind(this);
+        this.terminateSubscriptions = this.terminateSubscriptions.bind(this);
     }
 
     /**
@@ -136,13 +136,15 @@ const uhx = require('../uhx'),
      * @param {[UUID]} ids Subscription ids that should be terminated
      * @param {String} todaysDate Todays date, for termination date value 
      */
-    async terminateTodaysSubscriptions(today, _txc) {
+    async terminateSubscriptions(today, subsToTerminate, _txc) {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
 
             if(!_txc) await dbc.connect();
 
-            await dbc.query('UPDATE subscriptions SET date_terminated=$1 WHERE date_expired=$1 AND auto_renew=false', [today]);
+            const query = (`UPDATE subscriptions SET date_terminated='${[today]}', date_next_payment=NULL WHERE date_expired='${[today]}' AND auto_renew=false;
+                            UPDATE subscriptions SET date_terminated='${[today]}', date_next_payment=NULL WHERE id IN (${subsToTerminate.toString()});`);
+            await dbc.query(query);
 
         } catch (ex) {
             uhx.log.error(`Could not pull subscriptions to terminate: ${ex}`);
