@@ -39,7 +39,8 @@ module.exports = class ChatRepository {
   constructor(connectionString) {
     this._connectionString = connectionString;
     this.createChatRoom = this.createChatRoom.bind(this);
-    this.getChatRooms = this.getChatRooms.bind(this);
+    this.getChatRoomsPatients = this.getChatRoomsPatients.bind(this);
+    this.getChatRoomsProviders = this.getChatRoomsProviders.bind(this);
     this.createChatMessage = this.createChatMessage.bind(this);
     this.getChatMessages = this.getChatMessages.bind(this);
   }
@@ -66,10 +67,10 @@ module.exports = class ChatRepository {
 
   /**
    * @method
-   * @summary gets chatrooms associated with specific user
+   * @summary gets chatrooms associated with specific patient
    * @param {string} userId The user associated with the chat rooms
    */
-  async getChatRooms(userId) {
+  async getChatRoomsPatients(userId) {
     const dbc = new pg.Client(this._connectionString);
     try {
       let userChats = [];
@@ -79,6 +80,35 @@ module.exports = class ChatRepository {
                                             LEFT JOIN providers as p ON CAST(cr.providerid as text) = CAST(p.id as text) 
                                             LEFT JOIN patients as pt ON CAST(cr.patientid as text) = CAST(pt.id as text) 
                                             WHERE cr.patientid = $1`, [userId])
+
+
+      for(var r in userChatsFromDB.rows) {
+        userChats.push(new ChatRoom().fromData(userChatsFromDB.rows[r]));
+      }
+        
+      return userChats;
+    }
+    catch(err){console.log(err)}
+    finally {
+      dbc.end();
+    }
+  }
+
+   /**
+   * @method
+   * @summary gets chatrooms associated with specific provider
+   * @param {string} userId The user associated with the chat rooms
+   */
+  async getChatRoomsProviders(userId) {
+    const dbc = new pg.Client(this._connectionString);
+    try {
+      let userChats = [];
+      await dbc.connect();
+      let userChatsFromDB = await dbc.query(`SELECT cr.id, cr.title, cr.providerid, cr.patientid, p.name, pt.given_name, pt.family_name 
+                                            FROM public.chat_room as cr 
+                                            LEFT JOIN providers as p ON CAST(cr.providerid as text) = CAST(p.id as text) 
+                                            LEFT JOIN patients as pt ON CAST(cr.patientid as text) = CAST(pt.id as text) 
+                                            WHERE cr.providerid = $1`, [userId])
 
 
       for(var r in userChatsFromDB.rows) {

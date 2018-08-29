@@ -36,27 +36,37 @@ module.exports.ChatApiResource = class ChatApiResource {
       permission_group: "user",
       routes: [
         {
-          "path": "chat/:uid",
+          "path": "chat/provider/:uid",
           "get" : {
-              demand: security.PermissionType.LIST,
-              method: this.getChatRooms
-          },
+              demand: security.PermissionType.READ,
+              method: this.getChatRoomsProviders
+          }
+        },
+        {
+          "path": "chat/patient/:uid",
+          "get" : {
+              demand: security.PermissionType.READ,
+              method: this.getChatRoomsPatients
+          }
+        },
+        {
+          "path": "chat/:uid",
           "post" : {
-              demand: security.PermissionType.WRITE,
+              demand: security.PermissionType.READ,
               method: this.createChatRoom
           }
         },
         {
           "path": "chat/:cid/messages",
           "get" : {
-              demand: security.PermissionType.LIST,
+              demand: security.PermissionType.READ,
               method: this.getChatMessages
           }
         },
         {
           "path": "listen/:cid",
           "get" : {
-              demand: security.PermissionType.LIST,
+              demand: security.PermissionType.READ,
               method: this.initChatSocket
           }
         }
@@ -108,15 +118,30 @@ module.exports.ChatApiResource = class ChatApiResource {
 
   /**
    * @method
-   * @summary Get a list of chatrooms that a user is a part of 
+   * @summary Get a list of chatrooms that a provider is a part of 
    * @param {Express.Request} req http req from the client
    * @param {Express.Response} res The HTTP response going to the client
    */
-  async getChatRooms(req, res) {
+  async getChatRoomsProviders(req, res) {
+    console.log(req.params.uid);
+    if(!req.params.uid)
+        throw new exception.Exception("Missing chat user id parameter", exception.ErrorCodes.MISSING_PROPERTY);
+        
+    res.status(200).json(await uhx.Repositories.chatRepository.getChatRoomsProviders(req.params.uid));
+    return true;
+  }
+
+    /**
+   * @method
+   * @summary Get a list of chatrooms that a patient is a part of 
+   * @param {Express.Request} req http req from the client
+   * @param {Express.Response} res The HTTP response going to the client
+   */
+  async getChatRoomsPatients(req, res) {
     if(!req.params.uid)
         throw new exception.Exception("Missing chat user id parameter", exception.ErrorCodes.MISSING_PROPERTY);
 
-    res.status(200).json(await uhx.Repositories.chatRepository.getChatRooms(req.params.uid));
+    res.status(200).json(await uhx.Repositories.chatRepository.getChatRoomsPatients(req.params.uid));
     return true;
   }
 
