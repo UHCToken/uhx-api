@@ -1,3 +1,4 @@
+
 /// <Reference path="../model/model.js"/>
 'use strict';
 
@@ -23,7 +24,7 @@ const pg = require('pg'),
     security = require('../security'),
     model = require('../model/model'),
     CarePlan = require('../model/CarePlan'),
-    Offer = require('../model/Offer');
+    CareService = require('../model/CareService');
 
 /**
  * @class
@@ -145,19 +146,45 @@ module.exports = class CarePlanRepository {
 
             // Get by ID
             if(status && status != "*"){
-                //"SELECT care_plans.*, providers.name FROM care_plans, providers WHERE care_relationship_id IN (SELECT id FROM care_relationships WHERE provider_id = '$1' AND provider_id = providers.id) AND status=$2"
-                var rdr = await dbc.query("SELECT * FROM care_plans WHERE care_relationship_id IN (SELECT id FROM care_relationships WHERE provider_id = $1) AND status=$2", [providerId, status]);
+                var query =
+                'SELECT *\
+                FROM(\
+                  SELECT cp.id, cp.total, cp.care_relationship_id, cp.status, cp.creation_time,\
+                  (SELECT json_agg(cs)\
+                  FROM (\
+                    SELECT * FROM care_services WHERE care_plan_id = cp.id\
+                  ) cs\
+                 ) AS care_services\
+                FROM care_plans as cp) care_plans WHERE care_plans.care_relationship_id IN (SELECT id FROM care_relationships WHERE provider_id = $1)';
+                var rdr = await dbc.query(query, [providerId, status]);
             }
             else{
-                var rdr = await dbc.query("SELECT * FROM care_plans WHERE care_relationship_id IN (SELECT id FROM care_relationships WHERE provider_id = $1)", [providerId]);
+                var query = 
+                'SELECT *\
+                FROM(\
+                  SELECT cp.id, cp.total, cp.care_relationship_id, cp.status, cp.creation_time,\
+                  (SELECT json_agg(cs)\
+                  FROM (\
+                    SELECT * FROM care_services WHERE care_plan_id = cp.id\
+                  ) cs\
+                 ) AS care_services\
+                FROM care_plans as cp) care_plans WHERE care_plans.care_relationship_id IN (SELECT id FROM care_relationships WHERE provider_id = $1)';
+                var rdr = await dbc.query(query, [providerId]);
             }
             if (rdr.rows.length == 0)
-                throw new exception.NotFoundException("care_plans", providerId);
-            else{
-                var retVal = [];
-                rdr.rows.forEach(o=>retVal.push(new CarePlan().fromData(o)));
-                return retVal;
-            }
+                return [];
+                else{
+                    var retVal = [];
+                    for(var i = 0; i<rdr.rows.length; i++){
+                        var carePlan = new CarePlan().fromData(rdr.rows[i]);
+                        carePlan.careServices = [];
+                        for(var j = 0; j<rdr.rows[i].care_services.length; j++){
+                            carePlan.careServices.push(new CareService().fromData(rdr.rows[i].care_services[j]));
+                        }
+                        retVal.push(carePlan);
+                    }
+                    return retVal;
+                }
         }
         finally {
             if (!_txc) dbc.end();
@@ -178,17 +205,43 @@ module.exports = class CarePlanRepository {
 
             // Get by ID
             if(status && status != "*"){
+                var query =
+                'SELECT *\
+                FROM(\
+                  SELECT cp.id, cp.total, cp.care_relationship_id, cp.status, cp.creation_time,\
+                  (SELECT json_agg(cs)\
+                  FROM (\
+                    SELECT * FROM care_services WHERE care_plan_id = cp.id\
+                  ) cs\
+                 ) AS care_services\
+                FROM care_plans as cp) care_plans WHERE care_plans.care_relationship_id IN (SELECT id FROM care_relationships WHERE patient_id = $1)';
                 var rdr = await dbc.query("SELECT * FROM care_plans WHERE care_relationship_id IN (SELECT id FROM care_relationships WHERE patient_id = $1) AND status=$2", [patientId, status]);
             }
             else{
-                var rdr = await dbc.query("SELECT * FROM care_plans WHERE care_relationship_id IN (SELECT id FROM care_relationships WHERE patient_id = $1)", [patientId]);
+                var query = 
+                'SELECT *\
+                FROM(\
+                  SELECT cp.id, cp.total, cp.care_relationship_id, cp.status, cp.creation_time,\
+                  (SELECT json_agg(cs)\
+                  FROM (\
+                    SELECT * FROM care_services WHERE care_plan_id = cp.id\
+                  ) cs\
+                 ) AS care_services\
+                FROM care_plans as cp) care_plans WHERE care_plans.care_relationship_id IN (SELECT id FROM care_relationships WHERE patient_id = $1)';
+                var rdr = await dbc.query(query, [patientId]);
             }
             if (rdr.rows.length == 0)
-                throw new exception.NotFoundException("care_plans", patientId);
+                return [];
             else{
                 var retVal = [];
-                rdr.rows.forEach(o=>retVal.push(new CarePlan().fromData(o)));
-                
+                for(var i = 0; i<rdr.rows.length; i++){
+                    var carePlan = new CarePlan().fromData(rdr.rows[i]);
+                    carePlan.careServices = [];
+                    for(var j = 0; j<rdr.rows[i].care_services.length; j++){
+                        carePlan.careServices.push(new CareService().fromData(rdr.rows[i].care_services[j]));
+                    }
+                    retVal.push(carePlan);
+                }
                 return retVal;
             }
         }

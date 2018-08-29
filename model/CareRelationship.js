@@ -76,6 +76,14 @@
         this.completionTime = dbCareRelationship.completion_time;
         this.patientId = dbCareRelationship.patient_id;
         this.providerId = dbCareRelationship.provider_id;
+        this.providerName = dbCareRelationship.name;
+        this.patientFamilyName = dbCareRelationship.family_name;
+        this.patientGivenName = dbCareRelationship.given_name;
+        this.addressId = dbCareRelationship.address_id;
+        this.addressName = dbCareRelationship.address_name;
+        this.note = dbCareRelationship.note;
+        this.serviceTypeId = dbCareRelationship.service_type_id;
+        this.serviceTypeName = dbCareRelationship.type_name;
         return this;
     }
 
@@ -94,10 +102,13 @@
             completion_time: this.completionTime,
             patient_id: this.patientId,
             asset_id: this.assetId,
-            provider_id: this.providerId
+            provider_id: this.providerId,
+            service_type_id: this.serviceTypeId,
+            note: this.note,
+            address_id: this.addressId,
+            name: this.name
         };
     }
-
     /**
      * @method
      * @summary Represent this object in JSON
