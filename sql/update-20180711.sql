@@ -10,10 +10,15 @@ CREATE TABLE IF NOT EXISTS care_relationships (
     provider_id UUID NOT NULL,
     updated_time TIMESTAMPTZ, 
     updated_by UUID,
+    service_type_id UUID NOT NULL,
+    note varchar(2048),
+    address_id UUID NOT NULL,
     CONSTRAINT pk_care_relationship PRIMARY KEY (id),
+    CONSTRAINT fk_address FOREIGN KEY (address_id) REFERENCES provider_addresses(id),
     CONSTRAINT fk_patient FOREIGN KEY (patient_id) REFERENCES patients(id),
     CONSTRAINT fk_updated_by FOREIGN KEY (updated_by) REFERENCES users(id),
     CONSTRAINT fk_provider FOREIGN KEY (provider_id) REFERENCES providers(id),
+    CONSTRAINT fk_service_type FOREIGN KEY (service_type_id) REFERENCES service_types(id),
     CONSTRAINT fk_invoice_created_by FOREIGN KEY (created_by) REFERENCES users(id)
 );
 

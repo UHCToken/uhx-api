@@ -1,11 +1,11 @@
 
 
 INSERT INTO users(id, name, password, email)
-    VALUES ('5ffd56be-d2a2-4abc-93e3-056cc679232d', 'PatientSigner', crypt('Mohawk!23', gen_salt('bf')), 'PatientSigner');
+    VALUES ('5ffd56be-d2a2-4abc-93e3-056cc679232d', 'PatientSigner', crypt('temp', gen_salt('bf')), 'PatientSigner');
     INSERT INTO users(id, name, password, email)
-    VALUES ('891ab26a-3c2c-4c41-bcb5-0612f1cff939', 'ProviderSigner', crypt('Mohawk!23', gen_salt('bf')), 'ProviderSigner');
+    VALUES ('891ab26a-3c2c-4c41-bcb5-0612f1cff939', 'ProviderSigner', crypt('temp', gen_salt('bf')), 'ProviderSigner');
     INSERT INTO users(id, name, password, email)
-    VALUES ('610be8a6-dcf2-4e0f-8e83-7f340f6792ca', 'Escrow', crypt('Mohawk!23', gen_salt('bf')), 'Escrow');
+    VALUES ('610be8a6-dcf2-4e0f-8e83-7f340f6792ca', 'Escrow', crypt('temp', gen_salt('bf')), 'Escrow');
 
 
 
