@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS care_relationships (
     updated_by UUID,
     service_type_id UUID NOT NULL,
     note varchar(2048),
+    provider_note varchar(2048),
     address_id UUID NOT NULL,
     CONSTRAINT pk_care_relationship PRIMARY KEY (id),
     CONSTRAINT fk_address FOREIGN KEY (address_id) REFERENCES provider_addresses(id),

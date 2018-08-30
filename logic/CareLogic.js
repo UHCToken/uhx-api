@@ -133,7 +133,7 @@ module.exports = class CareLogic {
             var provider = await uhx.Repositories.providerRepository.get(principal.session.userId);
             if(careRelationship.status == STATUS_NEW && provider && provider.id == careRelationship.providerId){
                 careRelationship.status = STATUS_DECLINED;
-                
+                careRelationship.providerNote = careRelationshipBody.providerNote;
                 careRelationship = await uhx.Repositories.careRelationshipRepository.update(careRelationship, principal);
 
                 return careRelationship;
@@ -243,15 +243,16 @@ module.exports = class CareLogic {
      * @param {SecurityPrincipal} principal The principal which is declining the care plan
      * @returns {CarePlan} The updated care plan
      */
-    async declineCarePlan(carePlan, principal) {
+    async declineCarePlan(carePlanId, principal) {
 
         try {
-            var careRelationship = await uhx.Repositories.careRelationshipRepository.get(carePlanBody.careRelationshipId);
-            var patient = uhx.Repositories.patientRepository.get(principal.session.userId);
+            var carePlan = await uhx.Repositories.carePlanRepository.get(carePlanId);
+            var careRelationship = await uhx.Repositories.careRelationshipRepository.get(carePlan.careRelationshipId);
+            var patient = await uhx.Repositories.patientRepository.get(principal.session.userId);
             if(patient && patient.id == careRelationship.patientId){
-                var updatedCarePlan = await uhx.Repositories.carePlanRepository.get(carePlan.id)
-                updatedCarePlan.status = STATUS_DECLINED;
-                updatedCarePlan = await uhx.Repositories.carePlanRepository.update(updatedCarePlan, principal)
+                carePlan.status = STATUS_DECLINED;
+                carePlan = await uhx.Repositories.carePlanRepository.update(carePlan, principal)
+                return(carePlan)
             }
         }
         catch (e) {
