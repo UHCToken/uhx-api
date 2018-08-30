@@ -87,12 +87,9 @@ module.exports.ChatApiResource = class ChatApiResource {
    * @param {Express.Response} res The HTTP response going to the client
    */
   initChatSocket(req, res) {
-    if(uhx.Config.api.scheme == "http") {
-      io = require('socket.io')(http) 
-    }
-    else {
-      io = require('socket.io')(https);
-    }
+    const server = req.connection.server
+    io = require('socket.io')(server) 
+
     const chatId = req.params.cid;
 
     io.listen(8660);
@@ -112,12 +109,11 @@ module.exports.ChatApiResource = class ChatApiResource {
           chat.removeAllListeners();
           chat.server.close();
       })
-
-      socket.io.on('connect_error', function(err) {
-        // handle server error here
-        console.log('Error connecting to server' + err);
-      });
     });
+    // chat.io.on('connect_error', function(err) {
+    //   // handle server error here
+    //   console.log('Error connecting to server' + err);
+    // });
   }
 
   /**
