@@ -49,7 +49,8 @@
     https = require('https'),
     helmet = require('helmet'),
     http = require('http'),
-    skipper = require("skipper");
+    skipper = require("skipper"),
+    chat = require('./controllers/chat');
     
     toobusy.maxLag(10000);
 // Startup application
@@ -100,6 +101,7 @@ restApi.addResource(new stellarFederation.StellarFederationApiResource());
 restApi.addResource(new airdrop.AirdropApiResource());
 restApi.addResource(new subscription.SubscriptionApiResource());
 restApi.addResource(new offering.OfferingApiResource());
+restApi.addResource(new chat.ChatApiResource());
 
 uhx.init();
 uhx.initWorker();

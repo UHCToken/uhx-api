@@ -39,7 +39,8 @@ module.exports = class ChatRepository {
   constructor(connectionString) {
     this._connectionString = connectionString;
     this.createChatRoom = this.createChatRoom.bind(this);
-    this.getChatRooms = this.getChatRooms.bind(this);
+    this.getChatRoomsPatients = this.getChatRoomsPatients.bind(this);
+    this.getChatRoomsProviders = this.getChatRoomsProviders.bind(this);
     this.createChatMessage = this.createChatMessage.bind(this);
     this.getChatMessages = this.getChatMessages.bind(this);
   }
@@ -55,8 +56,8 @@ module.exports = class ChatRepository {
 
     try {
       await dbc.connect();
-      await dbc.query('INSERT INTO chat_room (c_id, c_namespace, c_title, c_providerid, c_patientid) VALUES ($1,$2,$3,$4,$5) RETURNING *', 
-                              [chatRoom.id, chatRoom.namespace, chatRoom.title, chatRoom.providerId, chatRoom.patientId]);
+      await dbc.query('INSERT INTO chat_room (title, providerid, patientid) VALUES ($1,$2,$3)', 
+                              [chatRoom.title, chatRoom.providerId, chatRoom.patientId]);
     }
     catch(err){uhx.log.debug(err)}
     finally {
@@ -66,18 +67,54 @@ module.exports = class ChatRepository {
 
   /**
    * @method
-   * @summary gets chatrooms associated with specific user
+   * @summary gets chatrooms associated with specific patient
    * @param {string} userId The user associated with the chat rooms
    */
-  async getChatRooms(userId) {
+  async getChatRoomsPatients(userId) {
     const dbc = new pg.Client(this._connectionString);
     try {
       let userChats = [];
       await dbc.connect();
-      let userChatsFromDB = await dbc.query('SELECT * FROM chat_room WHERE c_patientid = $1', [userId])
-      for(var r in userChatsFromDB.rows)
-        userChats.push(new ChatRoom().fromData(userChatsFromDB.rows[r]));
+      let userChatsFromDB = await dbc.query(`SELECT cr.id, cr.title, cr.providerid, cr.patientid, p.name, pt.given_name, pt.family_name 
+                                            FROM public.chat_room as cr 
+                                            LEFT JOIN providers as p ON CAST(cr.providerid as text) = CAST(p.id as text) 
+                                            LEFT JOIN patients as pt ON CAST(cr.patientid as text) = CAST(pt.id as text) 
+                                            WHERE cr.patientid = $1`, [userId])
 
+
+      for(var r in userChatsFromDB.rows) {
+        userChats.push(new ChatRoom().fromData(userChatsFromDB.rows[r]));
+      }
+        
+      return userChats;
+    }
+    catch(err){console.log(err)}
+    finally {
+      dbc.end();
+    }
+  }
+
+   /**
+   * @method
+   * @summary gets chatrooms associated with specific provider
+   * @param {string} userId The user associated with the chat rooms
+   */
+  async getChatRoomsProviders(userId) {
+    const dbc = new pg.Client(this._connectionString);
+    try {
+      let userChats = [];
+      await dbc.connect();
+      let userChatsFromDB = await dbc.query(`SELECT cr.id, cr.title, cr.providerid, cr.patientid, p.name, pt.given_name, pt.family_name 
+                                            FROM public.chat_room as cr 
+                                            LEFT JOIN providers as p ON CAST(cr.providerid as text) = CAST(p.id as text) 
+                                            LEFT JOIN patients as pt ON CAST(cr.patientid as text) = CAST(pt.id as text) 
+                                            WHERE cr.providerid = $1`, [userId])
+
+
+      for(var r in userChatsFromDB.rows) {
+        userChats.push(new ChatRoom().fromData(userChatsFromDB.rows[r]));
+      }
+        
       return userChats;
     }
     catch(err){console.log(err)}
@@ -97,10 +134,11 @@ module.exports = class ChatRepository {
 
     try {
       await dbc.connect();
-      await dbc.query('INSERT INTO chat_message (cm_id, cm_chatroom_id, cm_author, cm_datesent, cm_viewedstatus, cm_body) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *', 
-                              [chatMessage.id, chatRoomId, chatMessage.author, chatMessage.dateSent, chatMessage.viewedStatus, chatMessage.body]);
+      await dbc.query(`INSERT INTO chat_message (chatroom_id, authorid, datesent, viewedstatus, body, authorname) 
+                        VALUES ($1,$2,$3,$4,$5,$6)`, 
+                              [chatRoomId, chatMessage.authorId, chatMessage.dateSent, chatMessage.viewedStatus, chatMessage.body, chatMessage.authorName]);
     }
-    catch (err) {console.log(error)}
+    catch (err) {console.log(`There was an insert error..... ${error}`)}
     finally {
       dbc.end();
     }
@@ -116,10 +154,11 @@ module.exports = class ChatRepository {
     try {
       let chatRoomMessages = [];
       await dbc.connect();
-      let messagesFromDB = await dbc.query('SELECT * FROM chat_message WHERE cm_chatroom_id = $1', [chatRoomId])
+      let messagesFromDB = await dbc.query(`SELECT * FROM chat_message WHERE chatroom_id = $1`, [chatRoomId])
 
-      for(var r in messagesFromDB.rows)
-      chatRoomMessages.push(new ChatRoom().fromData(messagesFromDB.rows[r]));
+      for(var r in messagesFromDB.rows) {
+        chatRoomMessages.push(new ChatMessage().fromData(messagesFromDB.rows[r]));
+      }
 
       return chatRoomMessages;
     }

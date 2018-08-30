@@ -35,9 +35,15 @@ const ModelBase = require('./ModelBase');
  *      providerId:
  *        type: string
  *        description: userId of provider
+*      providerName:
+ *        type: string
+ *        description: Provider Name 
  *      patientId:
  *        type: string
  *        description: userId of patient
+ *      patientName:
+ *        type: string
+ *        description: Patient Name
  */
 module.exports = class ChatRoom extends ModelBase {
   
@@ -58,8 +64,10 @@ module.exports = class ChatRoom extends ModelBase {
   fromData(dbMessage) {
     this.id = dbMessage.id;
     this.title = dbMessage.title;
-    this.providerId = dbMessage.providerId;
-    this.patientId = dbMessage.patientId;
+    this.providerid = dbMessage.providerid;
+    this.providerName = dbMessage.name;
+    this.patientid = dbMessage.patientid;
+    this.patientName = `${dbMessage.given_name} ${dbMessage.family_name}`;
     return this;
   }
 
@@ -71,8 +79,10 @@ module.exports = class ChatRoom extends ModelBase {
     return {
       id: this.id,
       title: this.title,
-      providerId: this.providerId,
-      patientId: this.patientId
+      providerid: this.providerid,
+      providerName: this.providerName,
+      patientid: this.patientid,
+      patientName: this.patientName
     }
   }
 }
