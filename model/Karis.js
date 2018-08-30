@@ -126,7 +126,7 @@ module.exports = class Karis extends ModelBase {
      * @summary Converts this object into a data model
      */
     fromData(patient, subscription) {
-        this.memberNumber = patient.id;
+        this.memberNumber = patient.email;
         this.memberFullName = patient.givenName + " " + patient.familyName;
         this.memberFirstName = patient.givenName;
         this.memberLastName = patient.familyName;

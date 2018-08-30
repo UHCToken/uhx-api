@@ -184,7 +184,7 @@ module.exports = class KarisService {
             value: 'memberAffiliation'
         }];
 
-        const json2csvParser = new Json2csvParser({ fields, quote: "" });
+        const json2csvParser = new Json2csvParser({ fields });
         const csv = json2csvParser.parse(reports);
 
         fs.writeFile(csvFilename, csv, 'utf8', function (err) {
