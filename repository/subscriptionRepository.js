@@ -3,22 +3,23 @@
 
 /**
  * Copyright 2018 Universal Health Coin
- * 
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), 
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
  * to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
  * and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
- * 
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
- * 
+ *
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
-const pg = require('pg'),
+const uhx = require('../uhx'),
+    pg = require('pg'),
     moment = require('moment'),
     exception = require('../exception'),
     model = require('../model/model');
@@ -41,6 +42,9 @@ const pg = require('pg'),
         this.update = this.update.bind(this);
         this.getSubscriptionsForDailyReport = this.getSubscriptionsForDailyReport.bind(this);
         this.getSubscriptionsForMonthlyReport = this.getSubscriptionsForMonthlyReport.bind(this);
+        this.getSubscriptionsToBill = this.getSubscriptionsToBill.bind(this);
+        this.updateBilledSubscriptions = this.updateBilledSubscriptions.bind(this);
+        this.terminateSubscriptions = this.terminateSubscriptions.bind(this);
     }
 
     /**
@@ -61,16 +65,91 @@ const pg = require('pg'),
             if(rdr.rows.length === 0)
                 return [];
             else {
-                const subscriptions = [];
-
-                for (let i = 0; i < rdr.rows.length; i++) {
-                    subscriptions.push(new model.Subscription().fromData(rdr.rows[i]))
-                }
-
-                return subscriptions;
+                return await subscriptionArray(rdr);
             }
         }
         finally {
+            if(!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Retrieve the subset of subscribers that should be billed today
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @return {Subscription} The fetched subscriptions
+     */
+    async getSubscriptionsToBill(_txc) {
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+            // Today's date
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 1);
+
+            // Get subscriptions to bill today
+            const rdr = await dbc.query('SELECT * FROM subscription_lookup WHERE date_next_payment = $1', [today]);
+
+            if(rdr.rows.length === 0) {
+                // No subscriptions to bill
+                return [];
+            }
+            else {
+              return await this.subscriptionArray(rdr);
+            }
+        } catch (er) {
+            uhx.log.error(`Could not pull subscriptions to bill: ${ex}`);
+        } finally {
+            if(!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Update next billing dates of succesfully billed accounts
+     * @param {UUID} patientIds Array of patients that were succesfully billed
+     */
+    async updateBilledSubscriptions(updateValues, insertValues, _txc) {
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+            // Update subscription data
+            dbc.query(
+              `INSERT INTO subscriptions (id, offering_id, patient_id, date_next_payment, date_expired)
+               VALUES ${updateValues}
+               ON CONFLICT (id) DO UPDATE SET date_next_payment = EXCLUDED.date_next_payment;`);
+
+           // Track succesful payments made
+            await dbc.query(
+             `INSERT INTO subscription_payments (subscription_id, offering_id, patient_id, date_paid, price, currency, transaction_result)
+              VALUES ${insertValues}`);
+        } catch(ex) {
+          uhx.log.error(`Could not update billed subscriptions: ${ex}`);
+        }
+        finally {
+          if(!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
+     * @summary Update termination date of all subscriptions expiring today
+     * @param {[UUID]} ids Subscription ids that should be terminated
+     * @param {String} todaysDate Todays date, for termination date value 
+     */
+    async terminateSubscriptions(today, subsToTerminate, _txc) {
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+
+            if(!_txc) await dbc.connect();
+
+            const query = (`UPDATE subscriptions SET date_terminated='${[today]}', date_next_payment=NULL WHERE date_expired='${[today]}' AND auto_renew=false;
+                            UPDATE subscriptions SET date_terminated='${[today]}', date_next_payment=NULL WHERE id IN (${subsToTerminate.toString()});`);
+            await dbc.query(query);
+
+        } catch (ex) {
+            uhx.log.error(`Could not pull subscriptions to terminate: ${ex}`);
+        } finally {
             if(!_txc) dbc.end();
         }
     }
@@ -89,7 +168,7 @@ const pg = require('pg'),
 
         try {
             if(!_txc) await dbc.connect();
-            const today = new Date();
+            const today = moment();
             const offering = await dbc.query("SELECT * FROM offerings WHERE id = $1", [offeringId]);
             const nextPaymentDate = moment().add(offering.rows[0].period_in_months, 'months');
 
@@ -98,7 +177,9 @@ const pg = require('pg'),
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', patientId);
             else {
-                return new model.Subscription().fromData(rdr.rows[0]);
+                const subscriptionRdr = await dbc.query("SELECT * FROM subscription_lookup WHERE subscription_id = $1", [rdr.rows[0].id]);
+
+                return new model.Subscription().fromData(subscriptionRdr.rows[0]);
             }
         }
         finally {
@@ -145,10 +226,13 @@ const pg = require('pg'),
 
             const today = new Date();
             const rdr = await dbc.query("UPDATE subscriptions SET date_next_payment = null, date_terminated = $1 WHERE id = $2 RETURNING *", [today, subscriptionId]);
+
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', patientId);
             else {
-                return new model.Subscription().fromData(rdr.rows[0]);
+                const subscriptionRdr = await dbc.query("SELECT * FROM subscription_lookup WHERE subscription_id = $1", [rdr.rows[0].id]);
+
+                return new model.Subscription().fromData(subscriptionRdr.rows[0]);
             }
         }
         finally {
@@ -173,13 +257,7 @@ const pg = require('pg'),
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', 'No Subscriptions found.');
             else {
-                const subscriptions = [];
-
-                for (let i = 0; i < rdr.rows.length; i++) {
-                    subscriptions.push(new model.Subscription().fromData(rdr.rows[i]))
-                }
-
-                return subscriptions;
+                return await subscriptionArray(rdr);
             }
         }
         finally {
@@ -201,17 +279,27 @@ const pg = require('pg'),
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', 'No Subscriptions found.');
             else {
-                const subscriptions = [];
-
-                for (let i = 0; i < rdr.rows.length; i++) {
-                    subscriptions.push(new model.Subscription().fromData(rdr.rows[i]))
-                }
-
-                return subscriptions;
+                return await subscriptionArray(rdr);
             }
         }
         finally {
             if(!_txc) dbc.end();
         }
+    }
+
+    /**
+     * @method
+     * @summary Pushes subscription response from database into an array
+     * @param {DB Response} rdr Object holding the returned subscriptions
+     * @returns {Subscription} array of subscriptions
+     */
+    async subscriptionArray(rdr) {
+      const subscriptions = [];
+
+      for (let i = 0; i < rdr.rows.length; i++) {
+          subscriptions.push(new model.Subscription().fromData(rdr.rows[i]))
+      }
+
+      return subscriptions;
     }
  }
