@@ -19,6 +19,7 @@
 
 const ModelBase = require('./ModelBase'),
     config = require ('../config'),
+    moment = require('moment'),
     uhx = require('../uhx');
 
 /**
@@ -138,9 +139,9 @@ module.exports = class Karis extends ModelBase {
         this.faxNumber = patient.fax;
         this.email = patient.email;
         this.gender = patient.gender;
-        this.effectiveDate = subscription.dateSubscribed;
-        this.terminationDate = subscription.dateTerminated;
-        this.dob = patient.dob;
+        this.effectiveDate = moment(new Date(subscription.dateSubscribed)).format('MM-DD-YYYY');
+        this.terminationDate = subscription.dateTerminated === null ? null : moment(new Date(subscription.dateTerminated)).format('MM-DD-YYYY');
+        this.dob = moment(patient.dob).format('MM-DD-YYYY');
         this.clientCode = config.karis.clientCode;
         this.groupCode = config.karis.groupCode;
         this.planCode = config.karis.planCode;
