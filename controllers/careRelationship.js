@@ -90,39 +90,34 @@ class CareRelationshipApiResource {
 
     /**
      * @method
-     * @summary Posts a new transaction to the wallet
+     * @summary Creates a new care relationship
      * @param {Express.Request} req The request from the client
      * @param {Express.Response} res The response to send back to the client
      * @swagger
-     * /user/{userid}/wallet:
-     *  put:
+     * /careRelationship:
+     *  post:
      *      tags:
-     *      - "wallet"
-     *      summary: "Activates a new blockchain account for the specified user"
-     *      description: "This method will activate the user's wallet enabling the balances to appear"
+     *      - "careRelationship"
+     *      summary: "Creates a new care relationship between a patient and provider"
+     *      description: "This method create a care relationship between patient and provider"
      *      consumes: 
      *      - "application/json"
      *      produces:
      *      - "application/json"
      *      parameters:
-     *      - in: "path"
-     *        name: "userid"
-     *        description: "The identity of the user to activate an account for"
-     *        required: true
-     *        type: string
      *      - in: "body"
      *        name: "body"
-     *        description: "The wallet to be created (note: Address is generated automatically, only balances is used to establish an initial balance if this service permits)"
+     *        description: "The care relationship to be created"
      *        required: true
      *        schema:
-     *          $ref: "#/definitions/Wallet"
+     *          $ref: "#/definitions/CareRelationship"
      *      responses:
      *          201: 
      *             description: "The requested resource was created successfully"
      *             schema: 
-     *                  $ref: "#/definitions/Wallet"
+     *                  $ref: "#/definitions/CareRelationship"
      *          422:
-     *              description: "The user object sent by the client was rejected"
+     *              description: "The care relationship object sent by the client was rejected"
      *              schema: 
      *                  $ref: "#/definitions/Exception"
      *          500:
@@ -131,7 +126,7 @@ class CareRelationshipApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "write:wallet"
+     *          - "write:careRelationship"
      */
     async post(req, res) {
         var careRelationship = await uhx.CareLogic.createCareRelationship(req.body, req.principal);
@@ -141,31 +136,31 @@ class CareRelationshipApiResource {
 
     /**
      * @method
-     * @summary Deactivates a wallet
+     * @summary Deletes a care relationship
      * @param {Express.Request} req The HTTP request from the client
      * @param {Express.Response} res The HTTP response to the client
     * @swagger
-     * /user/{userid}/wallet:
+     * /careRelationship:
      *  delete:
      *      tags:
-     *      - "wallet"
-     *      summary: "Deactivates the specified user wallet"
-     *      description: "This method will set the deactivation time of the user's wallet"
+     *      - "careRelationship"
+     *      summary: "Deletes a care relationship"
+     *      description: "This method will delete a care relationship"
      *      produces:
      *      - "application/json"
      *      parameters:
-     *      - in: "path"
-     *        name: "userid"
-     *        description: "The identity of the user to deactivate a wallet for"
+     *      - in: "body"
+     *        name: "careRelationship"
+     *        description: "The care relation that is to be deleted"
      *        required: true
-     *        type: string
+     *        type: #/definitions/CareRelationship
      *      responses:
      *          201: 
-     *             description: "The deactivation was successful"
+     *             description: "The deletion was successful"
      *             schema: 
-     *                  $ref: "#/definitions/Wallet"
+     *                  $ref: "#/definitions/CareRelationship"
      *          404: 
-     *             description: "The user has not bought any UhX yet and does not have an active wallet"
+     *             description: "That care relationship does not exist"
      *             schema: 
      *                  $ref: "#/definitions/Exception"
      *          500:
@@ -174,7 +169,7 @@ class CareRelationshipApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "write:wallet"
+     *          - "write:careRelationship"
      */
     async delete(req, res) {
         var retVal = [];
@@ -184,7 +179,7 @@ class CareRelationshipApiResource {
     }
 
     /**
-     * @summary Gets the specified wallet
+     * @summary Gets the specified care relationship
      * @method
      * @param {Express.Request} req The HTTP request from the client
      * @param {Express.Response} res The HTTP response to the client
@@ -197,7 +192,7 @@ class CareRelationshipApiResource {
     }
 
         /**
-     * @summary Gets the specified wallet
+     * @summary Accept the care relationshups as a provider
      * @method
      * @param {Express.Request} req The HTTP request from the client
      * @param {Express.Response} res The HTTP response to the client
@@ -211,7 +206,7 @@ class CareRelationshipApiResource {
 
     
         /**
-     * @summary Gets the specified wallet
+     * @summary Declines the specified care relationship
      * @method
      * @param {Express.Request} req The HTTP request from the client
      * @param {Express.Response} res The HTTP response to the client
@@ -225,7 +220,7 @@ class CareRelationshipApiResource {
 
 
         /**
-     * @summary Gets the specified wallet
+     * @summary Gets all care relationships associated with either the provider or patient
      * @method
      * @param {Express.Request} req The HTTP request from the client
      * @param {Express.Response} res The HTTP response to the client
