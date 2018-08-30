@@ -112,6 +112,11 @@ module.exports.ChatApiResource = class ChatApiResource {
           chat.removeAllListeners();
           chat.server.close();
       })
+
+      socket.io.on('connect_error', function(err) {
+        // handle server error here
+        console.log('Error connecting to server' + err);
+      });
     });
   }
 
