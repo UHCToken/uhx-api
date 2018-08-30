@@ -35,9 +35,6 @@ const ModelBase = require('./ModelBase');
  *      author:
  *        type: string
  *        description: author of the message
-*      author:
- *        type: string
- *        description: name of author
  *      dateSent:
  *        type: Date
  *        description: Date/Time for when message was sent

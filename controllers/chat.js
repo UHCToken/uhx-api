@@ -50,9 +50,9 @@ module.exports.ChatApiResource = class ChatApiResource {
           }
         },
         {
-          "path": "chat/:uid",
+          "path": "chat",
           "post" : {
-              demand: security.PermissionType.READ,
+              demand: security.PermissionType.LIST,
               method: this.createChatRoom
           }
         },
@@ -146,10 +146,7 @@ module.exports.ChatApiResource = class ChatApiResource {
     if(!req.body)
       throw new exception.Exception("Missing body", exception.ErrorCodes.MISSING_PAYLOAD);
 
-    let chatRoom = new ChatRoom().copy(req.body.chatRoom)
-    //Create unique chatroom ID
-    chatroom.id = `${new Date(MM/DD/YYYY)}${chatroom.providerId}${chatRoom.patientId}`
-    res.status(201).json(uhx.Repositories.chatRepository.createChatRoom(chatRoom));
+    res.status(201).json(uhx.Repositories.chatRepository.createChatRoom(req.body.chatRoom));
     return true;
   }
 
