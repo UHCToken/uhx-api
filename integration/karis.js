@@ -17,17 +17,11 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
-const request = require("request"),
-    exception = require("../exception"),
-    security = require('../security'),
-    schedule = require('node-schedule'),
-    subscriptionRepository = require('../repository/subscriptionRepository'),
-    userRepository = require('../repository/userRepository'),
+const schedule = require('node-schedule'),
     uhx = require("../uhx"),
     model = require('../model/model'),
     config = require('../config'),
     fs = require('fs'),
-    Json2csvTransform = require('json2csv').Transform,
     Client = require('ssh2-sftp-client'),
     sftp = new Client(),
     Json2csvParser = require('json2csv').Parser;
@@ -74,9 +68,8 @@ module.exports = class KarisService {
                 }
 
                 const now = new Date();
-                const clientCode = config.karis.clientCode;
                 const fileDateDisplay = (now.getMonth() + 1).pad() + now.getDate().pad() + now.getFullYear();
-                const filename = "reports\\karis\\daily\\" + clientCode + "_" + fileDateDisplay;
+                const filename = "reports\\karis\\daily\\" + config.karis.clientCode + "_" + fileDateDisplay;
 
                 this.sendKarisReport(reports, filename);
             }

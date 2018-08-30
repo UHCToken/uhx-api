@@ -19,8 +19,7 @@
 
 const ModelBase = require('./ModelBase'),
     config = require ('../config'),
-    moment = require('moment'),
-    uhx = require('../uhx');
+    moment = require('moment');
 
 /**
  * @class Karis
