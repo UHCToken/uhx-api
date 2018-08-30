@@ -213,11 +213,16 @@ module.exports = class CareLogic {
                     throw new exception.Exception("Not enough assets to fulfill this funding", exception.ErrorCodes.INSUFFICIENT_FUNDS);
                 }
                 var transactions = await uhx.TokenLogic.createTransaction([transaction], principal);
-                var carePlan = await uhx.Repositories.carePlanRepository.get(carePlan.id)
+                if(transactions.state != model.TransactionStatus.Failed){
+                    var carePlan = await uhx.Repositories.carePlanRepository.get(carePlan.id)
                 
-                carePlan.status = STATUS_FUNDED;
-                carePlan = await uhx.Repositories.carePlanRepository.update(carePlan, principal)
-                return(carePlan);
+                    carePlan.status = STATUS_FUNDED;
+                    carePlan = await uhx.Repositories.carePlanRepository.update(carePlan, principal)
+                    return(carePlan);
+                }
+                else{
+                    throw new exception.Exception("Stellar network failure", exception.ErrorCodes.ERROR);
+                }
             }
         }
         catch (e) {

@@ -166,7 +166,7 @@ module.exports = class ProviderAddressRepository {
             if (!filter || !filter.lat || !filter.lon)
                 throw new exception.Exception("Missing latitude/longitude", exception.ErrorCodes.ARGUMENT_EXCEPTION);
             var sqlQuery = `
-                SELECT *
+                SELECT addresses.*
                 FROM (
                     SELECT *, 
                         (3959 * ACOS(COS(RADIANS($1)) * COS(RADIANS(provider_addresses.latitude)) 

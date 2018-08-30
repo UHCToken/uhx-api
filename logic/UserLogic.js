@@ -373,7 +373,7 @@ module.exports = class UserLogic {
             throw new exception.Exception("Address not found", exception.ErrorCodes.NOT_FOUND);
 
         var services = await uhx.Repositories.providerServiceRepository.getAllForAddress(addressId);
-        for (var s in services) {
+        for (var s = services.length - 1; s > -1; s--) {
             if (await uhx.Repositories.providerServiceRepository.serviceTypeExists(services[s].id, services[s].addressId))
                 await services[s].loadServiceTypeDetails();
             else
