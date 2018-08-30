@@ -61,6 +61,10 @@ module.exports.ChatApiResource = class ChatApiResource {
           "get" : {
               demand: security.PermissionType.READ,
               method: this.getChatMessages
+          },
+          "post": {
+            demand: security.PermissionType.READ,
+            method: this.createChatMessage
           }
         },
         {
@@ -84,28 +88,16 @@ module.exports.ChatApiResource = class ChatApiResource {
   initChatSocket(req, res) {
     const chatId = req.params.cid;
 
-    io.listen(8080);  //TODO: Configure Port
+    io.listen(8660);
     let chat = io.of(chatId);  //Create unique chatroom namespace from chatID
 
-    // Web sockets listening...
-    // io.listen(uhx.Config.api.port + 1);  //TODO: Configure Port
-
     chat.on('connection', (socket) => {
-      console.log('-------------------connected and stuff--------------------');
+      console.log('-------------------Listening--------------------');
 
       socket.on('SEND_MESSAGE', async function(data){
-        const chatMessage = data.message;
-        const chatRoomId = data.message.chatRoomId;
-        try {
-          await uhx.Repositories.chatRepository.createChatMessage(chatRoomId, chatMessage);
-        }
-        catch (e) {
-          throw new exception.Exception(`Error: ${e}`, exception.ErrorCodes.UNKNOWN);
-        }
-
+        console.log(`sending`)
         //Emit to chat
-        socket.emit('RECEIVE_MESSAGE', {message: chatMessage});
-
+        socket.emit('RECEIVE_MESSAGE', {message: 'Send'});
       })
 
       socket.on('disconnect', () => {
@@ -123,7 +115,6 @@ module.exports.ChatApiResource = class ChatApiResource {
    * @param {Express.Response} res The HTTP response going to the client
    */
   async getChatRoomsProviders(req, res) {
-    console.log(req.params.uid);
     if(!req.params.uid)
         throw new exception.Exception("Missing chat user id parameter", exception.ErrorCodes.MISSING_PROPERTY);
         
@@ -178,6 +169,29 @@ module.exports.ChatApiResource = class ChatApiResource {
     }
     catch (e) {
       throw new exception.Exception('There is an error.... ', exception.ErrorCodes.UNKNOWN);
+    }
+  }
+
+  /**
+   * @method
+   * @summary Creates a new chat message
+   * @param {Express.Request} req http req from the client
+   * @param {Express.Response} res The HTTP response going to the client
+   */
+  async createChatMessage(req, res) {
+    if(!req.body)
+      throw new exception.Exception("Missing body", exception.ErrorCodes.MISSING_PAYLOAD);
+
+    let chatRoomId = req.body.chatRoomId;
+    let chatMessage = req.body
+    console.log(chatRoomId);
+    console.log(chatMessage);
+    try {
+      res.status(201).json(uhx.Repositories.chatRepository.createChatMessage(chatRoomId, chatMessage));
+      return true;
+    }
+    catch (e) {
+      throw new exception.Exception(`Error: ${e}`, exception.ErrorCodes.UNKNOWN);
     }
   }
 }
