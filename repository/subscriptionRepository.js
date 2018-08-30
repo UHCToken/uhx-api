@@ -172,13 +172,8 @@ const uhx = require('../uhx'),
             const offering = await dbc.query("SELECT * FROM offerings WHERE id = $1", [offeringId]);
             const nextPaymentDate = moment().add(offering.rows[0].period_in_months, 'months');
 
-<<<<<<< HEAD
-            const rdr = await dbc.query("INSERT INTO subscriptions (offering_id, patient_id, date_subscribed, auto_renew) VALUES ($1, $2, $3, $4) RETURNING *", [offeringId, patientId, today, autoRenew]);
-
-=======
             const rdr = await dbc.query("INSERT INTO subscriptions (offering_id, patient_id, date_next_payment, date_subscribed, auto_renew) VALUES ($1, $2, $3, $4, $5) RETURNING *", [offeringId, patientId, nextPaymentDate, today, autoRenew]);
             
->>>>>>> Subscription
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', patientId);
             else {
