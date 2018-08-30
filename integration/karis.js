@@ -28,6 +28,8 @@ const request = require("request"),
     config = require('../config'),
     fs = require('fs'),
     Json2csvTransform = require('json2csv').Transform,
+    Client = require('ssh2-sftp-client'),
+    sftp = new Client(),
     Json2csvParser = require('json2csv').Parser;
 
 module.exports = class KarisService {
@@ -39,7 +41,7 @@ module.exports = class KarisService {
             return s;
         }
 
-        this.sendDailyLog();
+        // this.sendDailyLog();
 
         // Starts a schedule to send daily logs to Karis every day at 9 pm
         schedule.scheduleJob('* * 19 * *', () => {
@@ -191,7 +193,18 @@ module.exports = class KarisService {
             if (err) {
                 console.log('Some error occured - file either not saved or corrupted file saved.');
             } else{
-                console.log('It\'s saved!');
+                sftp.connect({
+                    host: config.karis.sftpClient.host,
+                    port: config.karis.sftpClient.port,
+                    username: config.karis.sftpClient.userName,
+                    privateKey: require('fs').readFileSync(config.karis.sftpClient.privateKeyLocation)                
+                }).then(() => {
+                    const file = csvFilename.split('\\').slice(-1)[0];
+                    
+                    sftp.put(csvFilename, file);
+                }).catch((err) => {
+                    console.log(err, 'catch error');
+                });
             }
         });
     }

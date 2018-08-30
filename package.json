@@ -36,6 +36,7 @@
     "skipper": "^0.8.5",
     "skipper-s3": "^0.5.11",
     "socket.io": "^2.1.1",
+    "ssh2-sftp-client": "^3.1.0",
     "stellar-sdk": "^0.8.1",
     "stripe": "^5.9.0",
     "swagger-jsdoc": "^1.9.7",
