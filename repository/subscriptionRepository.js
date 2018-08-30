@@ -20,6 +20,7 @@
 
 const uhx = require('../uhx'),
     pg = require('pg'),
+    moment = require('moment'),
     exception = require('../exception'),
     model = require('../model/model');
 
@@ -167,14 +168,23 @@ const uhx = require('../uhx'),
 
         try {
             if(!_txc) await dbc.connect();
-            const today = new Date();
+            const today = moment();
+            const offering = await dbc.query("SELECT * FROM offerings WHERE id = $1", [offeringId]);
+            const nextPaymentDate = moment().add(offering.rows[0].period_in_months, 'months');
 
+<<<<<<< HEAD
             const rdr = await dbc.query("INSERT INTO subscriptions (offering_id, patient_id, date_subscribed, auto_renew) VALUES ($1, $2, $3, $4) RETURNING *", [offeringId, patientId, today, autoRenew]);
 
+=======
+            const rdr = await dbc.query("INSERT INTO subscriptions (offering_id, patient_id, date_next_payment, date_subscribed, auto_renew) VALUES ($1, $2, $3, $4, $5) RETURNING *", [offeringId, patientId, nextPaymentDate, today, autoRenew]);
+            
+>>>>>>> Subscription
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', patientId);
             else {
-                return new model.Subscription().fromData(rdr.rows[0]);
+                const subscriptionRdr = await dbc.query("SELECT * FROM subscription_lookup WHERE subscription_id = $1", [rdr.rows[0].id]);
+
+                return new model.Subscription().fromData(subscriptionRdr.rows[0]);
             }
         }
         finally {
@@ -221,10 +231,13 @@ const uhx = require('../uhx'),
 
             const today = new Date();
             const rdr = await dbc.query("UPDATE subscriptions SET date_next_payment = null, date_terminated = $1 WHERE id = $2 RETURNING *", [today, subscriptionId]);
+
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', patientId);
             else {
-                return new model.Subscription().fromData(rdr.rows[0]);
+                const subscriptionRdr = await dbc.query("SELECT * FROM subscription_lookup WHERE subscription_id = $1", [rdr.rows[0].id]);
+
+                return new model.Subscription().fromData(subscriptionRdr.rows[0]);
             }
         }
         finally {

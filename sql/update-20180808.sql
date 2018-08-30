@@ -1,0 +1,1 @@
+INSERT INTO permission_sets (id, name, description, created_by) VALUES ('587dcd0c-4434-4348-8e23-f22c3992a7b3', 'care', 'Access to the care resource', '3c673456-23b1-4263-9deb-df46770852c9');

@@ -149,10 +149,14 @@ SELECT
 	s.date_subscribed,
 	s.date_terminated,
 	s.auto_renew,
+<<<<<<< HEAD
 	o.period_in_months,
 	og.id AS offering_group_id,
 	o.price,
 	c.code AS currency,
+=======
+	og.id AS offering_group_id,
+>>>>>>> Subscription
 	s.date_expired
 FROM subscriptions s
 LEFT JOIN offerings o ON s.offering_id = o.id

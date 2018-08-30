@@ -28,13 +28,13 @@ const ModelBase = require('./ModelBase'),
  * @property {string} offeringId The offering id of the subscription
  * @property {string} offeringGroupId The offering group id of the subscription
  * @property {Date} dateSubscribed The date the subscription begins
- * @property {Date} dateTerminated The date the subscription will end
+ * @property {Date} dateTerminated The date the subscription was terminated
+ * @property {Date} dateExpired The date the subscription will end
  * @property {Date} dateNextPayment The date of the next billing period
- * @property {number} monthsRemaining The number of months remaining for the given subscription
- * @property {number} periodInMonths The number of months between payments
- * @property {number} price The price paid for the subscription
- * @property {string} currency The currency that the subscription was paid for in
+ * @property {number} periodInMonths The number of months remaining
  * @property {boolean} autoRenew Represents if the billing cycle is auto-renewed
+ * @property {number} price The cost of the subscription for the given offering
+ * @property {string} currency The currency code for the given offering
  * @swagger
  * definitions:
  *  Subscription:
@@ -78,6 +78,15 @@ const ModelBase = require('./ModelBase'),
  *          autoRenew:
  *              type: boolean
  *              description: Represents if the billing cycle is auto-renewed
+ *          periodInMonths:
+ *              type: number
+ *              description: The number of months the subscription is for
+ *          price:
+ *              type: number
+ *              description: The cost of the subscription based on the offering
+ *          currency:
+ *              type: string
+ *              description: The currency code for the given offering
  */
 module.exports = class Subscription extends ModelBase {
 
@@ -105,12 +114,12 @@ module.exports = class Subscription extends ModelBase {
         this.offeringGroupId = dbSubscription.offering_group_id;
         this.dateSubscribed = dbSubscription.date_subscribed !== null ? dbSubscription.date_subscribed.toLocaleString() : null;
         this.dateTerminated = dbSubscription.date_terminated !== null ? dbSubscription.date_terminated.toLocaleString() : null;
-        this.dateNextPayment = dbSubscription.date_next_payment !== null ? dbSubscription.date_next_payment.toLocaleString() : null;
         this.dateExpired = dbSubscription.date_expired !== null ? dbSubscription.date_expired.toLocaleString() : null;
-        this.periodInMonths = dbSubscription.period_in_months !== null ? dbSubscription.period_in_months.toLocaleString() : null;
-        this.price = dbSubscription.price !== null ? dbSubscription.price.toLocaleString() : null;
-        this.currency = dbSubscription.currency !== null ? dbSubscription.currency.toLocaleString() : null;
+        this.dateNextPayment = dbSubscription.date_next_payment !== null ? dbSubscription.date_next_payment.toLocaleString() : null;
+        this.periodInMonths = dbSubscription.period_in_months;
         this.autoRenew = dbSubscription.auto_renew;
+        this.price = dbSubscription.price;
+        this.currency = dbSubscription.currency;
         return this;
     }
 
@@ -127,12 +136,12 @@ module.exports = class Subscription extends ModelBase {
             offering_group_id: this.offeringGroupId,
             date_subscribed: this.dateSubscribed,
             date_terminated: this.dateTerminated,
-            date_next_payment: this.dateNextPayment,
             date_expired: this.dateExpired,
+            date_next_payment: this.dateNextPayment,
             period_in_months: this.periodInMonths,
+            auto_renew: this.autoRenew,
             price: this.price,
-            currency: this.currency,
-            auto_renew: this.autoRenew
+            currency: this.currency
         };
     }
 
@@ -149,12 +158,12 @@ module.exports = class Subscription extends ModelBase {
             offeringGroupId: this.offeringGroupId,
             dateSubscribed: this.dateSubscribed,
             dateTerminated: this.dateTerminated,
+            dateExpired: this.dateExpired,
             dateNextPayment: this.dateNextPayment,
             periodInMonths: this.periodInMonths,
-            dateExpired: this.dateExpired,
+            autoRenew: this.autoRenew,
             price: this.price,
-            curreny: this.currency,
-            autoRenew: this.autoRenew
+            currency: this.currency
         }
     }
 }

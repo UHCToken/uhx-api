@@ -654,6 +654,9 @@ module.exports = class TokenLogic {
                 // Copy the transactions and make them safe
                 transactions = transactions.map(t=>new Transaction(t.id, t.type, t.memo, null, principal.session.userId, t.payee || t.payeeId, t.amount, null, null, model.TransactionStatus.Pending));
             }
+            else if(principal.grant["transaction"] == 15 && model.TransactionType.Purchase){
+                transactions = transactions.map(t=> new Transaction(t.id, t.type, t.memo, t.postingDate, t.payor || t.payorId || principal.session.userId, t.payee || t.payeeId, t.amount, null, null, t.state));
+            }
             else {
                 // Transaction map
                 transactions = transactions.map(t=> new Transaction(t.id, t.type, t.memo, t.postingDate, t.payor || t.payorId, t.payee || t.payeeId, t.amount, null, null, t.state));
@@ -1050,6 +1053,79 @@ module.exports = class TokenLogic {
                 e = e.cause[0];
             throw new exception.Exception("Error retrieving transaction", e.code || exception.ErrorCodes.UNKNOWN, e);
 
+        }
+    }
+
+
+        /**
+     * @method
+     * @summary Gets the specified transaction from the local database or from the block chain 
+     * @param {String} txId The identifier of the transaction to retrieve
+     * @param {SecurityPrincipal} principal The user who is making the request
+     */
+    async createEscrow(escrowInfo, principal) {
+
+        try {
+            var payorWallet = await uhx.Repositories.walletRepository.getByUserAndNetworkId(escrowInfo.payorId, "1");
+            
+            transaction = {
+                "type": "1",
+                "payeeWalletId": "80c9043d-72c9-4dfa-a977-76765c1bb813",
+                "payorWalletId": escrowInfo.payorId,
+                "amount": {
+                    "value": "5",
+                    "code": "RECOIN",
+                },
+                "state": "1",
+                "memo": "Escrow",
+                "network": "1"
+            }
+            var transaction = new Transaction().copy(transaction)
+    
+            await uhx.TokenLogic.fundEscrow(transaction ,principal)
+
+            var result = await uhx.StellarClient.createEscrow(payeeWallet, payorWallet, escrowInfo.amount);
+
+        }
+        catch(e) {
+            uhx.log.error(`Error retrieving transaction: ${e.message}`);
+            while(e.code == exception.ErrorCodes.DATA_ERROR && e.cause) 
+                e = e.cause[0];
+            throw new exception.Exception("Error retrieving transaction", e.code || exception.ErrorCodes.UNKNOWN, e);
+
+        }
+    }
+
+        /**
+     * @method
+     * @summary Creates a transaction
+     * @param {Array} transactions The transactions that are being inserted or executed
+     * @param {SecurityPrincipal} principal The user that is creating the transaction
+     * @returns {Array} The created to planned transactions
+     */
+    async fundEscrow(transaction, principal) {
+
+        try {
+           
+            return await uhx.Repositories.transaction(async (_txc) => {
+
+                    await transaction.loadPayorWallet();
+                    await transaction.loadPayeeWallet();
+                    
+                    transaction = await uhx.Repositories.transactionRepository.insert(transaction, principal, _txc);
+
+                    await uhx.StellarClient.execute(transaction);
+                    await uhx.Repositories.transactionRepository.update(transaction, principal, _txc);
+                
+                    return transaction;
+                
+            });
+        }
+        catch(e) {
+            uhx.log.error(`Error creating transaction: ${e.message}`);
+            while(e.code == exception.ErrorCodes.DATA_ERROR && e.cause) 
+                e = e.cause[0];
+            throw new exception.Exception("Error creating transaction", e.code || exception.ErrorCodes.UNKNOWN, e);
         }
     }
 }

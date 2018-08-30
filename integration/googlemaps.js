@@ -35,8 +35,15 @@ module.exports = class GoogleMaps {
 
         var gm = new GoogleMapsAPI(uhx.Config.googleMaps);
 
-        if (address instanceof Object)
-            var geocodeParams = { "address": `${address.street}, ${address.postalZip}, ${address.city} ${address.stateProv} ${address.country}` };
+
+        if (address instanceof Object) {
+            if (address.country) {
+                var country = await uhx.Repositories.countryRepository.getCountryByCode(address.country);
+                if (!country) throw new exception.Exception("Invalid country code", exception.ErrorCodes.INVALID_NAME);
+                else country = country.name;
+            }
+            var geocodeParams = { "address": `${address.street || ''} ${address.postalZip || ''} ${address.city || ''} ${address.stateProv || ''} ${country || address.country || ''}` };
+        }
         else
             var geocodeParams = { "address": address };
 
@@ -47,7 +54,6 @@ module.exports = class GoogleMaps {
                 if (results && results.status == "OK") {
                     retVal.lat = results.results[0].geometry.location.lat;
                     retVal.lon = results.results[0].geometry.location.lng;
-                    retVal.placeId = results.results[0].place_id;
                     fulfill(retVal);
                 } else {
                     reject(new exception.Exception("An error has occurred: " + (err || results.error_message), exception.ErrorCodes.DATA_ERROR));
@@ -90,5 +96,43 @@ module.exports = class GoogleMaps {
             });
         });
         return addresses;
+    }
+
+    /**
+    * @method
+    * @summary Gets the place information for a latitude and longitude
+    * @param {string} lat The latitude
+    * @param {string} lon The longitude
+    * @returns {Object} The place address of the latitude and longitude
+    */
+    async getPlace(lat, lon) {
+
+        var gm = new GoogleMapsAPI(uhx.Config.googleMaps);
+
+        var reverseGeocodeParams = {
+            "latlng": lat + ',' + lon,
+            "result_type": "postal_code", // By postal or zip rather then locality
+            "language": "en",
+            "location_type": "APPROXIMATE" // Less specific results
+        };
+        return await new Promise((fulfill, reject) => {
+            gm.reverseGeocode(reverseGeocodeParams, function (err, results) {
+                if (results && results.status == "OK") {
+                    try {
+                        if (results.results[0] && results.results[0].formatted_address)
+                            fulfill(results.results[0].formatted_address);
+                        else
+                            fulfill(null);
+                    } catch (ex) {
+                        reject(new exception.Exception("Error getting address: " + ex, exception.ErrorCodes.DATA_ERROR));
+                    }
+                }
+                else {
+                    reject(new exception.Exception("Error getting address: " + err, exception.ErrorCodes.DATA_ERROR));
+                }
+            });
+        });
+
+        return address;
     }
 }

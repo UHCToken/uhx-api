@@ -37,7 +37,9 @@ module.exports = class ProviderAddressRepository {
     constructor(connectionString) {
         this._connectionString = connectionString;
         this.get = this.get.bind(this);
+        this.getUserIdByAddress = this.getUserIdByAddress.bind(this);
         this.getAllForProvider = this.getAllForProvider.bind(this);
+        this.checkIfLatLonExists = this.checkIfLatLonExists.bind(this);
         this.query = this.query.bind(this);
         this.update = this.update.bind(this);
         this.insert = this.insert.bind(this);
@@ -73,6 +75,34 @@ module.exports = class ProviderAddressRepository {
 
     /**
      * @method
+     * @summary Retrieves the user id of a provider address
+     * @param {uuid} id The id of the provider address
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {string} The retrieved user id
+     */
+    async getUserIdByAddress(id, _txc) {
+
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+            const rdr = await dbc.query(`
+                SELECT users.id
+                FROM users
+                JOIN providers ON users.id = providers.user_id
+                JOIN provider_addresses ON providers.id = provider_addresses.provider_id
+                WHERE provider_addresses.id = $1`, [id]);
+            if (rdr.rows.length == 0)
+                return null;
+            else
+                return rdr.rows[0].id;
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
      * @summary Retrieve all of a provider's addresses from the database
      * @param {uuid} providerId Gets all of the specified provider's address
      * @param {Client} _txc The postgresql connection with an active transaction to run in
@@ -83,7 +113,7 @@ module.exports = class ProviderAddressRepository {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if (!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM provider_addresses WHERE deactivation_time IS NULL AND provider_id = $1", [providerId]);
+            const rdr = await dbc.query("SELECT * FROM provider_addresses WHERE deactivation_time IS NULL AND provider_id = $1 ORDER BY GREATEST(creation_time) ASC", [providerId]);
             if (rdr.rows.length == 0)
                 return null;
             else {
@@ -100,6 +130,30 @@ module.exports = class ProviderAddressRepository {
 
     /**
      * @method
+     * @summary Checks if the the latitude and longitude coordinates already exist
+     * @param {string} lat The latitude
+     * @param {string} lon The longitude
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {Boolean} The coordinates exist
+     */
+    async checkIfLatLonExists(lat, lon, _txc) {
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+            const rdr = await dbc.query("SELECT * FROM provider_addresses WHERE latitude = $1 AND longitude = $2", [lat, lon]);
+            if (rdr.rows.length == 0)
+                return false;
+            else
+                return true;
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
+
+    }
+
+    /**
+     * @method
      * @summary Query the database for the specified addresses
      * @param {*} filter The query template to use
      * @returns {*} The matching addresses
@@ -112,7 +166,7 @@ module.exports = class ProviderAddressRepository {
             if (!filter || !filter.lat || !filter.lon)
                 throw new exception.Exception("Missing latitude/longitude", exception.ErrorCodes.ARGUMENT_EXCEPTION);
             var sqlQuery = `
-                SELECT *
+                SELECT addresses.*
                 FROM (
                     SELECT *, 
                         (3959 * ACOS(COS(RADIANS($1)) * COS(RADIANS(provider_addresses.latitude)) 
@@ -125,15 +179,18 @@ module.exports = class ProviderAddressRepository {
                         WHERE provider_addresses.latitude BETWEEN ($1::NUMERIC - $3::NUMERIC) AND ($1::NUMERIC + $3::NUMERIC)
                         AND provider_addresses.longitude BETWEEN ($2::NUMERIC - $3::NUMERIC) AND ($2::NUMERIC + $3::NUMERIC)
                         ) AS provider_addresses
-                    ) SUB
+                    ) AS addresses 
+                INNER JOIN providers ON addresses.provider_id = providers.id
                 WHERE distance <= $4
-                AND deactivation_time IS NULL
-                AND visible = true`;
+                AND addresses.deactivation_time IS NULL
+                AND providers.deactivation_time IS NULL
+                AND addresses.visible = true
+                AND providers.visible = true`;
 
             var sqlArgs = [filter.lat, filter.lon, filter.distance * 0.02 || 0.5, filter.distance || 25, filter.limit || 25];
             if (filter.serviceType) {
                 sqlQuery += `
-                     AND id IN (SELECT provider_address_id FROM provider_address_types WHERE service_type = $6)`;
+                     AND addresses.id IN (SELECT provider_address_id FROM provider_address_types WHERE service_type = $6)`;
                 sqlArgs.push(filter.serviceType);
             }
 

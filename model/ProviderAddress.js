@@ -27,6 +27,7 @@ const uhx = require('../uhx'),
  * @property {string} providerId The id of the provider
  * @property {string} addressName The name of the provider address name
  * @property {string} tel The provider address telephone 
+ * @property {string} telExt The provider address telephone extension
  * @property {string} fax The provider address fax number
  * @property {string} street The provider address street
  * @property {string} unitSuite The provider address unit
@@ -54,6 +55,9 @@ const uhx = require('../uhx'),
  *             tel:
  *                 type: string
  *                 description: The address's contact telephone number
+ *             telExt:
+ *                 type: string
+ *                 description: The address's contact telephone number extension
  *             fax:
  *                 type: string
  *                 description: The address's fax number
@@ -112,6 +116,7 @@ module.exports = class ProviderAddress extends ModelBase {
         this.providerId = dbAddress.provider_id;
         this.addressName = dbAddress.address_name;
         this.tel = dbAddress.tel;
+        this.telExt = dbAddress.tel_ext;
         this.fax = dbAddress.fax;
         this.street = dbAddress.street;
         this.unitSuite = dbAddress.unit_suite;
@@ -139,6 +144,7 @@ module.exports = class ProviderAddress extends ModelBase {
             provider_id: this.providerId,
             address_name: this.addressName,
             tel: this.tel,
+            tel_ext: this.telExt,
             fax: this.fax,
             street: this.street,
             unit_suite: this.unitSuite,
@@ -175,13 +181,15 @@ module.exports = class ProviderAddress extends ModelBase {
         }
 
         if (this._services) {
-            for (var s in this._services) {
+            for (var s = this._services.length - 1; s > -1; s--) {
                 if (await uhx.Repositories.providerServiceRepository.serviceTypeExists(this._services[s].id, this.id, _txc))
                     await this._services[s].loadServiceTypeDetails();
-                else
-                    delete (this._services[s]);
+                else {
+                    this._services.splice(s, 1);
+                }
             }
-        }
+        } else
+            this._services = [];
         return this._services;
     }
 

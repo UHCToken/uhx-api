@@ -99,7 +99,7 @@ module.exports.OfferingApiResource = class OfferingApiResource {
             const offering = offeringGroups[i];
 
             offering.offerings = offering.offerings.filter((off) => {
-                return off.country_code === countryCode;
+                return off.country_code.toLowerCase() === countryCode.toLowerCase();
             });
 
             delete(offering.services);
