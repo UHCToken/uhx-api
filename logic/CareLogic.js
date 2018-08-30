@@ -104,6 +104,9 @@ module.exports = class CareLogic {
                 
                 careRelationship = await uhx.Repositories.careRelationshipRepository.update(careRelationship, principal);
 
+                await uhx.Repositories.chatRepository.createChatRoom(careRelationship);
+
+
                 return careRelationship;
             }
             else{

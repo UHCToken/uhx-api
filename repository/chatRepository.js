@@ -57,7 +57,7 @@ module.exports = class ChatRepository {
     try {
       await dbc.connect();
       await dbc.query('INSERT INTO chat_room (title, providerid, patientid) VALUES ($1,$2,$3)', 
-                              [chatRoom.title, chatRoom.providerId, chatRoom.patientId]);
+                              [chatRoom.title || '', chatRoom.providerId, chatRoom.patientId]);
     }
     catch(err){uhx.log.debug(err)}
     finally {
