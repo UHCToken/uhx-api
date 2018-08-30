@@ -48,9 +48,6 @@ module.exports = class BillingLogic {
      schedule.scheduleJob('0 21 * * *', () => {
        this.dailyBilling();
      });
-
-     // TODO: Remove this test code
-    this.dailyBilling();
    }
 
    /**
@@ -117,16 +114,16 @@ module.exports = class BillingLogic {
        uhx.Repositories.subscriptionRepository.terminateSubscriptions(todaysDate, subscriptionsToTerminate);
 
      } catch(ex) {
-       // TODO: Add error message
-       console.log(ex)
+       uhx.log.error(`Billing service error: ${ex.code} || ${ex.message}`);
+       uhx.log.error(e.stack);
      }
    }
 
    /**
     * @method
-    * @summary Transfers currency from users accounts to subscription wallet using a queue
+    * @summary Transfers currency from users accounts to subscription wallet
     * @param {[Subscription]} subscriptions Array of subscriptions to be billed
-    * @returns {[Subscription], [Subscription]} Array of succesful billings, array of failed billngs
+    * @returns {[Subscription], [Subscription]} Array of billings, array of subscriptions to terminate because of failed payment
     */
    async billUsers(subscriptions) {
      try {
@@ -148,7 +145,7 @@ module.exports = class BillingLogic {
           newTransaction.id = uuidv4();
 
           // Load user information
-          newTransaction.loadPayor();
+          await newTransaction.loadPayor();
           await newTransaction.loadPayee();
           
           // Load wallet information
@@ -169,21 +166,22 @@ module.exports = class BillingLogic {
           if (((payorStellarBalance - 0.0001) < minStellarBalance) && (toppedUpPayors.indexOf(newTransaction.payorId) > -1)) {
               uhx.log.info(`Patient ${subscriptions[i].patientId} has insufficient XLM to complete subscription transaction, topping up their XLM.`);
               let topUpValue = minStellarBalance - payorStellarBalance;
-              // TODO: Switch to top up account
+
+              // Create top up transaction
               let topUpTransaction = new Transaction(null, model.TransactionType.Deposit, 'Top-up account', new Date(), null, null, new MonetaryAmount(topUpValue, 'XLM'), new MonetaryAmount(0.0000100, 'XLM'), null, model.TransactionStatus.Pending);
               
-              // Reverse payor and payee for top up transaction
-              topUpTransaction.payorId = newTransaction.payeeId;
+              // Set payee and payor for top up
+              topUpTransaction.payorId = config.subscription.topUpAccount;
               topUpTransaction.payeeId = newTransaction.payorId;
               topUpTransaction._payeeWallet = payorWallet;
               topUpTransaction._payorWallet = payeeWallet;
               
-              //
+              // Keep track of which wallets are already being topped up, add the top up transaction
               toppedUpPayors.push(newTransaction.payorId);
               transactions.push(topUpTransaction);
           }
-
-          if ((payorPurchasingBalance - subscriptions[i].price) < 0) {
+          else if ((payorPurchasingBalance - subscriptions[i].price) < 0) {
+              // Check if patient can afford the payment
               uhx.log.info(`Subscription payment cannot be completed. Patient ${subscriptions[i].patientId} has insufficent ${(subscriptions[i].currency == 'native' ? 'XLM' : subscriptions[i].currency)}`);
 
               // Terminate subscription of user since they cannot pay for subscription
@@ -219,7 +217,6 @@ module.exports = class BillingLogic {
        };
      } catch (ex) {
        uhx.log.error(`Error billing subscriptions: ${ex}`);
-       uhx.log.error(`Subscriptions attempted to be billed: ${subscriptions.toString()}`);
      }
    }
 }
