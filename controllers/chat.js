@@ -20,11 +20,12 @@
 const ChatMessage = require('../model/ChatMessage'),
   ChatRoom = require('../model/ChatRoom'),
   http = require('http'),
-  io = require('socket.io')(http),
+  https = require('https'),
   security = require('../security'),
   exception = require('../exception'),
   uhx = require('../uhx');
 
+  let io;
 /**
  * @class
  * @summary Represents Chat Object, with socket.io for listening, and routes for getting/creating chatrooms and chats
@@ -86,6 +87,12 @@ module.exports.ChatApiResource = class ChatApiResource {
    * @param {Express.Response} res The HTTP response going to the client
    */
   initChatSocket(req, res) {
+    if(uhx.Config.api.scheme == "http") {
+      io = require('socket.io')(http) 
+    }
+    else {
+      io = require('socket.io')(https);
+    }
     const chatId = req.params.cid;
 
     io.listen(8660);
@@ -181,8 +188,6 @@ module.exports.ChatApiResource = class ChatApiResource {
 
     let chatRoomId = req.body.chatRoomId;
     let chatMessage = req.body
-    console.log(chatRoomId);
-    console.log(chatMessage);
     try {
       res.status(201).json(uhx.Repositories.chatRepository.createChatMessage(chatRoomId, chatMessage));
       return true;
