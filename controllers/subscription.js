@@ -156,9 +156,9 @@ module.exports.SubscriptionApiResource = class SubscriptionApiResource {
      *          - "read:subscription"
      */
     async post(req, res) {
-        var subscriptions = await uhx.Repositories.subscriptionRepository.post(req.params.id, req.body.offeringId, req.body.autoRenew);
+        var subscription = await uhx.Repositories.subscriptionRepository.post(req.params.id, req.body.offeringId, req.body.autoRenew);
       
-        res.status(200).json(subscriptions);
+        res.status(200).json(subscription);
         return true
     }
 

@@ -400,6 +400,8 @@ class PatientApiResource {
 
         if (req.params.uid)
             var id = req.params.uid;
+        else if (req.body.userId)
+            var id = req.body.userId;
         else if (req.params.patientid){
             var patient = await uhx.Repositories.patientRepository.get(req.params.patientid);
             var id = patient.userId;
