@@ -89,7 +89,7 @@ const pg = require('pg'),
 
         try {
             if(!_txc) await dbc.connect();
-            const today = new Date();
+            const today = moment();
             const offering = await dbc.query("SELECT * FROM offerings WHERE id = $1", [offeringId]);
             const nextPaymentDate = moment().add(offering.rows[0].period_in_months, 'months');
 
@@ -98,7 +98,9 @@ const pg = require('pg'),
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', patientId);
             else {
-                return new model.Subscription().fromData(rdr.rows[0]);
+                const subscriptionRdr = await dbc.query("SELECT * FROM subscription_lookup WHERE subscription_id = $1", [rdr.rows[0].id]);
+
+                return new model.Subscription().fromData(subscriptionRdr.rows[0]);
             }
         }
         finally {
@@ -145,10 +147,13 @@ const pg = require('pg'),
 
             const today = new Date();
             const rdr = await dbc.query("UPDATE subscriptions SET date_next_payment = null, date_terminated = $1 WHERE id = $2 RETURNING *", [today, subscriptionId]);
+
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', patientId);
             else {
-                return new model.Subscription().fromData(rdr.rows[0]);
+                const subscriptionRdr = await dbc.query("SELECT * FROM subscription_lookup WHERE subscription_id = $1", [rdr.rows[0].id]);
+
+                return new model.Subscription().fromData(subscriptionRdr.rows[0]);
             }
         }
         finally {
