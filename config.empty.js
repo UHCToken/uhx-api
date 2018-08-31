@@ -190,6 +190,10 @@ module.exports = {
          * @summary Identifies the account to sign for the provider
          */
         signer_provider_id: "891ab26a-3c2c-4c41-bcb5-0612f1cff939",
+        /**
+         * @summary Currency to be used for escrow
+         */
+        escrow_asset_code: "TEST",
             /**
          * @summary Identifies the account that will hold escrow funds
          */
@@ -197,6 +201,7 @@ module.exports = {
         /**
           * @summary The determine if this is part of a testnet
           */
+         
         testnet_use: true,
         /**
           * @summary The horizon endpoint

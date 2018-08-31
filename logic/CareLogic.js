@@ -165,12 +165,12 @@ module.exports = class CareLogic {
                     var carePlan = new model.CarePlan().copy(carePlanBody);
                     carePlan.status = STATUS_NEW;
                     carePlan.total = carePlanBody.careServices.reduce(( ac, service) => ac + parseFloat(service.amount), 0)
-                    carePlan.assetId = (await uhx.Repositories.assetRepository.getByCode("RECOIN")).id;
+                    carePlan.assetId = (await uhx.Repositories.assetRepository.getByCode(uhx.Config.stellar.escrow_asset_code)).id;
                     carePlan = await uhx.Repositories.carePlanRepository.insert(carePlan, principal, _txc)
                     for(var i = 0; i< carePlanBody.careServices.length; i++){
                         var careService = new model.CareService().copy(carePlanBody.careServices[i]);
                         careService.carePlanId = carePlan.id;
-                        careService.assetId = (await uhx.Repositories.assetRepository.getByCode("RECOIN")).id
+                        careService.assetId = (await uhx.Repositories.assetRepository.getByCode(uhx.Config.stellar.escrow_asset_code)).id
                         careService.code = "00";
                         careService = await uhx.Repositories.careServiceRepository.insert(careService, principal, _txc);
                     }
