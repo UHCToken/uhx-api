@@ -10,7 +10,7 @@ In short, the UhX API provides:
 
 * A simple OAUTH 2.0 token service allowing a "Log in with UhX" function
 * The ability to query, read, and post transactions to the UhX user wallets
-* The ability to acquire UhX tokens with a third party credit card processor
+* The ability to acquire UhX tokens with a third party e-check processor
 
 ## Getting Started
 
@@ -61,7 +61,9 @@ To setup / run:
    $ node app.js
    ```
 8. Verify the service is running by navigating to [the swagger documentation](http://localhost:4001/api-docs)
-
+## Configure the API
+   The configuration file copied over uses example data and uses crypto testnets. To switch to use real cryptocurrency the configuration endpoints for each network need to be set in the configuration and wallets need to be generated.
+   
 ## Git Workflow Used
 
 If you're interested in contributing, see the [CONTRIBUTING.md](CONTRIBUTING.md) notes. You'll see several branches in this repository:
