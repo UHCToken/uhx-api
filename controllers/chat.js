@@ -87,6 +87,7 @@ module.exports.ChatApiResource = class ChatApiResource {
    * @param {Express.Response} res The HTTP response going to the client
    */
   initChatSocket(req, res) {
+    console.log(`starting...`)
     const server = req.connection.server
     io = require('socket.io')(server) 
 
