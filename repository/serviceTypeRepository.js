@@ -77,7 +77,7 @@ module.exports = class ServiceTypeRepository {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if (!_txc) await dbc.connect();
-            if(showAll) var rdr = await dbc.query("SELECT * FROM service_types");
+            if(showAll) var rdr = await dbc.query("SELECT type_name AS name, * FROM service_types");
             else var rdr = await dbc.query("SELECT id, type_name AS name, description FROM service_types WHERE deactivation_time IS NULL");
             if (rdr.rows.length == 0)
                 return null;
