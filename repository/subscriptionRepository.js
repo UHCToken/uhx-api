@@ -21,6 +21,7 @@
 const uhx = require('../uhx'),
     pg = require('pg'),
     moment = require('moment'),
+    momentTimezone = require('moment-timezone'),
     exception = require('../exception'),
     model = require('../model/model');
 
@@ -65,7 +66,7 @@ const uhx = require('../uhx'),
             if(rdr.rows.length === 0)
                 return [];
             else {
-                return await subscriptionArray(rdr);
+                return await this.subscriptionArray(rdr);
             }
         }
         finally {
@@ -168,11 +169,26 @@ const uhx = require('../uhx'),
 
         try {
             if(!_txc) await dbc.connect();
-            const today = moment();
-            const offering = await dbc.query("SELECT * FROM offerings WHERE id = $1", [offeringId]);
-            const nextPaymentDate = moment().add(offering.rows[0].period_in_months, 'months');
+            let subscriptionDate,
+                nextPaymentDate;
 
-            const rdr = await dbc.query("INSERT INTO subscriptions (offering_id, patient_id, date_next_payment, date_subscribed, auto_renew) VALUES ($1, $2, $3, $4, $5) RETURNING *", [offeringId, patientId, nextPaymentDate, today, autoRenew]);
+            const now = parseInt(momentTimezone().tz('America/Chicago').format('hh'));
+
+            // If subscription occurs after 9pm Central time; the subscription will not be active for 2 more days
+            if (now >= 21) {
+                subscriptionDate = moment().add(2, 'days');
+            } else {
+                subscriptionDate = moment().add(1, 'days');
+            }
+
+            const offering = await dbc.query("SELECT * FROM offerings WHERE id = $1", [offeringId]);
+            const subscriptionExpiryDate = subscriptionDate.add(offering.rows[0].period_in_months, 'months');
+
+            if (autoRenew) {
+                nextPaymentDate = subscriptionExpiryDate;
+            }
+
+            const rdr = await dbc.query("INSERT INTO subscriptions (offering_id, patient_id, date_next_payment, date_subscribed, auto_renew, date_expired) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *", [offeringId, patientId, nextPaymentDate, subscriptionDate, autoRenew, subscriptionExpiryDate]);
             
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', patientId);
@@ -257,7 +273,7 @@ const uhx = require('../uhx'),
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', 'No Subscriptions found.');
             else {
-                return await subscriptionArray(rdr);
+                return await this.subscriptionArray(rdr);
             }
         }
         finally {
@@ -279,7 +295,7 @@ const uhx = require('../uhx'),
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', 'No Subscriptions found.');
             else {
-                return await subscriptionArray(rdr);
+                return await this.subscriptionArray(rdr);
             }
         }
         finally {
