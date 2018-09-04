@@ -195,17 +195,25 @@ module.exports = class KarisService {
 
     async sendFile(csvFilename) {
         this.encryptFile(csvFilename).then((encryptedFile) => {
-            sftp.connect({
-                host: config.karis.sftpClient.host,
-                port: config.karis.sftpClient.port,
-                username: config.karis.sftpClient.userName,
-                privateKey: require('fs').readFileSync(config.karis.sftpClient.privateKeyLocation)                
-            }).then(() => {
-                const file = csvFilename.split('\\').slice(-1)[0];
-                
-                sftp.put(csvFilename, file);
-            }).catch((err) => {
-                console.log(err, 'catch error');
+            const file = csvFilename.split('.')[0] + '.txt';
+
+            fs.writeFile(file, encryptedFile, 'utf8', function (err) {
+                if (err) {
+                    console.log('Some error occured - file either not saved or corrupted file saved.');
+                } else{
+                    sftp.connect({
+                        host: config.karis.sftpClient.host,
+                        port: config.karis.sftpClient.port,
+                        username: config.karis.sftpClient.userName,
+                        privateKey: require('fs').readFileSync(config.karis.sftpClient.privateKeyLocation)                
+                    }).then(() => {
+                        const file = csvFilename.split('\\').slice(-1)[0].split('.')[0] + '.txt';
+                        
+                        sftp.put(file2, file);
+                    }).catch((err) => {
+                        console.log(err, 'catch error');
+                    });
+                }
             });
         });
     }
