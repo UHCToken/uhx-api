@@ -67,55 +67,12 @@ module.exports.ChatApiResource = class ChatApiResource {
             demand: security.PermissionType.READ,
             method: this.createChatMessage
           }
-        },
-        {
-          "path": "listen/:cid",
-          "get" : {
-              demand: security.PermissionType.READ,
-              method: this.initChatSocket
-          }
         }
       ]
     }  
   }
 
 
-  /**
-   * @method
-   * @summary: Initiates the web socket activity. 
-   * @param {Express.Request} req http req from the client
-   * @param {Express.Response} res The HTTP response going to the client
-   */
-  initChatSocket(req, res) {
-    console.log(`starting...`)
-    const server = req.connection.server
-    io = require('socket.io')(server) 
-
-    const chatId = req.params.cid;
-
-    io.listen(8660);
-    let chat = io.of(chatId);  //Create unique chatroom namespace from chatID
-
-    chat.on('connection', (socket) => {
-      console.log('-------------------Listening--------------------');
-
-      socket.on('SEND_MESSAGE', async function(data){
-        console.log(`sending`)
-        //Emit to chat
-        socket.emit('RECEIVE_MESSAGE', {message: 'Send'});
-      })
-
-      socket.on('disconnect', () => {
-          console.log('user disconnected')
-          chat.removeAllListeners();
-          chat.server.close();
-      })
-    });
-    // chat.io.on('connect_error', function(err) {
-    //   // handle server error here
-    //   console.log('Error connecting to server' + err);
-    // });
-  }
 
   /**
    * @method

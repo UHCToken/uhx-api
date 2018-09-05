@@ -110,10 +110,30 @@ restApi.start();
 
 // Start the express instance
 if(uhx.Config.api.scheme == "http") {
-    http.createServer(app).listen(uhx.Config.api.port);
+    const server = http.createServer(app).listen(uhx.Config.api.port);
+    const io = require('socket.io')(server) 
+    io.on('connection', (socket) => {
+        console.log('-------------------Listening--------------------');
+
+        socket.on('SEND_MESSAGE', async function(data){
+          console.log(`sending`)
+          //Emit to chat
+          socket.emit('RECEIVE_MESSAGE', {message: 'Send'});
+        })
+    });
 }
 else {
-    https.createServer(uhx.Config.api.tls, app).listen(uhx.Config.api.port);
+    const server = https.createServer(uhx.Config.api.tls, app).listen(uhx.Config.api.port);
+    const io = require('socket.io')(server) 
+    io.on('connection', (socket) => {
+        console.log('-------------------Listening--------------------');
+
+        socket.on('SEND_MESSAGE', async function(data){
+          console.log(`sending`)
+          //Emit to chat
+          socket.emit('RECEIVE_MESSAGE', {message: 'Send'});
+        })
+    });
 }
 
 uhx.log.info(`UhX API started on ${uhx.Config.api.scheme} port ${uhx.Config.api.port}`);
