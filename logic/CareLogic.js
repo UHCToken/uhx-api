@@ -33,6 +33,7 @@ const STATUS_NEW = "NEW",
     STATUS_FUNDED = "FUNDED",
     STATUS_PROVIDED = "PROVIDED",
     STATUS_RECEIVED = "RECEIVED",
+    STATUS_DISPUTED = "DISPUTED",
     STATUS_EXPIRED = "EXPIRED";
 /**
   * @class
@@ -101,7 +102,7 @@ module.exports = class CareLogic {
             var provider = await uhx.Repositories.providerRepository.get(principal.session.userId);
             if(careRelationship.status == STATUS_NEW && provider && provider.id == careRelationship.providerId){
                 careRelationship.status = STATUS_ACCEPTED;
-                
+                careRelationship.providerNote = careRelationshipBody.feedback;
                 careRelationship = await uhx.Repositories.careRelationshipRepository.update(careRelationship, principal);
 
                 await uhx.Repositories.chatRepository.createChatRoom(careRelationship);
@@ -133,9 +134,8 @@ module.exports = class CareLogic {
             var provider = await uhx.Repositories.providerRepository.get(principal.session.userId);
             if(careRelationship.status == STATUS_NEW && provider && provider.id == careRelationship.providerId){
                 careRelationship.status = STATUS_DECLINED;
-                careRelationship.providerNote = careRelationshipBody.providerNote;
+                careRelationship.providerNote = careRelationshipBody.feedback;
                 careRelationship = await uhx.Repositories.careRelationshipRepository.update(careRelationship, principal);
-
                 return careRelationship;
             }
             else{
@@ -178,8 +178,8 @@ module.exports = class CareLogic {
             });
         }
         catch (e) {
-            uhx.log.error(`Error accepting care relationship: ${e.message}`);
-            throw new exception.Exception("Error accepting care relationship", e.code || exception.ErrorCodes.UNKNOWN, e);
+            uhx.log.error(`Error creating care plan: ${e.message}`);
+            throw new exception.Exception("Error creating care plan", e.code || exception.ErrorCodes.UNKNOWN, e);
         }
     }
 
@@ -261,6 +261,40 @@ module.exports = class CareLogic {
         }
     }
 
+
+        /**
+     * @method
+     * @summary Dispute a care plan
+     * @param {CarePlan} carePlan The care plan that is to be disputed
+     * @param {SecurityPrincipal} principal The principal which is disputing the care plan
+     * @returns {CarePlan} The updated care plan
+     */
+    async disputeCarePlan(carePlanBody, principal) {
+
+        try {
+            var carePlan = await uhx.Repositories.carePlanRepository.get(carePlanBody.id);
+            var careRelationship = await uhx.Repositories.careRelationshipRepository.get(carePlan.careRelationshipId);
+            var patient = await uhx.Repositories.patientRepository.get(principal.session.userId);
+            var provider = await uhx.Repositories.providerRepository.get(principal.session.userId);
+            
+            if(patient && patient.id == careRelationship.patientId && (carePlan.status == STATUS_FUNDED || carePlan.status == STATUS_PROVIDED)){
+                carePlan.status = STATUS_DISPUTED;
+                carePlan.disputeReason = carePlanBody.disputeReason;
+                carePlan = await uhx.Repositories.carePlanRepository.update(carePlan, principal)
+                return(carePlan)
+            }
+            else if(provider && provider.id == careRelationship.providerId && (carePlan.status == STATUS_FUNDED || carePlan.status == STATUS_RECEIVED)){
+                carePlan.status = STATUS_DISPUTED;
+                carePlan.disputeReason = carePlanBody.disputeReason;
+                carePlan = await uhx.Repositories.carePlanRepository.update(carePlan, principal)
+                return(carePlan)
+            }
+        }
+        catch (e) {
+            uhx.log.error(`Error disputing care plan: ${e.message}`);
+            throw new exception.Exception("Error disputing care plan", e.code || exception.ErrorCodes.UNKNOWN, e);
+        }
+    }
     /**
      * @method
      * @summary Confirm a care plan

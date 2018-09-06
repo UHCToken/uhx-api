@@ -85,6 +85,13 @@ class CarePlanApiResource {
                     }
                 },
                 {
+                    "path": "carePlan/:id/dispute",
+                    "post": {
+                        "demand": security.PermissionType.WRITE,
+                        "method": this.dispute
+                    }
+                },
+                {
                     "path": "carePlan/:id/confirm",
                     "post": {
                         "demand": security.PermissionType.WRITE,
@@ -229,6 +236,19 @@ class CarePlanApiResource {
     async decline(req, res) {
 
         var carePlan = await uhx.CareLogic.declineCarePlan(req.params.id, req.principal);
+        res.status(200).json(carePlan);
+        return true;
+    }
+
+        /**
+     * @summary Disputes a specified care plan
+     * @method
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to the client
+     */
+    async dispute(req, res) {
+
+        var carePlan = await uhx.CareLogic.disputeCarePlan(req.body, req.principal);
         res.status(200).json(carePlan);
         return true;
     }
