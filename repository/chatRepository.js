@@ -23,6 +23,7 @@ const pg = require('pg'),
   ChatRoom = require('../model/ChatRoom'),
   ChatMessage = require('../model/ChatMessage'),
   model = require('../model/model'),
+  uhx = require("../uhx"),
   security = require('../security');
 
 /**

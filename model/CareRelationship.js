@@ -82,7 +82,7 @@
         this.addressId = dbCareRelationship.address_id;
         this.addressName = dbCareRelationship.address_name;
         this.note = dbCareRelationship.note;
-        this.providerNote = dbCareRelationship.providerNote;
+        this.providerNote = dbCareRelationship.provider_note;
         this.serviceTypeId = dbCareRelationship.service_type_id;
         this.serviceTypeName = dbCareRelationship.type_name;
         return this;
