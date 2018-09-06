@@ -2,18 +2,18 @@
 
 /**
  * Copyright 2018 Universal Health Coin
- * 
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), 
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
  * to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
  * and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
- * 
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
- * 
+ *
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
@@ -39,12 +39,15 @@ const ModelBase = require('./ModelBase'),
  * definitions:
  *  Subscription:
  *      properties:
- *          id: 
+ *          id:
  *              type: string
  *              description: The unique identifier for the subscription
  *          patientId:
  *              type: string
  *              description: The id of the patient
+ *          userId:
+ *              type: string
+ *              desription: The id of the user associated with this patient
  *          offeringId:
  *              type: string
  *              description: The id of the group of services this subscription is subscribed to
@@ -56,13 +59,22 @@ const ModelBase = require('./ModelBase'),
  *              description: The date the subscription began
  *          dateTerminated:
  *              type: Date
- *              description: The date the subscription was terminated
- *          dateExpired:
- *              type: Date
- *              description: The date the subscription expires
+ *              description: The date the subscription was manually terminated
  *          dateNextPayment:
  *              type: Date
  *              description: The date of the next billing period
+ *          periodInMonths:
+ *              type: number
+ *              description: The number of months between subscription payments
+ *          price:
+ *              type: number
+ *              description: The amount paid for the subscription
+ *          dateExpired:
+ *              type: Date
+ *              description: The date that the subscription expires
+ *          currency:
+ *              type: string
+ *              description: the currency the subscription was paid for in
  *          autoRenew:
  *              type: boolean
  *              description: Represents if the billing cycle is auto-renewed
@@ -97,6 +109,7 @@ module.exports = class Subscription extends ModelBase {
     fromData(dbSubscription) {
         this.id = dbSubscription.id || dbSubscription.subscription_id;
         this.patientId = dbSubscription.patient_id;
+        this.userId = dbSubscription.user_id;
         this.offeringId = dbSubscription.offering_id;
         this.offeringGroupId = dbSubscription.offering_group_id;
         this.dateSubscribed = dbSubscription.date_subscribed !== null ? dbSubscription.date_subscribed.toLocaleString() : null;
@@ -118,6 +131,7 @@ module.exports = class Subscription extends ModelBase {
         return {
             id : this.id,
             patient_id : this.patientId,
+            user_id : this.userId,
             offering_id: this.offeringId,
             offering_group_id: this.offeringGroupId,
             date_subscribed: this.dateSubscribed,
@@ -139,6 +153,7 @@ module.exports = class Subscription extends ModelBase {
         return {
             id : this.id,
             patientId : this.patientId,
+            userId : this.userId,
             offeringId: this.offeringId,
             offeringGroupId: this.offeringGroupId,
             dateSubscribed: this.dateSubscribed,

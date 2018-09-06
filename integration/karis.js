@@ -40,12 +40,12 @@ module.exports = class KarisService {
 
         // Starts a schedule to send daily logs to Karis every day at 9 pm
         schedule.scheduleJob('* * 19 * *', () => {
-            this.sendDailyLog();
+            // this.sendDailyLog();
         });
 
         // Starts a schedule to send a monthly census to Karis on the 1st of every month
         schedule.scheduleJob('0 0 1 * *', () => {
-            this.monthlyCensus();
+            // this.monthlyCensus();
         });
     }
 
@@ -186,7 +186,7 @@ module.exports = class KarisService {
         
         fs.writeFile(csvFilename, csv, 'utf8', function (err) {
             if (err) {
-                console.log('Some error occured - file either not saved or corrupted file saved.');
+                console.log('An error occurred while trying to create the csv file.');
             } else{
                 self.sendFile(csvFilename);
             }
@@ -194,10 +194,9 @@ module.exports = class KarisService {
     }
 
     async sendFile(csvFilename) {
-        this.encryptFile(csvFilename).then((encryptedFile) => {
-            const file = csvFilename.split('.')[0] + '.txt';
-
-            fs.writeFile(file, encryptedFile, 'utf8', function (err) {
+        this.encryptFile(csvFilename).then((encryptedFileData) => {
+            const encryptedFileName = csvFilename + '.pgp';
+            fs.writeFile(encryptedFileName, encryptedFileData, 'utf8', function (err) {
                 if (err) {
                     console.log('Some error occured - file either not saved or corrupted file saved.');
                 } else{
@@ -207,9 +206,9 @@ module.exports = class KarisService {
                         username: config.karis.sftpClient.userName,
                         privateKey: require('fs').readFileSync(config.karis.sftpClient.privateKeyLocation)                
                     }).then(() => {
-                        const file = csvFilename.split('\\').slice(-1)[0].split('.')[0] + '.txt';
+                        const file = csvFilename.split('\\').slice(-1)[0] + '.pgp';
                         
-                        sftp.put(file2, file);
+                        sftp.put(encryptedFileName, file);
                     }).catch((err) => {
                         console.log(err, 'catch error');
                     });
@@ -221,76 +220,63 @@ module.exports = class KarisService {
     async encryptFile(fileName) {
         return new Promise(async (resolve, reject) => {
             const pubkey = `-----BEGIN PGP PUBLIC KEY BLOCK-----
-            Version: BCPG C# v1.6.1.0
+            Version: GnuPG/MacGPG2 v2
+            Comment: GPGTools - https://gpgtools.org
             
-            mQENBFty1SoBCACswWoY2LU0HnZ1alt9OESMYbfqcrnDSODuojyOQZv6vUzUjxiq
-            VdutryjKbMHsD/ETcbjlYNMBH205Uspv4w/hxVeyHz6jndEGdxqZY7CR3Ung0CbA
-            C7RejiybXeVdv/xSevOVb1qZsY/wrQbG9mN2SyJD/Kb+0EsOCPR+KQKl+P3T9B/s
-            cjAGc4NF0GrjY3a2sjHm5bIkcd9s9dASPzKdEUYX3uM6u30kMuUQBYFLWIPjGGL5
-            jF3cLb4gQ0QExRM5EVxTBD4wvxFsJgKtxZYtywJP4tnRdNzfuG3Hq7/EuvEmcnnB
-            tsH3LRVuT46mRKttin1++wZY+N1/xmT1eoHFABEBAAG0IGJyaWFuLnZhbm9vc3Rl
-            bkBtb2hhd2tjb2xsZWdlLmNhiQEcBBABAgAGBQJbctUqAAoJEDJJtsOYB2uE8hkH
-            /jsQr10vywx4LkM03RUmjnhCxrWzjw/skjXLSnYH3XwLRmoU5MU/9G29kNdovate
-            if6ghp90HijoPxSiFCU/aPcKkotmwjf0MKs/S4q114DwF47NwORswzzg+4w2jxyx
-            ffcgmtuvyGbvJ+knoBowuUlywcZiTivZVH2dfJxUA+NVDt2y5Sc7NTUeZo2eQ+Fy
-            lNLZpDpXkVwT1KCv5gAhgDfUkg6Ha6cQ+tFFCq5/XhrO5iaRlcxn2UivrdUzlY/A
-            UM8YOFG81iZWpKUz1f5xSgMB4cXIMcBOEJcgwicjNHyNI6LCOfTHb+PN3x6fFqqp
-            xILvOMArkGrvwCgoYZqAUzE=
-            =nx2W
+            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
+            =8D3G
             -----END PGP PUBLIC KEY BLOCK-----`;
 
-            const privkey = `-----BEGIN PGP PRIVATE KEY BLOCK-----
-            Version: BCPG C# v1.6.1.0
-            
-            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
-            gu84wCuQau/AKChhmoBTMQ==
-            =DPJy
-            -----END PGP PRIVATE KEY BLOCK-----`;
-
-            const passphrase = `mybootsarecalledbunnies`;
-
-            const privKeyObj = (await openpgp.key.readArmored(privkey)).keys[0];
-            privKeyObj.decrypt(passphrase);
-            const fileText = require('fs').readFileSync(fileName);
+            const fileData = fs.readFileSync(fileName);
 
             const options = {
-                message: openpgp.message.fromText(fileText),    
-                publicKeys: (await openpgp.key.readArmored(pubkey)).keys, 
-                privateKeys: [privKeyObj]                             
+                message: openpgp.message.fromBinary(fileData),    
+                publicKeys: (await openpgp.key.readArmored(pubkey)).keys
             }
-            
+
             openpgp.encrypt(options).then(ciphertext => {
                 const encrypted = ciphertext.data
                 
                 resolve(encrypted);
             }).catch((error) => {
                 console.log(error);
-            });  
+            }); 
         });
     }
 }
