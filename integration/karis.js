@@ -39,16 +39,16 @@ module.exports = class KarisService {
             return s;
         }
 
-        this.sendKarisReport(null, "test"); 
+        // this.sendKarisReport(null, "test"); 
 
         // Starts a schedule to send daily logs to Karis every day at 9 pm
         schedule.scheduleJob('* * 19 * *', () => {
-            this.sendDailyLog();
+            // this.sendDailyLog();
         });
 
         // Starts a schedule to send a monthly census to Karis on the 1st of every month
         schedule.scheduleJob('0 0 1 * *', () => {
-            this.monthlyCensus();
+            // this.monthlyCensus();
         });
     }
 

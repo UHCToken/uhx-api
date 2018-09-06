@@ -106,10 +106,14 @@ module.exports.SubscriptionApiResource = class SubscriptionApiResource {
      *          - "read:subscription"
      */
     async get(req, res) {
-        var subscriptions = await uhx.Repositories.subscriptionRepository.get(req.params.id);
+        try {
+            var subscriptions = await uhx.Repositories.subscriptionRepository.get(req.params.id);
 
-        res.status(200).json(subscriptions);
-        return true
+            res.status(200).json(subscriptions);
+            return true
+        } catch (ex) {
+            uhx.log.error(`Get subscription: ${ex.message}`);
+        }
     }
 
     /**
@@ -156,10 +160,14 @@ module.exports.SubscriptionApiResource = class SubscriptionApiResource {
      *          - "read:subscription"
      */
     async post(req, res) {
-        var subscription = await uhx.Repositories.subscriptionRepository.post(req.params.id, req.body.offeringId, req.body.autoRenew);
-      
-        res.status(200).json(subscription);
-        return true
+        try {
+            var subscription = await uhx.Repositories.subscriptionRepository.post(req.params.id, req.body.offeringId, req.body.autoRenew);
+
+            res.status(200).json(subscription);
+            return true
+        } catch(ex) {
+            uhx.log.error(`Posting subscription: ${ex.message}`)
+        }
     }
 
     /**
@@ -206,10 +214,18 @@ module.exports.SubscriptionApiResource = class SubscriptionApiResource {
      *          - "read:subscription"
      */
     async update(req, res) {
-        var subscription = await uhx.Repositories.subscriptionRepository.update(req.body.id, req.body.offeringId, req.body.autoRenew);
+        try{
+            var subscription = await uhx.Repositories.subscriptionRepository.update(req.body.id, req.body.offeringId, req.body.autoRenew);
 
-        res.status(200).json(subscription);
-        return true
+            // Succesful update, respond ok with subscription object
+            res.status(200).json(subscription);
+            return true
+        }
+        catch(ex) {
+            // Error updating subscription, return internal server error and log error
+            uhx.log.error(`Updating patient subscription: ${ex.message}`)
+            res.status(500);
+        }
     }
 
     /**
@@ -246,9 +262,15 @@ module.exports.SubscriptionApiResource = class SubscriptionApiResource {
      *          - "read:subscription"
      */
     async cancel(req, res) {
-        var subscription = await uhx.Repositories.subscriptionRepository.cancel(req.body.subscriptionId);
+        try{
+            var subscription = await uhx.Repositories.subscriptionRepository.cancel(req.body.subscriptionId);
 
-        res.status(200).json(subscription);
-        return true
+            // Cancel succesful, respond OK with subscription
+            res.status(200).json(subscription);
+            return true
+        } catch (ex) {
+            uhx.log.error(`Cancelling subscription: ${ex.message}`);
+            res.status(500);
+        }
     }
 }
