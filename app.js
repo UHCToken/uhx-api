@@ -118,7 +118,7 @@ if(uhx.Config.api.scheme == "http") {
         socket.on('SEND_MESSAGE', async function(data){
           console.log(`sending`)
           //Emit to chat
-          socket.emit('RECEIVE_MESSAGE', {message: 'Send'});
+          socket.broadcast.emit('RECEIVE_MESSAGE', {message: 'Send'});
         })
     });
 }
@@ -131,7 +131,7 @@ else {
         socket.on('SEND_MESSAGE', async function(data){
           console.log(`sending`)
           //Emit to chat
-          socket.emit('RECEIVE_MESSAGE', {message: 'Send'});
+          socket.broadcast.emit('RECEIVE_MESSAGE', {message: 'Send'});
         })
     });
 }
