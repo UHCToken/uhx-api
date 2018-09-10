@@ -67,6 +67,13 @@ module.exports.ChatApiResource = class ChatApiResource {
             demand: security.PermissionType.READ,
             method: this.createChatMessage
           }
+        },
+        {
+          "path": "chat/unread",
+          "get" : {
+              demand: security.PermissionType.READ,
+              method: this.getUnreadMessageNumber
+          },
         }
       ]
     }  
@@ -149,6 +156,26 @@ module.exports.ChatApiResource = class ChatApiResource {
     let chatMessage = req.body
     try {
       res.status(201).json(uhx.Repositories.chatRepository.createChatMessage(chatRoomId, chatMessage));
+      return true;
+    }
+    catch (e) {
+      throw new exception.Exception(`Error: ${e}`, exception.ErrorCodes.UNKNOWN);
+    }
+  }
+
+  /**
+   * @method
+   * @summary Gets the number of unread messages per chatroom
+   * @param {Express.Request} req http req from the client
+   * @param {Express.Response} res The HTTP response going to the client
+   */
+  async getUnreadMessageNumber(req, res) {
+    if(!req.body)
+      throw new exception.Exception("Missing body", exception.ErrorCodes.MISSING_PAYLOAD);
+
+    let chatRoomId = req.body.chatRoomId;
+    try {
+      res.status(201).json(uhx.Repositories.chatRepository.getNumberOfUnreadChatRoomMessages(chatRoomId));
       return true;
     }
     catch (e) {

@@ -169,4 +169,27 @@ module.exports = class ChatRepository {
     }
   }
 
+  /**
+   * @method
+   * @summary Gets the number of chatroom messages that are unread
+   * @param {string} chatRoomId ChatID of chat messages are associated with
+   */
+  async getNumberOfUnreadChatRoomMessages(chatRoomId) {
+    const dbc = new pg.Client(this._connectionString);
+    try {
+      await dbc.connect();
+      let unreadMessages = await dbc.query(`
+        SELECT Count(*) FROM chat_message 
+        WHERE chatroom_id = $1
+        AND viewedstatus = 'Unread'`
+        , [chatRoomId])
+
+        return unreadMessages;
+    }
+    catch (err) {console.log(error)}
+    finally {
+      dbc.end();
+    }
+  }
+
 }
