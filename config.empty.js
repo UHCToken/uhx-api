@@ -183,20 +183,25 @@ module.exports = {
          */
         fee_collector: "GB34934894328",
         /**
-     * @summary Identifies the account to sign for the patient
-     */
+         * @summary Identifies the account to sign for the patient
+         */
         signer_patient_id: "5ffd56be-d2a2-4abc-93e3-056cc679232d",
         /**
-* @summary Identifies the account to sign for the provider
-*/
+        * @summary Identifies the account to sign for the provider
+        */
         signer_provider_id: "891ab26a-3c2c-4c41-bcb5-0612f1cff939",
         /**
-     * @summary Identifies the account that will hold escrow funds
-     */
+         * @summary Currency to be used for escrow
+         */
+        escrow_asset_code: "TEST",
+            /**
+         * @summary Identifies the account that will hold escrow funds
+         */
         escrow_id: "610be8a6-dcf2-4e0f-8e83-7f340f6792ca",
         /**
           * @summary The determine if this is part of a testnet
           */
+         
         testnet_use: true,
         /**
           * @summary The horizon endpoint

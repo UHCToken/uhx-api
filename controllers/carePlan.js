@@ -65,10 +65,6 @@ class CarePlanApiResource {
                 },
                 {
                     "path": "carePlan/:id",
-                    "post": {
-                        "demand": security.PermissionType.WRITE,
-                        "method": this.complete
-                    },
                     "get": {
                         "demand": security.PermissionType.READ,
                         "method": this.get
@@ -85,7 +81,14 @@ class CarePlanApiResource {
                     "path": "carePlan/:id/decline",
                     "post": {
                         "demand": security.PermissionType.WRITE,
-                        "method": this.fund
+                        "method": this.decline
+                    }
+                },
+                {
+                    "path": "carePlan/:id/dispute",
+                    "post": {
+                        "demand": security.PermissionType.WRITE,
+                        "method": this.dispute
                     }
                 },
                 {
@@ -108,37 +111,32 @@ class CarePlanApiResource {
 
     /**
      * @method
-     * @summary Posts a new transaction to the wallet
+     * @summary Creates a new care plan
      * @param {Express.Request} req The request from the client
      * @param {Express.Response} res The response to send back to the client
      * @swagger
-     * /user/{userid}/wallet:
-     *  put:
+     * /carePlan:
+     *  post:
      *      tags:
-     *      - "wallet"
-     *      summary: "Activates a new blockchain account for the specified user"
-     *      description: "This method will activate the user's wallet enabling the balances to appear"
+     *      - "carePlan"
+     *      summary: "Creates a new care plan for a patient"
+     *      description: "This creates a care plan containing care services to e given to the patient"
      *      consumes: 
      *      - "application/json"
      *      produces:
      *      - "application/json"
      *      parameters:
-     *      - in: "path"
-     *        name: "userid"
-     *        description: "The identity of the user to activate an account for"
-     *        required: true
-     *        type: string
      *      - in: "body"
      *        name: "body"
-     *        description: "The wallet to be created (note: Address is generated automatically, only balances is used to establish an initial balance if this service permits)"
+     *        description: "The care plan to be created, and the services to be associated and created as well"
      *        required: true
      *        schema:
-     *          $ref: "#/definitions/Wallet"
+     *          $ref: "#/definitions/CarePlan"
      *      responses:
      *          201: 
      *             description: "The requested resource was created successfully"
      *             schema: 
-     *                  $ref: "#/definitions/Wallet"
+     *                  $ref: "#/definitions/CarePlan"
      *          422:
      *              description: "The user object sent by the client was rejected"
      *              schema: 
@@ -149,7 +147,7 @@ class CarePlanApiResource {
      *                  $ref: "#/definitions/Exception"
      *      security:
      *      - uhx_auth:
-     *          - "write:wallet"
+     *          - "write:carePlan"
      */
     async post(req, res) {
         var plan = await uhx.CareLogic.createCarePlan(req.body, req.principal);
@@ -215,21 +213,8 @@ class CarePlanApiResource {
         return true;
     }
 
-        /**
-     * @summary Gets the specified wallet
-     * @method
-     * @param {Express.Request} req The HTTP request from the client
-     * @param {Express.Response} res The HTTP response to the client
-     */
-    async complete(req, res) {
-
-        var serviceInvoice = await uhx.SecurityLogic.completeServiceInvoice(req.params.id, req.body, req.principal);
-        res.status(200).json(serviceInvoice);
-        return true;
-    }
-
     /**
-     * @summary Gets the specified wallet
+     * @summary Funds the specified care plan
      * @method
      * @param {Express.Request} req The HTTP request from the client
      * @param {Express.Response} res The HTTP response to the client
@@ -241,8 +226,34 @@ class CarePlanApiResource {
         return true;
     }
 
+
+    /**
+     * @summary Declines a specified care plan
+     * @method
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to the client
+     */
+    async decline(req, res) {
+
+        var carePlan = await uhx.CareLogic.declineCarePlan(req.params.id, req.principal);
+        res.status(200).json(carePlan);
+        return true;
+    }
+
         /**
-     * @summary Gets the specified wallet
+     * @summary Disputes a specified care plan
+     * @method
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to the client
+     */
+    async dispute(req, res) {
+
+        var carePlan = await uhx.CareLogic.disputeCarePlan(req.body, req.principal);
+        res.status(200).json(carePlan);
+        return true;
+    }
+        /**
+     * @summary Confirms the care plan as both patient and provider
      * @method
      * @param {Express.Request} req The HTTP request from the client
      * @param {Express.Response} res The HTTP response to the client
@@ -256,7 +267,7 @@ class CarePlanApiResource {
 
     
         /**
-     * @summary Gets the specified wallet
+     * @summary Gets all care plans associated with either the provider or patient
      * @method
      * @param {Express.Request} req The HTTP request from the client
      * @param {Express.Response} res The HTTP response to the client

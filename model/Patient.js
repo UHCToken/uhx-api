@@ -194,7 +194,7 @@ const uhx = require('../uhx'),
             retVal.street = this.address.street;
             retVal.unit_suite = this.address.unitSuite;
             retVal.city = this.address.city;
-            retVal.state_prov = this.address.stateProve;
+            retVal.state_prov = this.address.stateProv;
             retVal.country = this.address.country;
             retVal.postal_zip = this.address.postalZip;
         }

@@ -82,6 +82,7 @@
         this.addressId = dbCareRelationship.address_id;
         this.addressName = dbCareRelationship.address_name;
         this.note = dbCareRelationship.note;
+        this.providerNote = dbCareRelationship.provider_note;
         this.serviceTypeId = dbCareRelationship.service_type_id;
         this.serviceTypeName = dbCareRelationship.type_name;
         return this;
@@ -105,6 +106,7 @@
             provider_id: this.providerId,
             service_type_id: this.serviceTypeId,
             note: this.note,
+            provider_note: this.providerNote,
             address_id: this.addressId,
             name: this.name
         };

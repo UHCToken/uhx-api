@@ -143,23 +143,18 @@ module.exports = class CareRelationshipRepository {
             if (!_txc) await dbc.connect();
 
             // Get by ID
-            if(status && status != "*"){
-                var query = 'SELECT care_relationships.id, care_relationships.note, care_relationships.creation_time, care_relationships.status,\
-                 patients.given_name, patients.family_name,\
-                 service_types.id as service_type_id, service_types.type_name,\
-                 provider_addresses.id as address_id, provider_addresses.address_name\
-                 FROM care_relationships, patients, service_types, provider_addresses\
-                 WHERE care_relationships.provider_id = $1 AND care_relationship.status = $2 AND patients.id = care_relationships.patient_id AND provider_addresses.id = care_relationships.address_id AND service_types.id = care_relationships.service_type_id';
-                 var rdr = await dbc.query(query, [providerId, status]);
-            }
-            else{
-                var query = 'SELECT care_relationships.id, care_relationships.note, care_relationships.creation_time, care_relationships.status,\
+            var query = 'SELECT care_relationships.id, care_relationships.note, care_relationships.creation_time, care_relationships.status, care_relationships.provider_note,\
                  patients.given_name, patients.family_name,\
                  service_types.id as service_type_id, service_types.type_name,\
                  provider_addresses.id as address_id, provider_addresses.address_name\
                  FROM care_relationships, patients, service_types, provider_addresses\
                  WHERE care_relationships.provider_id = $1 AND patients.id = care_relationships.patient_id AND provider_addresses.id = care_relationships.address_id AND service_types.id = care_relationships.service_type_id';
-                 
+            
+            if(status && status != "*"){
+                query = query + "AND care_relationship.status = $2";
+                var rdr = await dbc.query(query, [providerId, status]);
+            }
+            else{
                  var rdr = await dbc.query(query, [providerId]);
             }
             if (rdr.rows.length == 0)
@@ -188,24 +183,17 @@ module.exports = class CareRelationshipRepository {
             if (!_txc) await dbc.connect();
 
             // Get by ID
-            if(status && status != "*"){
-                var query = 'SELECT care_relationships.id, care_relationships.note, care_relationships.creation_time, care_relationships.status,\
-                 providers.name, providers.id as provider_id,\
-                 service_types.id as service_type_id, service_types.type_name,\
-                 provider_addresses.id as address_id, provider_addresses.address_name\
-                 FROM care_relationships, providers, service_types, provider_addresses\
-                 WHERE patient_id = $1 AND status=$2 AND providers.id = care_relationships.provider_id AND provider_addresses.id = care_relationships.address_id AND service_types.id = care_relationships.service_type_id';
-                
-                var rdr = await dbc.query(query, [patientId, status]);
-            }
-            else{
-                var query = 'SELECT care_relationships.id, care_relationships.note, care_relationships.creation_time, care_relationships.status,\
+            var query = 'SELECT care_relationships.id, care_relationships.note, care_relationships.creation_time, care_relationships.status, care_relationships.provider_note,\
                  providers.name, providers.id as provider_id,\
                  service_types.id as service_type_id, service_types.type_name,\
                  provider_addresses.id as address_id, provider_addresses.address_name\
                  FROM care_relationships, providers, service_types, provider_addresses\
                  WHERE patient_id = $1 AND providers.id = care_relationships.provider_id AND provider_addresses.id = care_relationships.address_id AND service_types.id = care_relationships.service_type_id';
-
+            if(status && status != "*"){
+                query = query + 'AND status=$2';
+                var rdr = await dbc.query(query, [patientId, status]);
+            }
+            else{
                 var rdr = await dbc.query(query, [patientId]);
             }
             if (rdr.rows.length == 0)
