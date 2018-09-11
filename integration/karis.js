@@ -36,7 +36,7 @@ module.exports = class KarisService {
             return s;
         }
 
-        this.sendDailyLog();
+        // this.sendDailyLog();
 
         // Starts a schedule to send daily logs to Karis every day at 9 pm
         schedule.scheduleJob('* * 19 * *', () => {
@@ -112,8 +112,8 @@ module.exports = class KarisService {
     /**
      * @method
      * @summary Sends the list of reports to Karis
-     * @param {Karis} reports A collection of Karis reports to be sent to daily or monthly reports
-     * @param {string} filename The name of the file to be saved within Karis
+     * @param {Karis} reports A collection of Karis reports to be sent
+     * @param {string} filename The name of the file to be sent to Karis
      */
     sendKarisReport(reports, filename) {
         const csvFilename = filename + ".csv";
@@ -209,7 +209,7 @@ module.exports = class KarisService {
                         host: config.karis.sftpClient.host,
                         port: config.karis.sftpClient.port,
                         username: config.karis.sftpClient.userName,
-                        privateKey: require('fs').readFileSync(config.karis.sftpClient.privateKeyLocation)                
+                        privateKey: fs.readFileSync(config.karis.sftpClient.privateKeyLocation)                
                     }).then(() => {
                         const file = csvFilename.split('\\').slice(-1)[0] + '.pgp';
                         
