@@ -242,7 +242,7 @@ const uhx = require('../uhx'),
             if(!_txc) await dbc.connect();
 
             const today = new Date();
-            const rdr = await dbc.query("UPDATE subscriptions SET date_next_payment = null, date_terminated = $1 WHERE id = $2 RETURNING *", [today, subscriptionId]);
+            const rdr = await dbc.query("UPDATE subscriptions SET date_next_payment = null, auto_renew = FALSE, date_terminated = $1 WHERE id = $2 RETURNING *", [today, subscriptionId]);
 
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', patientId);
