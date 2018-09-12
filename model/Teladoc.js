@@ -150,11 +150,8 @@ module.exports = class Teladoc extends ModelBase {
             case 'female':
                 gender = 'F';
                 break;
-            case 'other':
-                gender = 'O';
-                break;
             default:
-                gender = 'O';
+                gender = 'U';
                 break;
         }
 

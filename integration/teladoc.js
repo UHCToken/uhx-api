@@ -35,7 +35,7 @@ module.exports = class TeladocService {
             return s;
         }
 
-        this.sendDailyLog();
+        // this.sendDailyLog();
 
         // Starts a schedule to send daily logs to Teladoc every day at 9 pm
         schedule.scheduleJob('* * 19 * *', () => {
@@ -87,7 +87,7 @@ module.exports = class TeladocService {
             const subscriptions = await uhx.Repositories.subscriptionRepository.getSubscriptionsForMonthlyReportToTeladoc();
 
             if (!subscriptions) {
-                // No subscriptions found; send email
+                // No subscriptions found;
             } else {
                 const reports = [];
 

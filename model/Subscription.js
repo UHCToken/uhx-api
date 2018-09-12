@@ -112,10 +112,10 @@ module.exports = class Subscription extends ModelBase {
         this.userId = dbSubscription.user_id;
         this.offeringId = dbSubscription.offering_id;
         this.offeringGroupId = dbSubscription.offering_group_id;
-        this.dateSubscribed = dbSubscription.date_subscribed !== null ? dbSubscription.date_subscribed.toLocaleString() : null;
-        this.dateTerminated = dbSubscription.date_terminated !== null ? dbSubscription.date_terminated.toLocaleString() : null;
-        this.dateExpired = dbSubscription.date_expired !== null ? dbSubscription.date_expired.toLocaleString() : null;
-        this.dateNextPayment = dbSubscription.date_next_payment !== null ? dbSubscription.date_next_payment.toLocaleString() : null;
+        this.dateSubscribed = typeof dbSubscription.date_subscribed !== 'undefined' && dbSubscription.date_subscribed !== null ? dbSubscription.date_subscribed.toLocaleString() : null;
+        this.dateTerminated = typeof dbSubscription.date_terminated !== 'undefined' && dbSubscription.date_terminated !== null ? dbSubscription.date_terminated.toLocaleString() : null;
+        this.dateExpired = typeof dbSubscription.date_expired !== 'undefined' && dbSubscription.date_expired !== null ? dbSubscription.date_expired.toLocaleString() : null;
+        this.dateNextPayment = typeof dbSubscription.date_next_payment !== 'undefined' && dbSubscription.date_next_payment !== null ? dbSubscription.date_next_payment.toLocaleString() : null;
         this.periodInMonths = dbSubscription.period_in_months;
         this.autoRenew = dbSubscription.auto_renew;
         this.price = dbSubscription.price;

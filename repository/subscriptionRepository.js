@@ -41,8 +41,10 @@ const uhx = require('../uhx'),
         this.get = this.get.bind(this);
         this.post = this.post.bind(this);
         this.update = this.update.bind(this);
-        this.getSubscriptionsForDailyReport = this.getSubscriptionsForDailyReport.bind(this);
-        this.getSubscriptionsForMonthlyReport = this.getSubscriptionsForMonthlyReport.bind(this);
+        this.getSubscriptionsForDailyReportToKaris = this.getSubscriptionsForDailyReportToKaris.bind(this);
+        this.getSubscriptionsForMonthlyReportToKaris = this.getSubscriptionsForMonthlyReportToKaris.bind(this);
+        this.getSubscriptionsForDailyReportToTeladoc = this.getSubscriptionsForDailyReportToTeladoc.bind(this);
+        this.getSubscriptionsForMonthlyReportToTeladoc = this.getSubscriptionsForMonthlyReportToTeladoc.bind(this);
         this.getSubscriptionsToBill = this.getSubscriptionsToBill.bind(this);
         this.updateBilledSubscriptions = this.updateBilledSubscriptions.bind(this);
         this.terminateSubscriptions = this.terminateSubscriptions.bind(this);
@@ -266,11 +268,8 @@ const uhx = require('../uhx'),
     async getSubscriptionsForDailyReportToKaris(_txc) {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
-            const now = new Date();
-            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 1);
-
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM subscriptions WHERE date_terminated IS NULL OR date_terminated = $1", [today]);
+            const rdr = await dbc.query("SELECT * FROM karis_daily_reports");
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', 'No Subscriptions found.');
             else {
@@ -292,7 +291,7 @@ const uhx = require('../uhx'),
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM subscriptions WHERE date_terminated IS NULL OR date_terminated < $1", [new Date()]);
+            const rdr = await dbc.query("SELECT * FROM karis_monthly_reports");
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', 'No Subscriptions found.');
             else {
@@ -313,11 +312,8 @@ const uhx = require('../uhx'),
     async getSubscriptionsForDailyReportToTeladoc(_txc) {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
-            const now = new Date();
-            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 1);
-
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM subscriptions WHERE date_terminated IS NULL OR date_terminated = $1", [today]);
+            const rdr = await dbc.query("SELECT * FROM teladoc_daily_reports");
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', 'No Subscriptions found.');
             else {
@@ -339,7 +335,7 @@ const uhx = require('../uhx'),
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM subscriptions WHERE date_terminated IS NULL OR date_terminated < $1", [new Date()]);
+            const rdr = await dbc.query("SELECT * FROM teladoc_monthly_reports");
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', 'No Subscriptions found.');
             else {
