@@ -55,7 +55,7 @@ module.exports = class KarisService {
      */
     async sendDailyLog() {
         try {
-            const subscriptions = await uhx.Repositories.subscriptionRepository.getSubscriptionsForDailyReport();
+            const subscriptions = await uhx.Repositories.subscriptionRepository.getSubscriptionsForDailyReportToKaris();
 
             if (!subscriptions) {
                 // No subscriptions found
@@ -85,7 +85,7 @@ module.exports = class KarisService {
      */
     async sendMonthlyCensus() {
         try {
-            const subscriptions = await uhx.Repositories.subscriptionRepository.getSubscriptionsForMonthlyReport();
+            const subscriptions = await uhx.Repositories.subscriptionRepository.getSubscriptionsForMonthlyReportToKaris();
 
             if (!subscriptions) {
                 // No subscriptions found; send email

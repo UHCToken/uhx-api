@@ -263,7 +263,54 @@ const uhx = require('../uhx'),
      * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {Subscription} The fetched subscriptions
      */
-    async getSubscriptionsForDailyReport(_txc) {
+    async getSubscriptionsForDailyReportToKaris(_txc) {
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 1);
+
+            if(!_txc) await dbc.connect();
+            const rdr = await dbc.query("SELECT * FROM subscriptions WHERE date_terminated IS NULL OR date_terminated = $1", [today]);
+            if(rdr.rows.length === 0)
+                throw new exception.NotFoundException('subscriptions', 'No Subscriptions found.');
+            else {
+                return await this.subscriptionArray(rdr);
+            }
+        }
+        finally {
+            if(!_txc) dbc.end();
+        }
+    }
+    
+    /**
+     * @method
+     * @summary Retrieve a set of subscribers from the database that an active membership for the previous month
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {Subscription} The fetched subscriptions
+     */
+    async getSubscriptionsForMonthlyReportToKaris(_txc) {
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+            const rdr = await dbc.query("SELECT * FROM subscriptions WHERE date_terminated IS NULL OR date_terminated < $1", [new Date()]);
+            if(rdr.rows.length === 0)
+                throw new exception.NotFoundException('subscriptions', 'No Subscriptions found.');
+            else {
+                return await this.subscriptionArray(rdr);
+            }
+        }
+        finally {
+            if(!_txc) dbc.end();
+        }
+    }
+
+     /**
+     * @method
+     * @summary Retrieve a set of subscribers from the database that have current subscriptions for today
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {Subscription} The fetched subscriptions
+     */
+    async getSubscriptionsForDailyReportToTeladoc(_txc) {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             const now = new Date();
@@ -288,7 +335,7 @@ const uhx = require('../uhx'),
      * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {Subscription} The fetched subscriptions
      */
-    async getSubscriptionsForMonthlyReport(_txc) {
+    async getSubscriptionsForMonthlyReportToTeladoc(_txc) {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();

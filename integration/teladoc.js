@@ -54,7 +54,7 @@ module.exports = class TeladocService {
      */
     async sendDailyLog() {
         try {
-            const subscriptions = await uhx.Repositories.subscriptionRepository.getSubscriptionsForDailyReport();
+            const subscriptions = await uhx.Repositories.subscriptionRepository.getSubscriptionsForDailyReportToTeladoc();
 
             if (!subscriptions) {
                 // No subscriptions found
@@ -84,7 +84,7 @@ module.exports = class TeladocService {
      */
     async sendMonthlyCensus() {
         try {
-            const subscriptions = await uhx.Repositories.subscriptionRepository.getSubscriptionsForMonthlyReport();
+            const subscriptions = await uhx.Repositories.subscriptionRepository.getSubscriptionsForMonthlyReportToTeladoc();
 
             if (!subscriptions) {
                 // No subscriptions found; send email
