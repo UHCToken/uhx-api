@@ -69,11 +69,15 @@ module.exports.ChatApiResource = class ChatApiResource {
           }
         },
         {
-          "path": "chat/unread",
+          "path": "chat/:cid/unread",
           "get" : {
               demand: security.PermissionType.READ,
               method: this.getUnreadMessageNumber
           },
+          "put": {
+            "demand": security.PermissionType.WRITE | security.PermissionType.READ,
+            "method": this.updateUnreadMessages
+          }
         }
       ]
     }  
@@ -119,7 +123,7 @@ module.exports.ChatApiResource = class ChatApiResource {
     if(!req.body)
       throw new exception.Exception("Missing body", exception.ErrorCodes.MISSING_PAYLOAD);
 
-    res.status(201).json(uhx.Repositories.chatRepository.createChatRoom(req.body.chatRoom));
+    res.status(201).json(await uhx.Repositories.chatRepository.createChatRoom(req.body.chatRoom));
     return true;
   }
 
@@ -155,7 +159,7 @@ module.exports.ChatApiResource = class ChatApiResource {
     let chatRoomId = req.body.chatRoomId;
     let chatMessage = req.body
     try {
-      res.status(201).json(uhx.Repositories.chatRepository.createChatMessage(chatRoomId, chatMessage));
+      res.status(201).json(await uhx.Repositories.chatRepository.createChatMessage(chatRoomId, chatMessage));
       return true;
     }
     catch (e) {
@@ -170,12 +174,43 @@ module.exports.ChatApiResource = class ChatApiResource {
    * @param {Express.Response} res The HTTP response going to the client
    */
   async getUnreadMessageNumber(req, res) {
-    if(!req.body)
-      throw new exception.Exception("Missing body", exception.ErrorCodes.MISSING_PAYLOAD);
+    const chatId = req.params.cid;
+    const userId = req.headers.userid;
 
-    let chatRoomId = req.body.chatRoomId;
+    if(!chatId)
+      throw new exception.Exception("Missing chat room id parameter", exception.ErrorCodes.MISSING_PROPERTY);
+
+    if(!userId)
+      throw new exception.Exception("Missing user id parameter", exception.ErrorCodes.MISSING_PROPERTY);
+
+
     try {
-      res.status(201).json(uhx.Repositories.chatRepository.getNumberOfUnreadChatRoomMessages(chatRoomId));
+      res.status(200).json(await uhx.Repositories.chatRepository.getNumberOfUnreadChatRoomMessages(chatId, userId));
+      return true;
+    }
+    catch (e) {
+      throw new exception.Exception(`Error: ${e}`, exception.ErrorCodes.UNKNOWN);
+    }
+  }
+
+  /**
+   * @method
+   * @summary Updates chat rooms from unread to read
+   * @param {Express.Request} req http req from the client
+   * @param {Express.Response} res The HTTP response going to the client
+   */
+  async updateUnreadMessages(req, res) {
+    const chatId = req.params.cid;
+    const userId = req.headers.userid; //userid of other user in chat (not one signed in)
+
+    if(!chatId)
+    throw new exception.Exception("Missing chat room id parameter", exception.ErrorCodes.MISSING_PROPERTY);
+
+    if(!userId)
+      throw new exception.Exception("Missing user id parameter", exception.ErrorCodes.MISSING_PROPERTY);
+
+    try {
+      res.status(200).json(await uhx.Repositories.chatRepository.updateChatMessagesToRead(chatId, userId));
       return true;
     }
     catch (e) {
