@@ -182,13 +182,14 @@ const uhx = require('../uhx'),
             }
 
             const offering = await dbc.query("SELECT * FROM offerings WHERE id = $1", [offeringId]);
+            const dateSubscribed = new Date(subscriptionDate);
             const subscriptionExpiryDate = subscriptionDate.add(offering.rows[0].period_in_months, 'months');
 
             if (autoRenew) {
                 nextPaymentDate = subscriptionExpiryDate;
             }
 
-            const rdr = await dbc.query("INSERT INTO subscriptions (offering_id, patient_id, date_next_payment, date_subscribed, auto_renew, date_expired) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *", [offeringId, patientId, nextPaymentDate, subscriptionDate, autoRenew, subscriptionExpiryDate]);
+            const rdr = await dbc.query("INSERT INTO subscriptions (offering_id, patient_id, date_next_payment, date_subscribed, auto_renew, date_expired) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *", [offeringId, patientId, nextPaymentDate, dateSubscribed, autoRenew, subscriptionExpiryDate]);
             
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', patientId);
@@ -241,7 +242,7 @@ const uhx = require('../uhx'),
             if(!_txc) await dbc.connect();
 
             const today = new Date();
-            const rdr = await dbc.query("UPDATE subscriptions SET date_next_payment = null, date_terminated = $1 WHERE id = $2 RETURNING *", [today, subscriptionId]);
+            const rdr = await dbc.query("UPDATE subscriptions SET date_next_payment = null, auto_renew = FALSE, date_terminated = $1 WHERE id = $2 RETURNING *", [today, subscriptionId]);
 
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', subscriptionId);
