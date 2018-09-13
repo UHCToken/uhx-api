@@ -143,8 +143,7 @@ module.exports = class CareRelationshipRepository {
             if (!_txc) await dbc.connect();
 
             // Get by ID
-            var query = 'SELECT care_relationships.id, care_relationships.note, care_relationships.creation_time, care_relationships.status, care_relationships.provider_note,\
-                 patients.given_name, patients.family_name,\
+            var query = 'SELECT care_relationships.id, care_relationships.note, care_relationships.creation_time, care_relationships.status, care_relationships.patient_email_shown, care_relationships.patient_address_shown, care_relationships.provider_id, care_relationships.patient_id, care_relationships.provider_note,\
                  service_types.id as service_type_id, service_types.type_name,\
                  provider_addresses.id as address_id, provider_addresses.address_name\
                  FROM care_relationships, patients, service_types, provider_addresses\
@@ -183,7 +182,7 @@ module.exports = class CareRelationshipRepository {
             if (!_txc) await dbc.connect();
 
             // Get by ID
-            var query = 'SELECT care_relationships.id, care_relationships.note, care_relationships.creation_time, care_relationships.status, care_relationships.provider_note,\
+            var query = 'SELECT care_relationships.id, care_relationships.note, care_relationships.creation_time, care_relationships.status, care_relationships.provider_note, care_relationships.patient_email_shown, care_relationships.patient_address_shown, care_relationships.provider_id, care_relationships.patient_id,\
                  providers.name, providers.id as provider_id,\
                  service_types.id as service_type_id, service_types.type_name,\
                  provider_addresses.id as address_id, provider_addresses.address_name\
