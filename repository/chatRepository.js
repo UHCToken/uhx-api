@@ -155,7 +155,9 @@ module.exports = class ChatRepository {
     try {
       let chatRoomMessages = [];
       await dbc.connect();
-      let messagesFromDB = await dbc.query(`SELECT * FROM chat_message WHERE chatroom_id = $1`, [chatRoomId])
+      let messagesFromDB = await dbc.query(`SELECT * FROM chat_message 
+                                            WHERE chatroom_id = $1
+                                            ORDER BY datesent ASC`, [chatRoomId])
 
       for(var r in messagesFromDB.rows) {
         chatRoomMessages.push(new ChatMessage().fromData(messagesFromDB.rows[r]));
@@ -167,6 +169,62 @@ module.exports = class ChatRepository {
     finally {
       dbc.end();
     }
+  }
+
+  /**
+   * @method
+   * @summary Gets the number of chatroom messages that are unread
+   * @param {string} chatRoomId AuthorID that chat messages are associated with
+   */
+  async getNumberOfUnreadChatRoomMessages(chatroomId, userId) {
+    const dbc = new pg.Client(this._connectionString);
+    try {
+      await dbc.connect();
+      let unreadMessages = 0
+      let results =  await dbc.query(`
+        SELECT Count(*) FROM chat_message 
+        WHERE chatroom_id = $1
+        AND viewedstatus = 'Unread'
+        AND authorid != $2
+        `
+        , [chatroomId, userId])
+
+      results.rows.forEach(row=> {
+        unreadMessages += parseInt(row.count)
+      })
+      return unreadMessages;
+    }
+    catch (err) {console.log(error)}
+    finally {
+      dbc.end();
+    }
+  }
+
+    /**
+   * @method
+   * @summary Updates unread chat messages to read
+   * @param {string} chatid id of the chat room the message is associated with
+   * @param {string} userId user that chat messages are associated with
+   */
+  async updateChatMessagesToRead(chatid, userId) {
+    console.log(chatid)
+    console.log(userId)
+    const dbc = new pg.Client(this._connectionString);
+    try {
+      console.log(`trying`)
+      await dbc.connect();
+      await dbc.query(`UPDATE chat_message  
+                      SET viewedstatus = 'Read'
+                      WHERE chatroom_id = $1
+                      AND authorid = $2
+                      `, 
+            [chatid, userId]);
+    }
+    catch (err) {console.log(error)}
+    finally {
+      dbc.end();
+    }
+
   }
 
 }
