@@ -205,8 +205,11 @@ module.exports = class ChatRepository {
    * @param {string} userId user that chat messages are associated with
    */
   async updateChatMessagesToRead(chatid, userId) {
+    console.log(chatid)
+    console.log(userId)
     const dbc = new pg.Client(this._connectionString);
     try {
+      console.log(`trying`)
       await dbc.connect();
       await dbc.query(`UPDATE chat_message  
                       SET viewedstatus = 'Read'
