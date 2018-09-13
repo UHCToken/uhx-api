@@ -155,7 +155,9 @@ module.exports = class ChatRepository {
     try {
       let chatRoomMessages = [];
       await dbc.connect();
-      let messagesFromDB = await dbc.query(`SELECT * FROM chat_message WHERE chatroom_id = $1`, [chatRoomId])
+      let messagesFromDB = await dbc.query(`SELECT * FROM chat_message 
+                                            WHERE chatroom_id = $1
+                                            ORDER BY datesent ASC`, [chatRoomId])
 
       for(var r in messagesFromDB.rows) {
         chatRoomMessages.push(new ChatMessage().fromData(messagesFromDB.rows[r]));
