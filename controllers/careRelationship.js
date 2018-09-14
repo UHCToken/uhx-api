@@ -228,9 +228,19 @@ class CareRelationshipApiResource {
     async getAll(req, res) {
         if(req.body.providerId){
             var careRelationships = await uhx.Repositories.careRelationshipRepository.getByProviderId(req.body.providerId, req.body.status);
+            
+            for(var i = 0; i<careRelationships.length; i++){
+                await careRelationships[i].loadAddress();
+                await careRelationships[i].loadPatient();
+            }
         }
         else{
             var careRelationships = await uhx.Repositories.careRelationshipRepository.getByPatientId(req.body.patientId, req.body.status);
+            
+            for(var i = 0; i<careRelationships.length; i++){
+                await careRelationships[i].loadAddress();
+                await careRelationships[i].loadProvider();
+            }
         }
         res.status(200).json(careRelationships);
         return true;

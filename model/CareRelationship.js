@@ -59,6 +59,7 @@
         this.fromData = this.fromData.bind(this);
         this.toData = this.toData.bind(this);
         this.copy = this.copy.bind(this);
+        this._externIds = [];
     }
 
     /**
@@ -76,15 +77,13 @@
         this.completionTime = dbCareRelationship.completion_time;
         this.patientId = dbCareRelationship.patient_id;
         this.providerId = dbCareRelationship.provider_id;
-        this.providerName = dbCareRelationship.name;
-        this.patientFamilyName = dbCareRelationship.family_name;
-        this.patientGivenName = dbCareRelationship.given_name;
         this.addressId = dbCareRelationship.address_id;
-        this.addressName = dbCareRelationship.address_name;
         this.note = dbCareRelationship.note;
         this.providerNote = dbCareRelationship.provider_note;
         this.serviceTypeId = dbCareRelationship.service_type_id;
-        this.serviceTypeName = dbCareRelationship.type_name;
+        this.serviceTypeName = dbCareRelationship.type_name,
+        this.patientAddressShown = dbCareRelationship.patient_address_shown,
+        this.patientEmailShown = dbCareRelationship.patient_email_shown;
         return this;
     }
 
@@ -108,7 +107,8 @@
             note: this.note,
             provider_note: this.providerNote,
             address_id: this.addressId,
-            name: this.name
+            patient_address_shown: this.patientAddressShown,
+            patient_email_shown: this.patientEmailShown,
         };
     }
     /**
@@ -117,6 +117,30 @@
      */
     toJSON() {
         var retVal = this.stripHiddenFields(this);
+        retVal.address = this._address;
+        retVal.patient = this._patient;
+        retVal.provider = this._provider;
         return retVal;
+    }
+
+    async loadProvider() {
+        if(!this._provider)
+            this._provider = await uhx.Repositories.providerRepository.get(this.providerId);
+        return this._provider;
+    }
+
+    async loadPatient() {
+        if(!this._patient){
+            this._patient = await uhx.Repositories.patientRepository.get(this.patientId);
+            this._patient.email = this.patientEmailShown && this._patient && this._patient.email;
+            this._patient.address = this.patientAddressShown && this._patient && this._patient.address;
+        }    
+        return this._patient;
+    }
+
+    async loadAddress() {
+        if(!this._address)
+            this._address = await uhx.Repositories.providerAddressRepository.get(this.addressId);
+        return this._address;
     }
  }
