@@ -35,7 +35,7 @@ module.exports = class KarisService {
         // this.sendDailyLog();
 
         // Starts a schedule to send daily logs to Karis every day at 9 pm
-        schedule.scheduleJob('* * 19 * *', () => {
+        schedule.scheduleJob('* * 21 * *', () => {
             // this.sendDailyLog();
         });
 

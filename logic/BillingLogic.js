@@ -18,16 +18,14 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
-const uhx = require('../uhx'),
-    exception = require('../exception'),
-    subscriptionRepository = require('../repository/subscriptionRepository'),
-    schedule = require('node-schedule'),
-    moment = require('moment'),
-    Transaction = require('../model/Transaction'),
-    MonetaryAmount = require('../model/MonetaryAmount'),
-    uuidv4 = require('uuid/v4'),
-    model = require("../model/model"),
-    config = require('../config');
+const MonetaryAmount = require('../model/MonetaryAmount'),
+  Transaction = require('../model/Transaction'),
+  schedule = require('node-schedule'),
+  model = require("../model/model"),
+  config = require('../config'),
+  uuidv4 = require('uuid/v4'),
+  moment = require('moment'),
+  uhx = require('../uhx');
 
 /**
   * @class
@@ -46,8 +44,8 @@ module.exports = class BillingLogic {
 
     //  this.dailyBilling();
 
-     // Schedule billing to be done daily at 9pm
-     schedule.scheduleJob('0 21 * * *', () => {
+     // Schedule billing to be done daily at 8pm
+     schedule.scheduleJob('0 20 * * *', () => {
        this.dailyBilling();
      });
    }
