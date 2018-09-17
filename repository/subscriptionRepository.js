@@ -23,6 +23,7 @@ const uhx = require('../uhx'),
     moment = require('moment'),
     momentTimezone = require('moment-timezone'),
     exception = require('../exception'),
+    config = require('../config'),
     model = require('../model/model');
 
  /**
@@ -60,9 +61,6 @@ const uhx = require('../uhx'),
     async get(patientId, _txc) {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
-            const now = new Date();
-            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 1);
-
             if(!_txc) await dbc.connect();
             const rdr = await dbc.query("SELECT * FROM subscription_lookup WHERE patient_id = $1", [patientId]);
             if(rdr.rows.length === 0)
@@ -70,6 +68,11 @@ const uhx = require('../uhx'),
             else {
                 return await this.subscriptionArray(rdr);
             }
+        }
+        catch (ex) {
+            uhx.log.error(`Could not retrieve patient subscriptions: ${ex}`);
+
+            throw new exception.Exception('Error occurred while retrieving patient subscriptions', exception.ErrorCodes.DATABASE_ERROR);
         }
         finally {
             if(!_txc) dbc.end();
@@ -86,9 +89,8 @@ const uhx = require('../uhx'),
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
-            // Today's date
-            const now = new Date();
-            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 1);
+
+            const today = moment().format('YYYY-MM-DD');
 
             // Get subscriptions to bill today
             const rdr = await dbc.query('SELECT * FROM subscription_lookup WHERE date_next_payment = $1', [today]);
@@ -100,8 +102,10 @@ const uhx = require('../uhx'),
             else {
               return await this.subscriptionArray(rdr);
             }
-        } catch (er) {
+        } catch (ex) {
             uhx.log.error(`Could not pull subscriptions to bill: ${ex}`);
+
+            throw new exception.Exception('Error occurred while retrieving subscriptions for billing', exception.ErrorCodes.DATABASE_ERROR);
         } finally {
             if(!_txc) dbc.end();
         }
@@ -128,6 +132,8 @@ const uhx = require('../uhx'),
               VALUES ${insertValues}`);
         } catch(ex) {
           uhx.log.error(`Could not update billed subscriptions: ${ex}`);
+
+          throw new exception.Exception('Error occurred while updating subscriptions', exception.ErrorCodes.DATABASE_ERROR);
         }
         finally {
           if(!_txc) dbc.end();
@@ -143,15 +149,25 @@ const uhx = require('../uhx'),
     async terminateSubscriptions(today, subsToTerminate, _txc) {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
-
             if(!_txc) await dbc.connect();
 
-            const query = (`UPDATE subscriptions SET date_terminated='${[today]}', date_next_payment=NULL WHERE date_expired='${[today]}' AND auto_renew=false;
-                            UPDATE subscriptions SET date_terminated='${[today]}', date_next_payment=NULL WHERE id IN (${subsToTerminate.toString()});`);
+            let terminationDate;
+
+            // If the current time is after the upload time, the termination date will not be until the day after
+            if (this.isCurrentTimeBeforeConfiguredTime(config.reportingUploadTime)) {
+                terminationDate = today;
+            } else {
+                terminationDate = moment().add(1, 'days').format('YYYY-MM-DD');
+            }
+
+            const query = (`UPDATE subscriptions SET date_terminated='${[terminationDate]}', date_next_payment=NULL WHERE date_expired='${[today]}' AND auto_renew=false;
+                            UPDATE subscriptions SET date_terminated='${[terminationDate]}', date_next_payment=NULL WHERE id IN (${subsToTerminate.toString()});`);
             await dbc.query(query);
 
         } catch (ex) {
             uhx.log.error(`Could not pull subscriptions to terminate: ${ex}`);
+
+            throw new exception.Exception('Error occurred while updating subscriptions', exception.ErrorCodes.DATABASE_ERROR);
         } finally {
             if(!_txc) dbc.end();
         }
@@ -172,15 +188,13 @@ const uhx = require('../uhx'),
         try {
             if(!_txc) await dbc.connect();
             let subscriptionDate,
-                nextPaymentDate;
+                nextPaymentDate;            
 
-            const now = parseInt(momentTimezone().tz('America/Chicago').format('hh'));
-
-            // If subscription occurs after 9pm Central time; the subscription will not be active for 2 more days
-            if (now >= 21) {
-                subscriptionDate = moment().add(2, 'days');
-            } else {
+            // If subscription occurs after the configured time time; the subscription will not be active for 2 more days
+            if (this.isCurrentTimeBeforeConfiguredTime(config.reportingUploadTime)) {
                 subscriptionDate = moment().add(1, 'days');
+            } else {
+                subscriptionDate = moment().add(2, 'days');
             }
 
             const offering = await dbc.query("SELECT * FROM offerings WHERE id = $1", [offeringId]);
@@ -194,12 +208,17 @@ const uhx = require('../uhx'),
             const rdr = await dbc.query("INSERT INTO subscriptions (offering_id, patient_id, date_next_payment, date_subscribed, auto_renew, date_expired) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *", [offeringId, patientId, nextPaymentDate, dateSubscribed, autoRenew, subscriptionExpiryDate]);
             
             if(rdr.rows.length === 0)
-                throw new exception.NotFoundException('subscriptions', patientId);
+                throw new exception.Exception('Error inserting data', exception.ErrorCodes.DATABASE_ERROR);
             else {
                 const subscriptionRdr = await dbc.query("SELECT * FROM subscription_lookup WHERE subscription_id = $1", [rdr.rows[0].id]);
 
                 return new model.Subscription().fromData(subscriptionRdr.rows[0]);
             }
+        }
+        catch(ex) {
+            uhx.log.error(`Could not create new subscription: ${ex}`);
+
+            throw new exception.Exception('Error creating subscription', exception.ErrorCodes.DATABASE_ERROR);
         }
         finally {
             if(!_txc) dbc.end();
@@ -219,12 +238,18 @@ const uhx = require('../uhx'),
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
+
             const rdr = await dbc.query("UPDATE subscriptions SET offering_id = $1, auto_renew = $2 WHERE id = $3 RETURNING *", [offeringId, autoRenew, subscriptionId]);
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', patientId);
             else {
                 return new model.Subscription().fromData(rdr.rows[0]);
             }
+        }
+        catch(ex) {
+            uhx.log.error(`Could not update subscription: ${ex}`);
+
+            throw new exception.Exception('Error updating subscription', exception.ErrorCodes.DATABASE_ERROR);
         }
         finally {
             if(!_txc) dbc.end();
@@ -243,8 +268,7 @@ const uhx = require('../uhx'),
         try {
             if(!_txc) await dbc.connect();
 
-            const today = new Date();
-            const rdr = await dbc.query("UPDATE subscriptions SET date_next_payment = null, auto_renew = FALSE, date_terminated = $1 WHERE id = $2 RETURNING *", [today, subscriptionId]);
+            const rdr = await dbc.query("UPDATE subscriptions SET date_next_payment = null, auto_renew = FALSE WHERE id = $1 RETURNING *", [subscriptionId]);
 
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', subscriptionId);
@@ -253,6 +277,11 @@ const uhx = require('../uhx'),
 
                 return new model.Subscription().fromData(subscriptionRdr.rows[0]);
             }
+        }
+        catch(ex) {
+            uhx.log.error(`Could not cancel subscription: ${ex}`);
+
+            throw new exception.Exception('Error cancelling subscription', exception.ErrorCodes.DATABASE_ERROR);
         }
         finally {
             if(!_txc) dbc.end();
@@ -271,10 +300,15 @@ const uhx = require('../uhx'),
             if(!_txc) await dbc.connect();
             const rdr = await dbc.query("SELECT * FROM karis_daily_reports");
             if(rdr.rows.length === 0)
-                throw new exception.NotFoundException('subscriptions', 'No Subscriptions found.');
+                return [];
             else {
                 return await this.subscriptionArray(rdr);
             }
+        }
+        catch(ex) {
+            uhx.log.error(`Could not retrieve subscriptions for Karis daily reporting: ${ex}`);
+
+            throw new exception.Exception('Error retrieving subscriptions for Karis daily reporting', exception.ErrorCodes.DATABASE_ERROR);
         }
         finally {
             if(!_txc) dbc.end();
@@ -293,10 +327,15 @@ const uhx = require('../uhx'),
             if(!_txc) await dbc.connect();
             const rdr = await dbc.query("SELECT * FROM karis_monthly_reports");
             if(rdr.rows.length === 0)
-                throw new exception.NotFoundException('subscriptions', 'No Subscriptions found.');
+                return [];
             else {
                 return await this.subscriptionArray(rdr);
             }
+        }
+        catch(ex) {
+            uhx.log.error(`Could not retrieve subscriptions for Karis monthly reporting: ${ex}`);
+
+            throw new exception.Exception('Error retrieving subscriptions for Karis monthly reporting', exception.ErrorCodes.DATABASE_ERROR);
         }
         finally {
             if(!_txc) dbc.end();
@@ -315,10 +354,15 @@ const uhx = require('../uhx'),
             if(!_txc) await dbc.connect();
             const rdr = await dbc.query("SELECT * FROM teladoc_daily_reports");
             if(rdr.rows.length === 0)
-                throw new exception.NotFoundException('subscriptions', 'No Subscriptions found.');
+                return [];
             else {
                 return await this.subscriptionArray(rdr);
             }
+        }
+        catch(ex) {
+            uhx.log.error(`Could not retrieve subscriptions for Teladoc daily reporting: ${ex}`);
+
+            throw new exception.Exception('Error retrieving subscriptions for Teladoc daily reporting', exception.ErrorCodes.DATABASE_ERROR);
         }
         finally {
             if(!_txc) dbc.end();
@@ -337,10 +381,15 @@ const uhx = require('../uhx'),
             if(!_txc) await dbc.connect();
             const rdr = await dbc.query("SELECT * FROM teladoc_monthly_reports");
             if(rdr.rows.length === 0)
-                throw new exception.NotFoundException('subscriptions', 'No Subscriptions found.');
+                return [];
             else {
                 return await this.subscriptionArray(rdr);
             }
+        }
+        catch(ex) {
+            uhx.log.error(`Could not retrieve subscriptions for Teladoc monthly reporting: ${ex}`);
+
+            throw new exception.Exception('Error retrieving subscriptions for Teladoc monthly reporting', exception.ErrorCodes.DATABASE_ERROR);
         }
         finally {
             if(!_txc) dbc.end();
@@ -361,5 +410,26 @@ const uhx = require('../uhx'),
       }
 
       return subscriptions;
+    }
+
+    /**
+     * @method
+     * @summary Compares the current time with a time set in the configuration
+     * @param {string} time A string representation of a desired time, format "HH:MM" 
+     * @returns {Subscription} array of subscriptions
+     */
+    async isCurrentTimeBeforeConfiguredTime(time) {
+        const currentHour = parseInt(moment().format('hh'));
+        const currentMins = parseInt(moment().format('mm'));
+
+        const configTime = time.split(':');
+        const configHour = parseInt(configTime[0]);
+        const configMins = parseInt(configTime[1]);
+
+        if (currentHour >= configHour && currentMins >= configMins) {
+            return false;
+        } 
+
+        return true;
     }
  }

@@ -349,6 +349,10 @@ module.exports = {
         secure: true
     },
     /**
+     * @summary The time at which reports to be sent off to service providers
+     */
+    reportingUploadTime: "20:00",
+    /**
      * @summary Configuration settings related to Karis
      */
     karis: {
