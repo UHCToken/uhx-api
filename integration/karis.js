@@ -17,26 +17,21 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
-const schedule = require('node-schedule'),
-    uhx = require("../uhx"),
+const Json2csvParser = require('json2csv').Parser,
+    Client = require('ssh2-sftp-client'),
+    schedule = require('node-schedule'),
+    exception = require('../exception'),
     model = require('../model/model'),
     config = require('../config'),
-    fs = require('fs'),
-    Client = require('ssh2-sftp-client'),
-    moment = require('moment'),
-    sftp = new Client(),
     openpgp = require('openpgp'),
-    Json2csvParser = require('json2csv').Parser;
+    moment = require('moment'),
+    uhx = require("../uhx"),
+    sftp = new Client(),
+    fs = require('fs');
 
 module.exports = class KarisService {
 
     constructor() {
-        Number.prototype.pad = function(size) {
-            let s = String(this);
-            while (s.length < (size || 2)) {s = "0" + s;}
-            return s;
-        }
-
         // this.sendDailyLog();
 
         // Starts a schedule to send daily logs to Karis every day at 9 pm
@@ -72,7 +67,8 @@ module.exports = class KarisService {
 
             this.sendKarisReport(reports, filename);
         } catch(ex) {
-            console.log(ex);
+            uhx.log.error(`Could not send daily report to Karis: ${ex}`);
+            throw new exception.Exception('Could not send daily report to Karis', exception.ErrorCodes.UNKNOWN);
         }
     }
 
@@ -99,7 +95,8 @@ module.exports = class KarisService {
 
             this.sendKarisReport(reports, filename);
         } catch(ex) {
-
+            uhx.log.error(`Could not send monthly report to Karis: ${ex}`);
+            throw new exception.Exception('Could not send monthly report to Karis', exception.ErrorCodes.UNKNOWN);
         }
     }
 
@@ -179,8 +176,9 @@ module.exports = class KarisService {
         const csv = json2csvParser.parse(reports);
         
         fs.writeFile(csvFilename, csv, 'utf8', function (err) {
-            if (err) {
-                console.log('An error occurred while trying to create the csv file.');
+            if (error) {
+                uhx.log.error(`Error occurred while trying to create the csv file: ${error}`);
+                throw new exception.Exception('Error occurred while trying to create the csv file', exception.ErrorCodes.ERR_FILE_CREATION);
             } else{
                 self.sendFile(csvFilename);
             }
@@ -196,8 +194,9 @@ module.exports = class KarisService {
         this.encryptFile(csvFilename).then((encryptedFileData) => {
             const encryptedFileName = csvFilename + '.pgp';
             fs.writeFile(encryptedFileName, encryptedFileData, 'utf8', function (err) {
-                if (err) {
-                    console.log('Some error occured - file either not saved or corrupted file saved.');
+                if (error) {
+                    uhx.log.error(`Error occurred while trying to create the encrypted PGP file: ${error}`);
+                    throw new exception.Exception('Error occurred while trying to create the encrypted PGP file', exception.ErrorCodes.ERR_FILE_CREATION);
                 } else{
                     sftp.connect({
                         host: config.karis.sftpClient.host,
@@ -208,8 +207,9 @@ module.exports = class KarisService {
                         const file = csvFilename.split('\\').slice(-1)[0] + '.pgp';
                         
                         sftp.put(encryptedFileName, file);
-                    }).catch((err) => {
-                        console.log(err, 'catch error');
+                    }).catch((error) => {
+                        uhx.log.error(`Error occurred while sending report to Karis: ${error}`);
+                        throw new exception.Exception('Error occurred while sending report to Karis', exception.ErrorCodes.COM_FAILURE);
                     });
                 }
             });
@@ -233,7 +233,8 @@ module.exports = class KarisService {
             openpgp.encrypt(options).then(encryptedText => {                
                 resolve(encryptedText.data);
             }).catch((error) => {
-                console.log(error);
+                uhx.log.error(`Error occurred while trying to encrypt the file: ${error}`);
+                throw new exception.Exception('Error occurred while trying to encrypt the file', exception.ErrorCodes.ENCRYPTION_ERROR);
             }); 
         });
     }

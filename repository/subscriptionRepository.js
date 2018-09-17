@@ -18,13 +18,12 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
-const uhx = require('../uhx'),
-    pg = require('pg'),
-    moment = require('moment'),
-    momentTimezone = require('moment-timezone'),
-    exception = require('../exception'),
+const exception = require('../exception'),
+    model = require('../model/model'),
     config = require('../config'),
-    model = require('../model/model');
+    moment = require('moment'),
+    uhx = require('../uhx'),
+    pg = require('pg');
 
  /**
   * @class

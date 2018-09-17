@@ -17,24 +17,20 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
-const schedule = require('node-schedule'),
-    uhx = require("../uhx"),
+const Json2csvParser = require('json2csv').Parser;
+    Client = require('ssh2-sftp-client'),
+    schedule = require('node-schedule'),
+    exception = require('../exception'),
     model = require('../model/model'),
     config = require('../config'),
-    fs = require('fs'),
-    Client = require('ssh2-sftp-client'),
+    moment = require('moment'),
+    uhx = require("../uhx"),
     sftp = new Client(),
-    Json2csvParser = require('json2csv').Parser;
+    fs = require('fs');
 
 module.exports = class TeladocService {
 
     constructor() {
-        Number.prototype.pad = function(size) {
-            let s = String(this);
-            while (s.length < (size || 2)) {s = "0" + s;}
-            return s;
-        }
-
         // this.sendDailyLog();
 
         // Starts a schedule to send daily logs to Teladoc every day at 9 pm
@@ -55,26 +51,23 @@ module.exports = class TeladocService {
     async sendDailyLog() {
         try {
             const subscriptions = await uhx.Repositories.subscriptionRepository.getSubscriptionsForDailyReportToTeladoc();
+            const reports = [];
 
-            if (!subscriptions) {
-                // No subscriptions found
-            } else {
-                const reports = [];
-
+            if (subscriptions) {
                 for (let i = 0; i < subscriptions.length; i++) {
                     const patient = await uhx.Repositories.patientRepository.get(subscriptions[i].patientId);
 
                     reports.push(new model.Teladoc().fromData(patient, subscriptions[i]));
                 }
-
-                const now = new Date();
-                const fileDateDisplay = now.getFullYear() + (now.getMonth() + 1).pad() + now.getDate().pad();
-                const filename = "reports\\teladoc\\daily\\" + config.teladoc.groupId + "_TELADOCFAMILYID_" + fileDateDisplay;
-
-                this.sendTeladocReport(reports, filename);
             }
+
+            const fileDateDisplay = moment().format('YYYYMMDD');
+            const filename = "reports\\teladoc\\daily\\" + config.teladoc.groupId + "_TELADOCFAMILYID_" + fileDateDisplay;
+
+            this.sendTeladocReport(reports, filename);
         } catch(ex) {
-            console.log(ex);
+            uhx.log.error(`Could not send daily report to Teladoc: ${ex}`);
+            throw new exception.Exception('Could not send daily report to Teladoc', exception.ErrorCodes.UNKNOWN);
         }
     }
 
@@ -85,26 +78,24 @@ module.exports = class TeladocService {
     async sendMonthlyCensus() {
         try {
             const subscriptions = await uhx.Repositories.subscriptionRepository.getSubscriptionsForMonthlyReportToTeladoc();
+            const reports = [];
 
-            if (!subscriptions) {
-                // No subscriptions found;
-            } else {
-                const reports = [];
-
+            if (subscriptions) {
                 for (let i = 0; i < subscriptions.length; i++) {
                     const subscription = subscriptions[i];
                     const user = await uhx.Repositories.userRepository.get(subscription.userId);
 
                     reports.push(new model.Teladoc().fromData(user, subscription));
                 }
-
-                const fileDateDisplay = now.getFullYear() + (now.getMonth() + 1).pad() + now.getDate().pad();
-                const filename = "reports\\teladoc\\monthly\\" + config.teladoc.groupId + "_TELADOCFAMILYID_" + fileDateDisplay;
-
-                this.sendTeladocReport(reports, filename);
             }
-        } catch(ex) {
 
+            const fileDateDisplay = moment().format('YYYYMMDD');
+            const filename = "reports\\teladoc\\monthly\\" + config.teladoc.groupId + "_TELADOCFAMILYID_" + fileDateDisplay;
+
+            this.sendTeladocReport(reports, filename);
+        } catch(ex) {
+            uhx.log.error(`Could not send monthly report to Teladoc: ${ex}`);
+            throw new exception.Exception('Could not send monthly report to Teladoc', exception.ErrorCodes.UNKNOWN);
         }
     }
 
@@ -197,7 +188,8 @@ module.exports = class TeladocService {
         
         fs.writeFile(csvFilename, csv, 'utf8', function (err) {
             if (err) {
-                console.log('An error occurred while trying to create the csv file.');
+                uhx.log.error(`Error occurred while trying to create the csv file: ${err}`);
+                throw new exception.Exception('Error occurred while trying to create the csv file', exception.ErrorCodes.ERR_FILE_CREATION);
             } else{
                 self.sendFile(csvFilename);
             }
@@ -220,7 +212,8 @@ module.exports = class TeladocService {
             
             sftp.put(csvFilename, file);
         }).catch((err) => {
-            console.log(err, 'catch error');
+            uhx.log.error(`Error occurred while sending report to Teladoc: ${err}`);
+            throw new exception.Exception('Error occurred while sending report to Teladoc', exception.ErrorCodes.COM_FAILURE);
         });
     }
 }

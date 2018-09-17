@@ -17,11 +17,9 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
-const uhx = require('../uhx'),
-    exception = require('../exception'),
+const exception = require('../exception'),
     security = require('../security'),
-    subscriptionRepository = require('../repository/subscriptionRepository'),
-    model = require('../model/model');
+    uhx = require('../uhx');
 
 /**
  * @class
