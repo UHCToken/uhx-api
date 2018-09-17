@@ -149,7 +149,7 @@ const uhx = require('../uhx'),
             let terminationDate;
 
             // If the current time is after the upload time, the termination date will not be until the day after
-            if (this.isCurrentTimeBeforeConfiguredTime(config.karis.uploadTime)) {
+            if (this.isCurrentTimeBeforeConfiguredTime(config.reportingUploadTime)) {
                 terminationDate = today;
             } else {
                 terminationDate = moment().add(1, 'days');
@@ -184,7 +184,7 @@ const uhx = require('../uhx'),
                 nextPaymentDate;            
 
             // If subscription occurs after the configured time time; the subscription will not be active for 2 more days
-            if (this.isCurrentTimeBeforeConfiguredTime(config.karis.uploadTime)) {
+            if (this.isCurrentTimeBeforeConfiguredTime(config.reportingUploadTime)) {
                 subscriptionDate = moment().add(1, 'days');
             } else {
                 subscriptionDate = moment().add(2, 'days');

@@ -349,6 +349,10 @@ module.exports = {
         secure: true
     },
     /**
+     * @summary The time at which reports to be sent off to service providers
+     */
+    reportingUploadTime: "20:00",
+    /**
      * @summary Configuration settings related to Karis
      */
     karis: {
@@ -368,10 +372,6 @@ module.exports = {
          * @summary The familiar name a customer may reference to equate to the relationship with Universal Health Coin
          */
         memberAffiliation: "Universal Health Coin",
-        /**
-         * @summary The time (Eastern) in which to upload the reports to the SFTP server. Format - "##:##"
-         */
-        uploadTime: "20:00",
         /**
          * @summary The SFTP endpoint credentials
          */
