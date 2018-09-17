@@ -113,6 +113,7 @@ module.exports.SubscriptionApiResource = class SubscriptionApiResource {
             return true
         } catch (ex) {
             uhx.log.error(`Get subscription: ${ex.message}`);
+            throw new exception.Exception(ex.message, ex.code);
         }
     }
 
@@ -166,7 +167,8 @@ module.exports.SubscriptionApiResource = class SubscriptionApiResource {
             res.status(200).json(subscription);
             return true
         } catch(ex) {
-            uhx.log.error(`Posting subscription: ${ex.message}`)
+            uhx.log.error(`Posting subscription: ${ex.message}`);
+            throw new exception.Exception(ex.message, ex.code);
         }
     }
 
@@ -224,7 +226,7 @@ module.exports.SubscriptionApiResource = class SubscriptionApiResource {
         catch(ex) {
             // Error updating subscription, return internal server error and log error
             uhx.log.error(`Updating patient subscription: ${ex.message}`)
-            res.status(500);
+            throw new exception.Exception(ex.message, ex.code);
         }
     }
 
@@ -270,7 +272,7 @@ module.exports.SubscriptionApiResource = class SubscriptionApiResource {
             return true
         } catch (ex) {
             uhx.log.error(`Cancelling subscription: ${ex.message}`);
-            res.status(500);
+            throw new exception.Exception(ex.message, ex.code);
         }
     }
 }

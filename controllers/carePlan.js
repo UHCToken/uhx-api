@@ -160,7 +160,7 @@ class CarePlanApiResource {
      * @summary Deactivates a wallet
      * @param {Express.Request} req The HTTP request from the client
      * @param {Express.Response} res The HTTP response to the client
-    * @swagger
+     * @swagger
      * /user/{userid}/wallet:
      *  delete:
      *      tags:
@@ -240,7 +240,7 @@ class CarePlanApiResource {
         return true;
     }
 
-        /**
+    /**
      * @summary Disputes a specified care plan
      * @method
      * @param {Express.Request} req The HTTP request from the client
@@ -265,8 +265,7 @@ class CarePlanApiResource {
         return true;
     }
 
-    
-        /**
+    /**
      * @summary Gets all care plans associated with either the provider or patient
      * @method
      * @param {Express.Request} req The HTTP request from the client
