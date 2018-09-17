@@ -23,6 +23,7 @@ const uhx = require('../uhx'),
     moment = require('moment'),
     momentTimezone = require('moment-timezone'),
     exception = require('../exception'),
+    config = require('../config'),
     model = require('../model/model');
 
  /**
@@ -143,11 +144,19 @@ const uhx = require('../uhx'),
     async terminateSubscriptions(today, subsToTerminate, _txc) {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
-
             if(!_txc) await dbc.connect();
 
-            const query = (`UPDATE subscriptions SET date_terminated='${[today]}', date_next_payment=NULL WHERE date_expired='${[today]}' AND auto_renew=false;
-                            UPDATE subscriptions SET date_terminated='${[today]}', date_next_payment=NULL WHERE id IN (${subsToTerminate.toString()});`);
+            let terminationDate;
+
+            // If the current time is after the upload time, the termination date will not be until the day after
+            if (this.isCurrentTimeBeforeConfiguredTime(config.karis.uploadTime)) {
+                terminationDate = today;
+            } else {
+                terminationDate = moment().add(1, 'days');
+            }
+
+            const query = (`UPDATE subscriptions SET date_terminated='${[terminationDate]}', date_next_payment=NULL WHERE date_expired='${[today]}' AND auto_renew=false;
+                            UPDATE subscriptions SET date_terminated='${[terminationDate]}', date_next_payment=NULL WHERE id IN (${subsToTerminate.toString()});`);
             await dbc.query(query);
 
         } catch (ex) {
@@ -172,15 +181,13 @@ const uhx = require('../uhx'),
         try {
             if(!_txc) await dbc.connect();
             let subscriptionDate,
-                nextPaymentDate;
+                nextPaymentDate;            
 
-            const now = parseInt(momentTimezone().tz('America/Chicago').format('hh'));
-
-            // If subscription occurs after 9pm Central time; the subscription will not be active for 2 more days
-            if (now >= 21) {
-                subscriptionDate = moment().add(2, 'days');
-            } else {
+            // If subscription occurs after the configured time time; the subscription will not be active for 2 more days
+            if (this.isCurrentTimeBeforeConfiguredTime(config.karis.uploadTime)) {
                 subscriptionDate = moment().add(1, 'days');
+            } else {
+                subscriptionDate = moment().add(2, 'days');
             }
 
             const offering = await dbc.query("SELECT * FROM offerings WHERE id = $1", [offeringId]);
@@ -219,6 +226,7 @@ const uhx = require('../uhx'),
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
+
             const rdr = await dbc.query("UPDATE subscriptions SET offering_id = $1, auto_renew = $2 WHERE id = $3 RETURNING *", [offeringId, autoRenew, subscriptionId]);
             if(rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', patientId);
@@ -361,5 +369,26 @@ const uhx = require('../uhx'),
       }
 
       return subscriptions;
+    }
+
+    /**
+     * @method
+     * @summary Compares the current time with a time set in the configuration
+     * @param {string} configTime A string representation of a desired time, format "HH:MM" 
+     * @returns {Subscription} array of subscriptions
+     */
+    async isCurrentTimeBeforeConfiguredTime(configTime) {
+        const currentHour = parseInt(moment().format('hh'));
+        const currentMins = parseInt(moment().format('mm'));
+
+        const configTime = configTime.split(':');
+        const configHour = parseInt(configTime[0]);
+        const configMins = parseInt(configTime[1]);
+
+        if (currentHour >= configHour && currentMins >= configMins) {
+            return false;
+        } 
+
+        return true;
     }
  }

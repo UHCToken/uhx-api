@@ -369,6 +369,10 @@ module.exports = {
          */
         memberAffiliation: "Universal Health Coin",
         /**
+         * @summary The time (Eastern) in which to upload the reports to the SFTP server. Format - "##:##"
+         */
+        uploadTime: "20:00",
+        /**
          * @summary The SFTP endpoint credentials
          */
         sftpClient: {
