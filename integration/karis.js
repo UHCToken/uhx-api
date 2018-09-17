@@ -23,6 +23,7 @@ const schedule = require('node-schedule'),
     config = require('../config'),
     fs = require('fs'),
     Client = require('ssh2-sftp-client'),
+    moment = require('moment'),
     sftp = new Client(),
     openpgp = require('openpgp'),
     Json2csvParser = require('json2csv').Parser;
@@ -56,24 +57,20 @@ module.exports = class KarisService {
     async sendDailyLog() {
         try {
             const subscriptions = await uhx.Repositories.subscriptionRepository.getSubscriptionsForDailyReportToKaris();
+            const reports = [];
 
-            if (!subscriptions) {
-                // No subscriptions found
-            } else {
-                const reports = [];
-
+            if (subscriptions) {
                 for (let i = 0; i < subscriptions.length; i++) {
                     const patient = await uhx.Repositories.patientRepository.get(subscriptions[i].patientId);
 
                     reports.push(new model.Karis().fromData(patient, subscriptions[i]));
                 }
-
-                const now = new Date();
-                const fileDateDisplay = (now.getMonth() + 1).pad() + now.getDate().pad() + now.getFullYear();
-                const filename = "reports\\karis\\daily\\" + config.karis.clientCode + "_" + fileDateDisplay;
-
-                this.sendKarisReport(reports, filename);
             }
+
+            const fileDateDisplay = moment().format('MMDDYYYY');
+            const filename = "reports\\karis\\daily\\" + config.karis.clientCode + "_" + fileDateDisplay;
+
+            this.sendKarisReport(reports, filename);
         } catch(ex) {
             console.log(ex);
         }
@@ -86,24 +83,21 @@ module.exports = class KarisService {
     async sendMonthlyCensus() {
         try {
             const subscriptions = await uhx.Repositories.subscriptionRepository.getSubscriptionsForMonthlyReportToKaris();
-
-            if (!subscriptions) {
-                // No subscriptions found; send email
-            } else {
-                const reports = [];
-
+            const reports = [];
+            
+            if (subscriptions) {
                 for (let i = 0; i < subscriptions.length; i++) {
                     const subscription = subscriptions[i];
                     const user = await uhx.Repositories.userRepository.get(subscription.userId);
 
                     reports.push(new model.Karis().fromData(user, subscription));
                 }
-
-                const fileDateDisplay = (now.getMonth() + 1).pad() + now.getDate().pad() + now.getFullYear();
-                const filename = "reports\\karis\\monthly\\UNIVERSALHEALTHCOINCENSUS_" + fileDateDisplay;
-
-                this.sendKarisReport(reports, filename);
             }
+
+            const fileDateDisplay = moment().format('MMDDYYYY');
+            const filename = "reports\\karis\\monthly\\UNIVERSALHEALTHCOINCENSUS_" + fileDateDisplay;
+
+            this.sendKarisReport(reports, filename);
         } catch(ex) {
 
         }
