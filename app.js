@@ -70,8 +70,10 @@ app.use(skipper());
 var restApi = new api.RestApi(uhx.Config.api.base, app);
 
 // Add resources to rest API
-if(uhx.Config.security.enableCors) 
+if(uhx.Config.security.enableCors) {
     restApi.enableCors();
+}
+    
 
 if(uhx.Config.swagger.enabled) {
     restApi.addResource(new swagger.SwaggerMetadataResource());
@@ -111,7 +113,7 @@ restApi.start();
 // Start the express instance
 if(uhx.Config.api.scheme == "http") {
     const server = http.createServer(app).listen(uhx.Config.api.port);
-    const io = require('socket.io')(server) 
+    const io = require('socket.io')(server, {'transports': ['websocket', 'polling']})
     io.on('connection', (socket) => {
         console.log('-------------------Listening--------------------');
 
@@ -124,7 +126,7 @@ if(uhx.Config.api.scheme == "http") {
 }
 else {
     const server = https.createServer(uhx.Config.api.tls, app).listen(uhx.Config.api.port);
-    const io = require('socket.io')(server) 
+    const io = require('socket.io')(server, {'transports': ['websocket', 'polling']}) 
     io.on('connection', (socket) => {
         console.log('-------------------Listening--------------------');
 
