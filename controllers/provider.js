@@ -66,7 +66,7 @@ class ProviderApiResource {
                         "method": this.get
                     },
                     "put": {
-                        "demand": security.PermissionType.WRITE | security.PermissionType.READ,
+                        "demand": security.PermissionType.WRITE,
                         "method": this.put
                     }
                 },
