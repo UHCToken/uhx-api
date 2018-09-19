@@ -113,9 +113,7 @@ restApi.start();
 // Start the express instance
 if(uhx.Config.api.scheme == "http") {
     const server = http.createServer(app).listen(uhx.Config.api.port);
-    const io = require('socket.io')(server, {
-        transports: ['websocket', 'polling']
-    }) 
+    const io = require('socket.io')(server) 
     io.on('connection', (socket) => {
         console.log('-------------------Listening--------------------');
 
@@ -128,9 +126,7 @@ if(uhx.Config.api.scheme == "http") {
 }
 else {
     const server = https.createServer(uhx.Config.api.tls, app).listen(uhx.Config.api.port);
-    const io = require('socket.io')(server, {
-        transports: ['websocket', 'polling']
-    }) 
+    const io = require('socket.io')(server) 
     io.on('connection', (socket) => {
         console.log('-------------------Listening--------------------');
 
