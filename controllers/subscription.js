@@ -17,11 +17,9 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
-const uhx = require('../uhx'),
-    exception = require('../exception'),
+const exception = require('../exception'),
     security = require('../security'),
-    subscriptionRepository = require('../repository/subscriptionRepository'),
-    model = require('../model/model');
+    uhx = require('../uhx');
 
 /**
  * @class
@@ -50,12 +48,12 @@ module.exports.SubscriptionApiResource = class SubscriptionApiResource {
                 {
                     "path": "patient/:id/subscription",
                     "post": {
-                        "demand": security.PermissionType.READ,
+                        "demand": security.PermissionType.WRITE,
                         "method": this.post
                     }
                 },
                 {
-                    "path": "subscription",
+                    "path": "patient/:id/subscription",
                     "put": {
                         "demand": security.PermissionType.WRITE,
                         "method": this.update
@@ -113,6 +111,7 @@ module.exports.SubscriptionApiResource = class SubscriptionApiResource {
             return true
         } catch (ex) {
             uhx.log.error(`Get subscription: ${ex.message}`);
+            throw new exception.Exception(ex.message, ex.code);
         }
     }
 
@@ -166,7 +165,8 @@ module.exports.SubscriptionApiResource = class SubscriptionApiResource {
             res.status(200).json(subscription);
             return true
         } catch(ex) {
-            uhx.log.error(`Posting subscription: ${ex.message}`)
+            uhx.log.error(`Posting subscription: ${ex.message}`);
+            throw new exception.Exception(ex.message, ex.code);
         }
     }
 
@@ -224,7 +224,7 @@ module.exports.SubscriptionApiResource = class SubscriptionApiResource {
         catch(ex) {
             // Error updating subscription, return internal server error and log error
             uhx.log.error(`Updating patient subscription: ${ex.message}`)
-            res.status(500);
+            throw new exception.Exception(ex.message, ex.code);
         }
     }
 
@@ -270,7 +270,7 @@ module.exports.SubscriptionApiResource = class SubscriptionApiResource {
             return true
         } catch (ex) {
             uhx.log.error(`Cancelling subscription: ${ex.message}`);
-            res.status(500);
+            throw new exception.Exception(ex.message, ex.code);
         }
     }
 }

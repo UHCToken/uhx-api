@@ -145,7 +145,7 @@ module.exports = {
             "administrators": "044894bd-084e-47bb-9428-dbd80277614a",
             "users": "330d2fb4-ba61-4b48-a0a1-8162a4708e96",
             "providers": "4339ef73-25e7-43fd-9080-8f7eb55182eb",
-            "patients" : "285cb044-bf99-4409-b418-7edc5c012ded"
+            "patients": "285cb044-bf99-4409-b418-7edc5c012ded"
         },
         /**
          * @summary Configuration options for invitations
@@ -182,13 +182,13 @@ module.exports = {
          * @summary Identifies the target account where fees should be collected
          */
         fee_collector: "GB34934894328",
-            /**
+        /**
          * @summary Identifies the account to sign for the patient
          */
         signer_patient_id: "5ffd56be-d2a2-4abc-93e3-056cc679232d",
-                        /**
-         * @summary Identifies the account to sign for the provider
-         */
+        /**
+        * @summary Identifies the account to sign for the provider
+        */
         signer_provider_id: "891ab26a-3c2c-4c41-bcb5-0612f1cff939",
         /**
          * @summary Currency to be used for escrow
@@ -347,6 +347,84 @@ module.exports = {
          * @summary Use HTTPS
          */
         secure: true
+    },
+    /**
+     * @summary The time at which reports to be sent off to service providers
+     */
+    reportingUploadTime: "20:00",
+    /**
+     * @summary Configuration settings related to Karis
+     */
+    karis: {
+        /**
+         * @summary Code assigned by Karis to represent the organization
+         */
+        clientCode: "0011W00001u2xUB",
+        /**
+         * @summary Code assigned by Karis to represent your specific set of offerings
+         */
+        groupCode: "",
+        /**
+         * @summary Code used to distinguish different plans you may offer to clients
+         */
+        planCode: "0011W00001v0Dhy",
+        /**
+         * @summary The familiar name a customer may reference to equate to the relationship with Universal Health Coin
+         */
+        memberAffiliation: "Universal Health Coin",
+        /**
+         * @summary The SFTP endpoint credentials
+         */
+        sftpClient: {
+            host: "uploads.thekarisgroup.com",
+            userName: "universalhealthcoin",
+            privateKeyLocation: "security\\ssh\\karis\\id_rsa.ppk",
+            password: "",
+            port: 22,
+            publicPgpKey: `-----BEGIN PGP PUBLIC KEY BLOCK-----
+            Version: GnuPG/MacGPG2 v2
+            Comment: GPGTools - https://gpgtools.org
+            
+            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
+            =8D3G
+            -----END PGP PUBLIC KEY BLOCK-----`
+        },
     },
     /**
      * @summary Swagger configuration

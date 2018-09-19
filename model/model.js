@@ -30,6 +30,7 @@
     Application = require('./Application'),
     Session = require('./Session'),
     Karis = require('./Karis'),
+    Teladoc = require('./Teladoc'),
     PermissionSet = require('./PermissionSet'),
     PermissionSetInstance = require('./PermissionSetInstance'),
     MonetaryAmount = require('./MonetaryAmount'),
@@ -90,6 +91,7 @@ module.exports.Subscription = Subscription;
 module.exports.Offering = Offering;
 module.exports.Service = Service;
 module.exports.Karis = Karis;
+module.exports.Teladoc = Teladoc;
 module.exports.CarePlan = CarePlan;
 module.exports.CareRelationship = CareRelationship;
 module.exports.CareService = CareService;
