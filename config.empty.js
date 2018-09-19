@@ -131,6 +131,10 @@ module.exports = {
          */
         name_regex: /^[^0-9<>(){}%;"]+$/,
         /**
+         * @summary The validation regex for phone numbers
+         */
+        tel_regex: /^\s*(?:\+?(\d{1,3}))?[-. (]*(\d{3})[-. )]*(\d{3})[-. ]*(\d{4})(?: *x(\d+))?\s*$/,
+        /**
          * @summary When true, enables cross-origin scripting
          */
         enable_cors: true,
