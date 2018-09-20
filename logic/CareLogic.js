@@ -107,28 +107,23 @@ module.exports = class CareLogic {
 
                 //Check to see if a chat room exists between the patient and provider. If not, then create one
                 let roomExists = false;
-                // let patientChatRooms = await uhx.Repositories.chatRepository.getChatRoomsPatients(careRelationship.patientId)
-                //     .then (r => {
-                //         if(patientChatRooms) {
-                //             patientChatRooms.forEach(room => {
-                //                 if (room.providerId === careRelationship.providerId) {
-                //                     roomExists = true;
-                //                     console.log(`Chat room does exist`)
-                //                 }
-                //             })
-                //         }
-        
-                //         if(!roomExists) {
-                //             console.log(`chat room doesn't exist, CREATING.....`)
-                //             await uhx.Repositories.chatRepository.createChatRoom(careRelationship);
-                //         }
-                //     })
-                //     .catch( e => console.log(`there was an error: ${e}`))
-                    console.log(careRelationship);
+                let patientChatRooms = await uhx.Repositories.chatRepository.getChatRoomsPatients(careRelationship.patientId)
+                if(patientChatRooms) {
+                    console.log(patientChatRooms)
+                    patientChatRooms.forEach(room => {
+                        if (room.providerId === careRelationship.providerId) {
+                            roomExists = true;
+                            console.log(`Chat room does exist`)
+                        }
+                    })
+                }
 
+                if(!roomExists) {
+                    console.log(`chat room doesn't exist, CREATING.....`)
                     await uhx.Repositories.chatRepository.createChatRoom(careRelationship);
-                
+                }
 
+                // await uhx.Repositories.chatRepository.createChatRoom(careRelationship);
                 return careRelationship;
             }
             else{
