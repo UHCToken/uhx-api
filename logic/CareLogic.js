@@ -111,7 +111,7 @@ module.exports = class CareLogic {
                 if(patientChatRooms) {
                     console.log(patientChatRooms)
                     patientChatRooms.forEach(room => {
-                        if (room.providerId === careRelationship.providerId) {
+                        if (room.providerid === careRelationship.providerId) {
                             roomExists = true;
                             console.log(`Chat room does exist`)
                         }
