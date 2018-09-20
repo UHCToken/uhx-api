@@ -105,7 +105,6 @@ module.exports = class CareLogic {
                 careRelationship.providerNote = careRelationshipBody.feedback;
                 careRelationship = await uhx.Repositories.careRelationshipRepository.update(careRelationship, principal);
 
-                console.log(careRelationship)
                 //Check to see if a chat room exists between the patient and provider. If not, then create one
                 let roomExists = false;
                 let patientChatRooms = await uhx.Repositories.chatRepository.getChatRoomsPatients(careRelationship.patientId)
@@ -113,13 +112,11 @@ module.exports = class CareLogic {
                     patientChatRooms.forEach(room => {
                         if (room.providerid === careRelationship.providerId) {
                             roomExists = true;
-                            console.log(`Chat room does exist`)
                         }
                     })
                 }
 
                 if(!roomExists) {
-                    console.log(`chat room doesn't exist, CREATING.....`)
                     await uhx.Repositories.chatRepository.createChatRoom(careRelationship);
                 }
 
