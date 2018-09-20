@@ -79,6 +79,19 @@ module.exports = {
         ui_base: "http://localhost:4004/"
     },
     /**
+     * @summary Configuration for users and wallets for billing subscriptions 
+     */
+    subscription: {
+        /**
+         * @summary The id of the user to send subscription payment funds to. Must have an activated wallet on the Stellar network
+         */
+      paymentAccount: "891ab26a-3c2c-4c41-bcb5-0612f1cff939",
+      /**
+       * @summary The id of the user to retrieve XLM from when users need to be topped up for a transaction. Must have an activated wallet with Lumes(XLM) inside 
+       */
+      topUpAccount: "610be8a6-dcf2-4e0f-8e83-7f340f6792ca"
+    },
+    /**
      * @summary Configuration for security parameters
      */
     security: {
