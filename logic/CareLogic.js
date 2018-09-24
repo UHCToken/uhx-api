@@ -105,22 +105,9 @@ module.exports = class CareLogic {
                 careRelationship.providerNote = careRelationshipBody.feedback;
                 careRelationship = await uhx.Repositories.careRelationshipRepository.update(careRelationship, principal);
 
-                //Check to see if a chat room exists between the patient and provider. If not, then create one
-                let roomExists = false;
-                let patientChatRooms = await uhx.Repositories.chatRepository.getChatRoomsPatients(careRelationship.patientId)
-                if(patientChatRooms) {
-                    patientChatRooms.forEach(room => {
-                        if (room.providerid === careRelationship.providerId) {
-                            roomExists = true;
-                        }
-                    })
-                }
+                await uhx.Repositories.chatRepository.createChatRoom(careRelationship);
 
-                if(!roomExists) {
-                    await uhx.Repositories.chatRepository.createChatRoom(careRelationship);
-                }
 
-                // await uhx.Repositories.chatRepository.createChatRoom(careRelationship);
                 return careRelationship;
             }
             else{
@@ -215,7 +202,7 @@ module.exports = class CareLogic {
                     "payeeId": uhx.Config.stellar.escrow_id,
                     "amount": {
                         "value": carePlan.total,
-                        "code": "XLM",
+                        "code": uhx.Config.stellar.escrow_asset_code,
                     },
                     "state": "1",
                     "memo": "Fund Escrow"
@@ -223,9 +210,9 @@ module.exports = class CareLogic {
                 var transaction = new model.Transaction().copy(transaction);
                 var patientWallet = await uhx.Repositories.walletRepository.getByUserAndNetworkId(patient.userId, "1");
                 var patientBalance = await uhx.StellarClient.getAccount(patientWallet);
-                var assetBalance = patientBalance.balances.find((o)=>o.code == "XLM");
+                var assetBalance = patientBalance.balances.find((o)=>o.code == uhx.Config.stellar.escrow_asset_code);
                 
-                if(!assetBalance || (assetBalance.value-2) < carePlan.total){ 
+                if(!assetBalance || (assetBalance.value) < carePlan.total){ 
                     throw new exception.Exception("Not enough assets to fulfill this funding", exception.ErrorCodes.INSUFFICIENT_FUNDS);
                 }
                 var transactions = await uhx.TokenLogic.createTransaction([transaction], principal);
@@ -338,6 +325,21 @@ module.exports = class CareLogic {
                 }
             }
             else if((patient && patient.id == careRelationship.patientId && updatedCarePlan.status == STATUS_PROVIDED) || (provider && provider.id == careRelationship.providerId && updatedCarePlan.status == STATUS_RECEIVED)){
+                
+                var provider = await uhx.Repositories.providerRepository.get(careRelationship.providerId);
+                var providerWallet = await uhx.Repositories.walletRepository.getByUserId(provider.userId);
+
+                var distributionAccount = await uhx.Repositories.walletRepository.getByUserId(uhx.Config.stellar.initiator_wallet_id)
+
+                if(!providerWallet ){
+                    await uhx.StellarClient.activateAccount(providerWallet, "1.6", distributionAccount);
+                }
+                if(!providerWallet.balances.find(o=>o.code == uhx.Config.stellar.escrow_asset_code)){
+                    var asset = await uhx.Repositories.assetRepository.getByCode(uhx.Config.stellar.escrow_asset_code)
+
+                    await uhx.StellarClient.createTrust(providerWallet, asset);
+                }
+                
                 var transaction = await this.releaseFunds(careRelationship.providerId, updatedCarePlan.total, principal);
                 updatedCarePlan.status = STATUS_COMPLETED;
                 updatedCarePlan = await uhx.Repositories.carePlanRepository.update(updatedCarePlan, principal)
@@ -345,8 +347,7 @@ module.exports = class CareLogic {
             }
             else{
                 throw new exception.BusinessRuleViolationException(new exception.RuleViolation("Care plan can only be confirmed if funded.", exception.ErrorCodes.NOT_SUPPORTED, exception.RuleViolationSeverity.ERROR));
-            }
-            
+            }            
             
         }
         catch (e) {
@@ -370,7 +371,7 @@ module.exports = class CareLogic {
             var providerSignerWallet = await uhx.Repositories.walletRepository.getByUserAndNetworkId(uhx.Config.stellar.signer_provider_id, '1')
             var patientSignerWallet = await uhx.Repositories.walletRepository.getByUserAndNetworkId(uhx.Config.stellar.signer_patient_id, '1')
             var signers = [patientSignerWallet, providerSignerWallet];
-            return (await uhx.StellarClient.sendEscrowTransaction(escrowWallet, providerWallet, signers, {code: "XLM", value : "" + amount}))
+            return (await uhx.StellarClient.sendEscrowTransaction(escrowWallet, providerWallet, signers, {code: uhx.Config.stellar.escrow_asset_code, value : "" + amount}))
         }
         catch (e) {
             uhx.log.error(`Error releasing funds for care plan: ${e.message}`);
