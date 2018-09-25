@@ -21,6 +21,7 @@
 const schedule = require('node-schedule'),
   model = require("../model/model"),
   config = require('../config'),
+  moment = require('moment'),
   uhx = require('../uhx');
 
 /**
@@ -57,7 +58,7 @@ module.exports = class BillingLogic {
 
       if (subscriptions.length === 0) {
         // No subscriptions to be billed today
-        uhx.log.info(`No Subscriptions Billed on ${todaysDate}`);
+        uhx.log.info(`No Subscriptions Billed on ${moment().format('YYYY-MM-DD')}`);
       } else {
         // Call function to complete transactions
         uhx.log.info(`Attempting to Bill ${subscriptions.length} Accounts...`);
