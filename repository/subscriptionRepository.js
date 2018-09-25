@@ -237,7 +237,7 @@ module.exports = class SubscriptionRepository {
 
             const rdr = await dbc.query("UPDATE subscriptions SET offering_id = $1, auto_renew = $2 WHERE id = $3 RETURNING *", [offeringId, autoRenew, subscriptionId]);
             if (rdr.rows.length === 0)
-                throw new exception.NotFoundException('subscriptions', patientId);
+                throw new exception.NotFoundException('subscriptions', subscriptionId);
             else {
                 return new model.Subscription().fromData(rdr.rows[0]);
             }

@@ -53,7 +53,7 @@ module.exports.SubscriptionApiResource = class SubscriptionApiResource {
                     }
                 },
                 {
-                    "path": "patient/:id/subscription",
+                    "path": "subscription/:id",
                     "put": {
                         "demand": security.PermissionType.WRITE,
                         "method": this.update
@@ -215,7 +215,7 @@ module.exports.SubscriptionApiResource = class SubscriptionApiResource {
      */
     async update(req, res) {
         try{
-            var subscription = await uhx.Repositories.subscriptionRepository.update(req.body.id, req.body.offeringId, req.body.autoRenew);
+            var subscription = await uhx.Repositories.subscriptionRepository.update(req.params.id, req.body.offeringId, req.body.autoRenew);
 
             // Succesful update, respond ok with subscription object
             res.status(200).json(subscription);
