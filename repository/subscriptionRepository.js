@@ -230,12 +230,17 @@ module.exports = class SubscriptionRepository {
      * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {Subscription} The updated subscriptions for the patinet
      */
-    async update(subscriptionId, offeringId, autoRenew, _txc) {
+    async update(subscriptionId, offeringId, autoRenew, expiryDate, _txc) {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if (!_txc) await dbc.connect();
+            let nextPayment = null;
 
-            const rdr = await dbc.query("UPDATE subscriptions SET offering_id = $1, auto_renew = $2 WHERE id = $3 RETURNING *", [offeringId, autoRenew, subscriptionId]);
+            if (autoRenew) {
+                nextPayment = expiryDate;
+            }
+
+            const rdr = await dbc.query("UPDATE subscriptions SET offering_id = $1, auto_renew = $2, date_next_payment = $3 WHERE id = $4 RETURNING *", [offeringId, autoRenew, nextPayment, subscriptionId]);
             if (rdr.rows.length === 0)
                 throw new exception.NotFoundException('subscriptions', subscriptionId);
             else {

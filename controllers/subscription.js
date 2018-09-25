@@ -215,7 +215,7 @@ module.exports.SubscriptionApiResource = class SubscriptionApiResource {
      */
     async update(req, res) {
         try{
-            var subscription = await uhx.Repositories.subscriptionRepository.update(req.params.id, req.body.offeringId, req.body.autoRenew);
+            var subscription = await uhx.Repositories.subscriptionRepository.update(req.params.id, req.body.offeringId, req.body.autoRenew, req.body.expiryDate);
 
             // Succesful update, respond ok with subscription object
             res.status(200).json(subscription);
