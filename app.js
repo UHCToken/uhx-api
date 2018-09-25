@@ -70,8 +70,10 @@ app.use(skipper());
 var restApi = new api.RestApi(uhx.Config.api.base, app);
 
 // Add resources to rest API
-if(uhx.Config.security.enableCors) 
+if(uhx.Config.security.enableCors) {
     restApi.enableCors();
+}
+    
 
 if(uhx.Config.swagger.enabled) {
     restApi.addResource(new swagger.SwaggerMetadataResource());
