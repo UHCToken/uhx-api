@@ -65,9 +65,12 @@ module.exports = class KarisService {
             const fileDateDisplay = moment().format('MMDDYYYY');
             const filename = "reports\\karis\\daily\\" + config.karis.clientCode + "_" + fileDateDisplay;
 
-            this.sendKarisReport(reports, filename);
+            await this.sendKarisReport(reports, filename);
+
+            await this.sendEmail({ numberOfRecordsReported: reports.length, reportingType: "Daily" }, "success");
         } catch(ex) {
-            uhx.log.error(`Could not send daily report to Karis: ${ex}`);
+            uhx.log.error(`Could not send daily report to Karis: ${ex.message}`);
+            await this.sendEmail({ reportingType: "Daily", error: ex.code }, "failed");
             throw new exception.Exception('Could not send daily report to Karis', exception.ErrorCodes.UNKNOWN);
         }
     }
@@ -93,9 +96,12 @@ module.exports = class KarisService {
             const fileDateDisplay = moment().format('MMDDYYYY');
             const filename = "reports\\karis\\monthly\\UNIVERSALHEALTHCOINCENSUS_" + fileDateDisplay;
 
-            this.sendKarisReport(reports, filename);
+            await this.sendKarisReport(reports, filename);
+
+            await this.sendEmail({ numberOfRecordsReported: reports.length, reportingType: "Monthly" }, "success");
         } catch(ex) {
             uhx.log.error(`Could not send monthly report to Karis: ${ex}`);
+            await this.sendEmail({ reportingType: "Monthly" }, "failed")
             throw new exception.Exception('Could not send monthly report to Karis', exception.ErrorCodes.UNKNOWN);
         }
     }
@@ -106,7 +112,7 @@ module.exports = class KarisService {
      * @param {Karis} reports A collection of Karis reports to be sent
      * @param {string} filename The name of the file to be sent to Karis
      */
-    sendKarisReport(reports, filename) {
+    async sendKarisReport(reports, filename) {
         const csvFilename = filename + ".csv";
         const self = this;
         
@@ -175,7 +181,7 @@ module.exports = class KarisService {
         const json2csvParser = new Json2csvParser({ fields });
         const csv = json2csvParser.parse(reports);
         
-        fs.writeFile(csvFilename, csv, 'utf8', function (err) {
+        fs.writeFile(csvFilename, csv, 'utf8', function (error) {
             if (error) {
                 uhx.log.error(`Error occurred while trying to create the csv file: ${error}`);
                 throw new exception.Exception('Error occurred while trying to create the csv file', exception.ErrorCodes.ERR_FILE_CREATION);
@@ -193,7 +199,7 @@ module.exports = class KarisService {
     async sendFile(csvFilename) {
         this.encryptFile(csvFilename).then((encryptedFileData) => {
             const encryptedFileName = csvFilename + '.pgp';
-            fs.writeFile(encryptedFileName, encryptedFileData, 'utf8', function (err) {
+            fs.writeFile(encryptedFileName, encryptedFileData, 'utf8', function (error) {
                 if (error) {
                     uhx.log.error(`Error occurred while trying to create the encrypted PGP file: ${error}`);
                     throw new exception.Exception('Error occurred while trying to create the encrypted PGP file', exception.ErrorCodes.ERR_FILE_CREATION);
@@ -237,5 +243,29 @@ module.exports = class KarisService {
                 throw new exception.Exception('Error occurred while trying to encrypt the file', exception.ErrorCodes.ENCRYPTION_ERROR);
             }); 
         });
+    }
+
+    /**
+     * @method
+     * @summary Sends an email with the results of the file upload
+     * @param {object} content The data for the email to be sent
+     * @param {string} status The status of the file delivery to Karis
+     */
+    async sendEmail(content, status) {
+        content.reportingCompany = "Karis";
+        let template;
+
+        if (status === "failed") {
+            template = uhx.Config.mail.templates.reportingFailed;
+        } else {
+            template = uhx.Config.mail.templates.reportingSuccess;
+        }
+
+        return await uhx.Mailer.sendEmail({
+            to: uhx.Config.mail.karisReporterEmail,
+            from: uhx.Config.mail.medicEmail,
+            template: template,
+            subject: content.reportingType + " reporting to Karis " + status + "."
+        }, { content: content });
     }
 }

@@ -39,7 +39,7 @@ module.exports = class BillingLogic {
     this.dailyBilling = this.dailyBilling.bind(this);
     this.billUsers = this.billUsers.bind(this);
 
-    this.dailyBilling();
+    // this.dailyBilling();
 
     // Schedule billing to be done daily at 8pm
     schedule.scheduleJob('0 20 * * *', () => {
