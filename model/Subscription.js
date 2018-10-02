@@ -78,15 +78,6 @@ const ModelBase = require('./ModelBase'),
  *          autoRenew:
  *              type: boolean
  *              description: Represents if the billing cycle is auto-renewed
- *          periodInMonths:
- *              type: number
- *              description: The number of months the subscription is for
- *          price:
- *              type: number
- *              description: The cost of the subscription based on the offering
- *          currency:
- *              type: string
- *              description: The currency code for the given offering
  */
 module.exports = class Subscription extends ModelBase {
 
