@@ -40,6 +40,7 @@ module.exports = class CarePlanRepository {
     constructor(connectionString) {
         this._connectionString = connectionString;
         this.get = this.get.bind(this);
+        this.getAllDisputed = this.getAllDisputed.bind(this);
         this.insert = this.insert.bind(this);
         this.query = this.query.bind(this);
         this.update = this.update.bind(this);
@@ -101,7 +102,7 @@ module.exports = class CarePlanRepository {
             if (rdr.rows.length == 0)
                 throw new exception.Exception("Could not update care plan", exception.ErrorCodes.DATA_ERROR);
             else
-                return carePlan.fromData(rdr.rows[0]); 
+                return carePlan.fromData(rdr.rows[0]);
         }
         finally {
             if (!_txc) dbc.end();
@@ -132,22 +133,50 @@ module.exports = class CarePlanRepository {
         }
     }
 
-            /**
+    /**
      * @method
-     * @summary Gets the specified asset by ID
-     * @param {string} id The id of the asset to get
+     * @summary Gets all disputed care plans
      * @param {Client} _txc When present, the database transaction to use
      * @returns {Asset} The asset with identifier matching
      */
+    async getAllDisputed(_txc) {
+        var dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if (!_txc) await dbc.connect();
+
+            // Get by ID
+            var rdr = await dbc.query("SELECT * FROM care_plans WHERE status = 'DISPUTED'");
+            if (rdr.rows.length == 0)
+                return [];
+            else {
+                var retVal = [];
+                for (var r in rdr.rows)
+                    retVal[r] = new CarePlan().fromData(rdr.rows[r]);
+                return retVal;
+            }
+        }
+        finally {
+            if (!_txc) dbc.end();
+        }
+    }
+
+
+    /**
+* @method
+* @summary Gets the specified asset by ID
+* @param {string} id The id of the asset to get
+* @param {Client} _txc When present, the database transaction to use
+* @returns {Asset} The asset with identifier matching
+*/
     async getByProviderId(providerId, status, _txc) {
         var dbc = _txc || new pg.Client(this._connectionString);
         try {
             if (!_txc) await dbc.connect();
 
             // Get by ID
-            
+
             var query =
-            `SELECT *
+                `SELECT *
             FROM(
               SELECT cp.id, cp.total, cp.care_relationship_id, cp.status, cp.creation_time,
               (SELECT json_agg(cs)
@@ -156,43 +185,43 @@ module.exports = class CarePlanRepository {
               ) cs
              ) AS care_services
             FROM care_plans as cp) care_plans WHERE care_plans.care_relationship_id IN (SELECT id FROM care_relationships WHERE provider_id = $1)`;
-            
-            if(status && status != "*"){
+
+            if (status && status != "*") {
                 query = query + 'AND status=$2';
                 var rdr = await dbc.query(query, [providerId, status]);
             }
-            else{
+            else {
                 var rdr = await dbc.query(query, [providerId]);
             }
             if (rdr.rows.length == 0)
                 return [];
-                else{
-                    var retVal = [];
-                    for(var i = 0; i<rdr.rows.length; i++){
-                        var carePlan = new CarePlan().fromData(rdr.rows[i]);
-                        carePlan.careServices = [];
-                        if(rdr.rows[i].care_services){
-                            for(var j = 0; j<rdr.rows[i].care_services.length; j++){
-                                carePlan.careServices.push(new CareService().fromData(rdr.rows[i].care_services[j]));
-                            }
+            else {
+                var retVal = [];
+                for (var i = 0; i < rdr.rows.length; i++) {
+                    var carePlan = new CarePlan().fromData(rdr.rows[i]);
+                    carePlan.careServices = [];
+                    if (rdr.rows[i].care_services) {
+                        for (var j = 0; j < rdr.rows[i].care_services.length; j++) {
+                            carePlan.careServices.push(new CareService().fromData(rdr.rows[i].care_services[j]));
                         }
-                        retVal.push(carePlan);
                     }
-                    return retVal;
+                    retVal.push(carePlan);
                 }
+                return retVal;
+            }
         }
         finally {
             if (!_txc) dbc.end();
         }
     }
 
-            /**
-     * @method
-     * @summary Gets the specified asset by ID
-     * @param {string} id The id of the asset to get
-     * @param {Client} _txc When present, the database transaction to use
-     * @returns {Asset} The asset with identifier matching
-     */
+    /**
+* @method
+* @summary Gets the specified asset by ID
+* @param {string} id The id of the asset to get
+* @param {Client} _txc When present, the database transaction to use
+* @returns {Asset} The asset with identifier matching
+*/
     async getByPatientId(patientId, status, _txc) {
         var dbc = _txc || new pg.Client(this._connectionString);
         try {
@@ -200,7 +229,7 @@ module.exports = class CarePlanRepository {
 
             // Get by ID
             var query =
-            `SELECT *
+                `SELECT *
             FROM(
               SELECT cp.id, cp.total, cp.care_relationship_id, cp.status, cp.creation_time,
               (SELECT json_agg(cs)
@@ -209,22 +238,22 @@ module.exports = class CarePlanRepository {
               ) cs
              ) AS care_services
             FROM care_plans as cp) care_plans WHERE care_plans.care_relationship_id IN (SELECT id FROM care_relationships WHERE patient_id = $1)`;
-            if(status && status != "*"){
+            if (status && status != "*") {
                 query = query + 'AND status=$2';
                 var rdr = await dbc.query(query, [patientId, status]);
             }
-            else{
+            else {
                 var rdr = await dbc.query(query, [patientId]);
             }
             if (rdr.rows.length == 0)
                 return [];
-            else{
+            else {
                 var retVal = [];
-                for(var i = 0; i<rdr.rows.length; i++){
+                for (var i = 0; i < rdr.rows.length; i++) {
                     var carePlan = new CarePlan().fromData(rdr.rows[i]);
                     carePlan.careServices = [];
-                    if(rdr.rows[i].care_services){
-                        for(var j = 0; j<rdr.rows[i].care_services.length; j++){
+                    if (rdr.rows[i].care_services) {
+                        for (var j = 0; j < rdr.rows[i].care_services.length; j++) {
                             carePlan.careServices.push(new CareService().fromData(rdr.rows[i].care_services[j]));
                         }
                     }

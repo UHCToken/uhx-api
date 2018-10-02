@@ -54,10 +54,6 @@ class CarePlanApiResource {
                         "demand": security.PermissionType.WRITE,
                         "method": this.post
                     },
-                    "get": {
-                        "demand": security.PermissionType.READ,
-                        "method": this.get
-                    },
                     "delete": {
                         "demand": security.PermissionType.WRITE,
                         "method": this.delete
@@ -103,6 +99,13 @@ class CarePlanApiResource {
                     "post": {
                         "demand": security.PermissionType.READ,
                         "method": this.getAll
+                    }
+                },
+                {
+                    "path": "carePlans/disputed",
+                    "get": {
+                        "demand": security.PermissionType.READ,
+                        "method": this.getAllDisputed
                     }
                 }
             ]
@@ -214,6 +217,17 @@ class CarePlanApiResource {
     }
 
     /**
+ * @summary Gets all care plans
+ * @method
+ * @param {Express.Request} req The HTTP request from the client
+ * @param {Express.Response} res The HTTP response to the client
+ */
+    async getAllDisputed(req, res) {
+        res.status(200).json(await uhx.Repositories.carePlanRepository.getAllDisputed());
+        return true;
+    }
+
+    /**
      * @summary Funds the specified care plan
      * @method
      * @param {Express.Request} req The HTTP request from the client
@@ -240,24 +254,24 @@ class CarePlanApiResource {
         return true;
     }
 
-        /**
-     * @summary Disputes a specified care plan
-     * @method
-     * @param {Express.Request} req The HTTP request from the client
-     * @param {Express.Response} res The HTTP response to the client
-     */
+    /**
+ * @summary Disputes a specified care plan
+ * @method
+ * @param {Express.Request} req The HTTP request from the client
+ * @param {Express.Response} res The HTTP response to the client
+ */
     async dispute(req, res) {
 
         var carePlan = await uhx.CareLogic.disputeCarePlan(req.body, req.principal);
         res.status(200).json(carePlan);
         return true;
     }
-        /**
-     * @summary Confirms the care plan as both patient and provider
-     * @method
-     * @param {Express.Request} req The HTTP request from the client
-     * @param {Express.Response} res The HTTP response to the client
-     */
+    /**
+ * @summary Confirms the care plan as both patient and provider
+ * @method
+ * @param {Express.Request} req The HTTP request from the client
+ * @param {Express.Response} res The HTTP response to the client
+ */
     async confirm(req, res) {
 
         var carePlan = await uhx.CareLogic.confirmCarePlan(req.params, req.principal);
@@ -265,18 +279,18 @@ class CarePlanApiResource {
         return true;
     }
 
-    
-        /**
-     * @summary Gets all care plans associated with either the provider or patient
-     * @method
-     * @param {Express.Request} req The HTTP request from the client
-     * @param {Express.Response} res The HTTP response to the client
-     */
+
+    /**
+ * @summary Gets all care plans associated with either the provider or patient
+ * @method
+ * @param {Express.Request} req The HTTP request from the client
+ * @param {Express.Response} res The HTTP response to the client
+ */
     async getAll(req, res) {
-        if(req.body.providerId){
+        if (req.body.providerId) {
             var carePlans = await uhx.Repositories.carePlanRepository.getByProviderId(req.body.providerId, req.body.status);
         }
-        else{
+        else {
             var carePlans = await uhx.Repositories.carePlanRepository.getByPatientId(req.body.patientId, req.body.status);
         }
         res.status(200).json(carePlans);
