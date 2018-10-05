@@ -216,4 +216,28 @@ module.exports = class TeladocService {
             throw new exception.Exception('Error occurred while sending report to Teladoc', exception.ErrorCodes.COM_FAILURE);
         });
     }
+
+    /**
+     * @method
+     * @summary Sends an email with the results of the file upload
+     * @param {object} content The data for the email to be sent
+     * @param {string} status The status of the file delivery to Teladoc
+     */
+    async sendEmail(content, status) {
+        content.reportingCompany = "Teladoc";
+        let template;
+
+        if (status === "failed") {
+            template = uhx.Config.mail.templates.reportingFailed;
+        } else {
+            template = uhx.Config.mail.templates.reportingSuccess;
+        }
+
+        return await uhx.Mailer.sendEmail({
+            to: uhx.Config.mail.teladocReporterEmail,
+            from: uhx.Config.mail.medicEmail,
+            template: template,
+            subject: content.reportingType + " reporting to Teladoc " + status + "."
+        }, { content: content });
+    }
 }
