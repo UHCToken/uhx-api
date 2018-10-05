@@ -147,7 +147,7 @@ module.exports = class CareServiceRepository {
             // Get by ID
             var rdr = await dbc.query("SELECT * FROM care_services WHERE care_plan_id = $1", [id]);
             if (rdr.rows.length == 0)
-                throw new exception.NotFoundException("care_services", id);
+                return [];
             else{
                 var retVal = [];
                 rdr.rows.forEach(o=>retVal.push(new CareService().fromData(o)));

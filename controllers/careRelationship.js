@@ -54,13 +54,16 @@ class CareRelationshipApiResource {
                         "demand": security.PermissionType.READ,
                         "method": this.post
                     },
-                    "get": {
-                        "demand": security.PermissionType.READ,
-                        "method": this.get
-                    },
                     "delete": {
                         "demand": security.PermissionType.WRITE,
                         "method": this.delete
+                    }
+                },
+                {
+                    "path": "careRelationship/:id",
+                    "get": {
+                        "demand": security.PermissionType.READ,
+                        "method": this.get
                     }
                 },
                 {
@@ -187,16 +190,18 @@ class CareRelationshipApiResource {
     async get(req, res) {
 
         var serviceInvoice = await uhx.Repositories.careRelationshipRepository.get(req.params.id);
+        await serviceInvoice.loadPatient();
+        await serviceInvoice.loadProvider();
         res.status(200).json(serviceInvoice);
         return true;
     }
 
-        /**
-     * @summary Accept the care relationshups as a provider
-     * @method
-     * @param {Express.Request} req The HTTP request from the client
-     * @param {Express.Response} res The HTTP response to the client
-     */
+    /**
+ * @summary Accept the care relationshups as a provider
+ * @method
+ * @param {Express.Request} req The HTTP request from the client
+ * @param {Express.Response} res The HTTP response to the client
+ */
     async accept(req, res) {
 
         var careRelationship = await uhx.CareLogic.acceptCareRelationship(req.body, req.principal);
@@ -204,13 +209,13 @@ class CareRelationshipApiResource {
         return true;
     }
 
-    
-        /**
-     * @summary Declines the specified care relationship
-     * @method
-     * @param {Express.Request} req The HTTP request from the client
-     * @param {Express.Response} res The HTTP response to the client
-     */
+
+    /**
+ * @summary Declines the specified care relationship
+ * @method
+ * @param {Express.Request} req The HTTP request from the client
+ * @param {Express.Response} res The HTTP response to the client
+ */
     async decline(req, res) {
 
         var careRelationship = await uhx.CareLogic.declineCareRelationship(req.body, req.principal);
@@ -219,25 +224,25 @@ class CareRelationshipApiResource {
     }
 
 
-        /**
-     * @summary Gets all care relationships associated with either the provider or patient
-     * @method
-     * @param {Express.Request} req The HTTP request from the client
-     * @param {Express.Response} res The HTTP response to the client
-     */
+    /**
+ * @summary Gets all care relationships associated with either the provider or patient
+ * @method
+ * @param {Express.Request} req The HTTP request from the client
+ * @param {Express.Response} res The HTTP response to the client
+ */
     async getAll(req, res) {
-        if(req.body.providerId){
+        if (req.body.providerId) {
             var careRelationships = await uhx.Repositories.careRelationshipRepository.getByProviderId(req.body.providerId, req.body.status);
-            
-            for(var i = 0; i<careRelationships.length; i++){
+
+            for (var i = 0; i < careRelationships.length; i++) {
                 await careRelationships[i].loadAddress();
                 await careRelationships[i].loadPatient();
             }
         }
-        else{
+        else {
             var careRelationships = await uhx.Repositories.careRelationshipRepository.getByPatientId(req.body.patientId, req.body.status);
-            
-            for(var i = 0; i<careRelationships.length; i++){
+
+            for (var i = 0; i < careRelationships.length; i++) {
                 await careRelationships[i].loadAddress();
                 await careRelationships[i].loadProvider();
             }
