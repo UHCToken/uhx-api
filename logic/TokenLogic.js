@@ -102,6 +102,17 @@ module.exports = class TokenLogic {
                     for(var o in asset.offers) {
                         await uhx.Repositories.assetRepository.updateOffer(asset.offers[o], principal, _txc);
                         // TODO: Top-up account
+                        var newOffer = await uhx.Repositories.assetRepository.getActiveOffer(asset.id, _txc);
+                        if (newOffer && (!newOffer.public || asset.kycRequirement)){
+                            var distributingAccount = await uhx.Repositories.walletRepository.get((await uhx.Repositories.assetRepository.get(asset.id))._distWalletId);
+                            var supplyAccount = await uhx.StellarClient.getAccount(await newOffer.loadWallet());
+                            var supplyBalance = supplyAccount.balances.find(o=>o.code == asset.code).value;
+                            if (supplyBalance < newOffer.amount){
+                                await uhx.StellarClient.createPayment(distributingAccount, supplyAccount, new MonetaryAmount(newOffer.amount - supplyBalance, asset.code), asset.id, 'hash');
+                            } else if (supplyBalance > newOffer.amount) {
+                                await uhx.StellarClient.createPayment(supplyAccount, distributingAccount, new MonetaryAmount(supplyBalance - newOffer.amount, asset.code), asset.id, 'hash');
+                            }
+                        }
                     }
                 }
 
