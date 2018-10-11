@@ -490,8 +490,8 @@ module.exports = class StellarClient {
      * @param {string} ref A memo to add to the transaction
      * @param {boolean} asTrade Indicates whether the exchange should be as a official "trade" or just purchases
      * @returns {Transaction} The transaction information for the operation
-     * @example UserA wallet wishes to swap 100 UhX for 20 XLM from UserB wallet
-     * client.exchangeAsset(userA, userB, new MonetaryAmount(20, "XLM"), new MonetaryAmount(100, "UhX"), "ID")
+     * @example UserA wallet wishes to swap 100 UHX for 20 XLM from UserB wallet
+     * client.exchangeAsset(userA, userB, new MonetaryAmount(20, "XLM"), new MonetaryAmount(100, "UHX"), "ID")
      */
     async exchangeAsset(sellerWallet, buyerWallet, selling, buying, ref, asTrade) {
 

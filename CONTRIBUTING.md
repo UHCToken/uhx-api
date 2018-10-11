@@ -5,7 +5,7 @@ First of all, thank you for taking the time to contribute to this project. We've
 
 ### Familiarize yourself with the architecture
 
-The architecture of this project is documented in detail here. Note that all UhX calls are wrapped to ensure that proper error messages and authentication occurs on the UhX server, so it is recommended that you follow the pattern. Here are a few pointers:
+The architecture of this project is documented in detail here. Note that all UHX calls are wrapped to ensure that proper error messages and authentication occurs on the UHX server, so it is recommended that you follow the pattern. Here are a few pointers:
 
 1. Any service that interacts with clients should go in the /controllers folder and should be registered via the routes property.
 2. Don't call the database directly from any code in the /controllers folder, you should only interact with the database using the code in the repositories module.

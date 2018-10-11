@@ -246,7 +246,7 @@
      *          - client_credentials
      *          - authorization_code
      *      - name: username
-     *        description: The e-mail address of the UhX user
+     *        description: The e-mail address of the UHX user
      *        in: formData
      *        required: false
      *        type: string

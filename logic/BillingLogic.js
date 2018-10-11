@@ -31,7 +31,7 @@ const uhx = require('../uhx'),
 
 /**
   * @class
-  * @summary Represents the subscription billing logic of the UhX application
+  * @summary Represents the subscription billing logic of the UHX application
   */
 module.exports = class BillingLogic {
 

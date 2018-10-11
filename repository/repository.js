@@ -48,7 +48,7 @@ pg = require('pg'),
 
 /**
  * @class
- * @summary Represents UhX's database repositories
+ * @summary Represents UHX's database repositories
  */
 class UhcRepositories {
 

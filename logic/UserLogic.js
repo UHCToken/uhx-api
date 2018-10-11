@@ -57,7 +57,7 @@ module.exports = class UserLogic {
 
     /**
      * @method
-     * @summary Adds a provider to the UhX API
+     * @summary Adds a provider to the UHX API
      * @param {Provider} provider The provider to add
      * @param {*} serviceTypes The service types of the provider
      * @param {SecurityPrincipal} principal The user who is making the request
@@ -161,7 +161,7 @@ module.exports = class UserLogic {
 
     /**
      * @method
-     * @summary Adds a provider address to the UhX API
+     * @summary Adds a provider address to the UHX API
      * @param {ProviderAddress} address The provider address to add
      * @param {*} serviceTypes The service types of the provider address
      * @param {SecurityPrincipal} principal The user who is making the request
@@ -324,7 +324,7 @@ module.exports = class UserLogic {
 
     /**
      * @method
-     * @summary Adds provider address services to the UhX API
+     * @summary Adds provider address services to the UHX API
      * @param {string} addressId The provider address id to add services for
      * @param {*} services The provider address services to add
      * @param {SecurityPrincipal} principal The user who is making the request
@@ -362,7 +362,7 @@ module.exports = class UserLogic {
 
     /**
      * @method
-     * @summary Gets all the services for an address in the UhX API
+     * @summary Gets all the services for an address in the UHX API
      * @param {string} addressId The provider address id to get services for
      * @param {SecurityPrincipal} principal The user who is making the request
      * @returns {*} The services for the provider address
@@ -384,7 +384,7 @@ module.exports = class UserLogic {
 
     /**
      * @method
-     * @summary Adds provider address services to the UhX API
+     * @summary Adds provider address services to the UHX API
      * @param {string} addressId The provider address id to edit services for
      * @param {*} services The provider address services to edit
      * @param {string} action The action to run for the edit
@@ -429,7 +429,7 @@ module.exports = class UserLogic {
 
     /**
      * @method
-     * @summary Adds a provider address service to the UhX API
+     * @summary Adds a provider address service to the UHX API
      * @param {ProviderService} service The provider address services to add
      * @returns {ProviderService} The inserted provider address service
      */
@@ -524,7 +524,7 @@ module.exports = class UserLogic {
 
     /**
      * @method
-     * @summary Adds a patient to the UhX API
+     * @summary Adds a patient to the UHX API
      * @param {Patient} patient The patient to add
      * @param {SecurityPrincipal} principal The user who is making the request
      */

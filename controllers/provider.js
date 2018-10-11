@@ -28,7 +28,7 @@ const uhx = require('../uhx'),
  * @swagger
  * tags:
  *  - name: "provider"
- *    description: "The provider resource represents a single provider (client, provider, etc.) which is a member of UhX"
+ *    description: "The provider resource represents a single provider (client, provider, etc.) which is a member of UHX"
  */
 class ProviderApiResource {
 
@@ -98,8 +98,8 @@ class ProviderApiResource {
      *  post:
      *      tags:
      *      - "provider"
-     *      summary: "Registers a new provider in the UhX API"
-     *      description: "This method will register a new provider in the UhX API"
+     *      summary: "Registers a new provider in the UHX API"
+     *      description: "This method will register a new provider in the UHX API"
      *      consumes: 
      *      - "application/json"
      *      produces:
@@ -191,8 +191,8 @@ class ProviderApiResource {
      *  put:
      *      tags:
      *      - "provider"
-     *      summary: "Updates an existing provider in the UhX API"
-     *      description: "This method will update an existing  provider in the UhX API"
+     *      summary: "Updates an existing provider in the UHX API"
+     *      description: "This method will update an existing  provider in the UHX API"
      *      consumes: 
      *      - "application/json"
      *      produces:
@@ -254,8 +254,8 @@ class ProviderApiResource {
      *  get:
      *      tags:
      *      - "provider"
-     *      summary: "Gets an existing provider from the UhX member database"
-     *      description: "This method will fetch an existing provider from the UhX member database"
+     *      summary: "Gets an existing provider from the UHX member database"
+     *      description: "This method will fetch an existing provider from the UHX member database"
      *      produces:
      *      - "application/json"
      *      parameters:
