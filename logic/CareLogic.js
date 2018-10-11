@@ -37,7 +37,7 @@ const STATUS_NEW = "NEW",
     STATUS_EXPIRED = "EXPIRED";
 /**
   * @class
-  * @summary Represents the core care plan logic of the UhX application
+  * @summary Represents the core care plan logic of the UHX application
   */
 module.exports = class CareLogic {
 

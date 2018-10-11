@@ -28,7 +28,7 @@ const uhx = require('../uhx'),
  * @swagger
  * tags:
  *  - name: "invitation"
- *    description: "The invitation resource represents an invitation to join the UhX network"
+ *    description: "The invitation resource represents an invitation to join the UHX network"
  */
 class InvitationApiResource {
 
@@ -94,8 +94,8 @@ class InvitationApiResource {
      *  post:
      *      tags:
      *      - "invitation"
-     *      summary: "Creates a new invite on the UhX server"
-     *      description: "This method will insert the specified invitation to the UhX server and will issue a temporary claim token to the person specified"
+     *      summary: "Creates a new invite on the UHX server"
+     *      description: "This method will insert the specified invitation to the UHX server and will issue a temporary claim token to the person specified"
      *      consumes:
      *      - "application/json"
      *      produces:
@@ -187,8 +187,8 @@ class InvitationApiResource {
      *  get:
      *      tags:
      *      - "invitation"
-     *      summary: "Gets a specific invitation from the UhX server"
-     *      description: "This method will retrieve the specific invitation from the UhX server"
+     *      summary: "Gets a specific invitation from the UHX server"
+     *      description: "This method will retrieve the specific invitation from the UHX server"
      *      produces:
      *      - "application/json"
      *      parameters:
@@ -232,7 +232,7 @@ class InvitationApiResource {
      *      tags:
      *      - "invitation"
      *      summary: "Extend an active invitation"
-     *      description: "This method will extend the specific invitation expiry date on the UhX server"
+     *      description: "This method will extend the specific invitation expiry date on the UHX server"
      *      produces:
      *      - "application/json"
      *      parameters:
@@ -269,13 +269,13 @@ class InvitationApiResource {
                 throw new exception.Exception("Cannot extend claimed invitations", exception.ErrorCodes.RULES_VIOLATION);
             if (invitation.deactivatedTime)
                 throw new exception.Exception("Cannot extend deactivated invitations", exception.ErrorCodes.RULES_VIOLATION);
-            
+
             var claimToken = uhx.SecurityLogic.generateSignedClaimToken();
 
             var sendOptions = {
                 to: invitation.email,
                 from: uhx.Config.mail.from,
-                subject: "Your wallet is waiting for you on UhX!",
+                subject: "Your wallet is waiting for you on UHX!",
                 template: uhx.Config.mail.templates.resendInvitation
             };
 
@@ -306,7 +306,7 @@ class InvitationApiResource {
      *      tags:
      *      - "invitation"
      *      summary: "Rescind an active invitation"
-     *      description: "This method will rescind (deactivate) the specific invitation on the UhX server"
+     *      description: "This method will rescind (deactivate) the specific invitation on the UHX server"
      *      produces:
      *      - "application/json"
      *      parameters:
@@ -389,6 +389,33 @@ class InvitationApiResource {
             throw new exception.ArgumentException("password");
 
         var user = await uhx.SecurityLogic.claimInvitation(req.body.code, req.body.password, req.principal);
+
+        await user.loadWallets();
+
+        // Load balances from blockchain
+        if (user._wallets)
+            user._wallets = await uhx.TokenLogic.getAllBalancesForWallets(user._wallets);
+
+        // Get USD balance
+        var usd = await uhx.GreenMoney.getBalance(req.params.uid, 'USD');
+
+        var wallet = {};
+
+        if (usd) {
+            var wallet = {};
+            wallet.id = usd.id;
+            wallet.balances = [];
+            var balance = {};
+            balance.code = 'USD';
+            balance.value = usd.amount;
+            wallet.balances[0] = balance;
+            wallet.userId = usd.userId;
+            user._wallets.push(wallet)
+        }
+
+        await user.loadExternalIds();
+        await user.loadClaims();
+        await user.loadGroups();
         res.status(201)
             .set("Location", `${uhx.Config.api.scheme}://${uhx.Config.api.host}:${uhx.Config.api.port}${uhx.Config.api.base}/user/${user.id}`)
             .json(user);

@@ -126,8 +126,8 @@ class ServiceTypeApiResource {
      *  post:
      *      tags:
      *      - "servicetype"
-     *      summary: "Registers a new service type in the UhX API"
-     *      description: "This method will register a new service type in the UhX API"
+     *      summary: "Registers a new service type in the UHX API"
+     *      description: "This method will register a new service type in the UHX API"
      *      consumes: 
      *      - "application/json"
      *      produces:
@@ -181,8 +181,8 @@ class ServiceTypeApiResource {
      *  put:
      *      tags:
      *      - "servicetype"
-     *      summary: "Updates an existing service type in the UhX API"
-     *      description: "This method will update an existing service type in the UhX API"
+     *      summary: "Updates an existing service type in the UHX API"
+     *      description: "This method will update an existing service type in the UHX API"
      *      consumes: 
      *      - "application/json"
      *      produces:

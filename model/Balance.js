@@ -22,7 +22,7 @@ const ModelBase = require('./ModelBase'),
 
 /**
  * @class
- * @summary Represents a balance in the UhX data store
+ * @summary Represents a balance in the UHX data store
  * @swagger
  * definitions:
  *  Balance:

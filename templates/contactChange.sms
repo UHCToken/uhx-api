@@ -1,3 +1,3 @@
 Hi {{old.givenName}},
 
-This is UhX, just letting you know someone changed your telephone number to {{new.tel}}. If this wasn't you, please contact our support team by email: help@uhx.io
+This is UHX, just letting you know someone changed your telephone number to {{new.tel}}. If this wasn't you, please contact our support team by email: help@uhx.io

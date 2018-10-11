@@ -130,7 +130,7 @@ module.exports = class Invoice extends ModelBase {
     /**
      * @method
      * @returns {User} The payor of the invoice
-     * @summary Loads the payor from the UhX database
+     * @summary Loads the payor from the UHX database
      */
     async loadPayor(_txc) {
         if (!this._payor && this.payorId)

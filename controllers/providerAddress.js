@@ -162,8 +162,8 @@ class ProviderAddressApiResource {
      *  post:
      *      tags:
      *      - "provideraddress"
-     *      summary: "Registers a new provider address in the UhX API"
-     *      description: "This method will register a new provider address in the UhX API"
+     *      summary: "Registers a new provider address in the UHX API"
+     *      description: "This method will register a new provider address in the UHX API"
      *      consumes: 
      *      - "application/json"
      *      produces:
@@ -217,8 +217,8 @@ class ProviderAddressApiResource {
      *  get:
      *      tags:
      *      - "provideraddress"
-     *      summary: "Gets an existing provider address from the UhX member database"
-     *      description: "This method will fetch an existing provider address from the UhX member database"
+     *      summary: "Gets an existing provider address from the UHX member database"
+     *      description: "This method will fetch an existing provider address from the UHX member database"
      *      produces:
      *      - "application/json"
      *      parameters:
@@ -315,8 +315,8 @@ class ProviderAddressApiResource {
      *  put:
      *      tags:
      *      - "provideraddress"
-     *      summary: "Updates an existing provider address in the UhX API"
-     *      description: "This method will update an existing provider address in the UhX API"
+     *      summary: "Updates an existing provider address in the UHX API"
+     *      description: "This method will update an existing provider address in the UHX API"
      *      consumes: 
      *      - "application/json"
      *      produces:
@@ -374,8 +374,8 @@ class ProviderAddressApiResource {
      *  delete:
      *      tags:
      *      - "provideraddress"
-     *      summary: "Deactivates an existing provider address in the UhX API"
-     *      description: "This method will deactivate an existing provider address in the UhX API"
+     *      summary: "Deactivates an existing provider address in the UHX API"
+     *      description: "This method will deactivate an existing provider address in the UHX API"
      *      consumes: 
      *      - "application/json"
      *      produces:
