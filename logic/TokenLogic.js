@@ -337,7 +337,7 @@ module.exports = class TokenLogic {
         }
         catch(e) {
             uhx.log.error(`Error creating asset quote: ${e.message}`);
-            throw new exception.Exception("Error creating asset q uote" , e.code|| exception.ErrorCodes.UNKNOWN, e);
+            throw new exception.Exception("Error creating asset quote" , e.code|| exception.ErrorCodes.UNKNOWN, e);
         }
     }
 
