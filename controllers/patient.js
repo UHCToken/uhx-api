@@ -404,7 +404,7 @@ class PatientApiResource {
             var id = req.body.userId;
         else if (req.params.patientid){
             var patient = await uhx.Repositories.patientRepository.get(req.params.patientid);
-            var id = patient.userId;
+            if (patient) var id = patient.userId; else var id = req.params.patientid;
         }
         // if the token has OWNER set for PATIENT permission then this user must be SELF
         return (principal.grant.patient & security.PermissionType.OWNER && id == principal.session.userId) // the permission on the principal is for OWNER only
