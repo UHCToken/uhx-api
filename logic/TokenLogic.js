@@ -401,6 +401,7 @@ module.exports = class TokenLogic {
 
                 purchase = new Purchase().copy({
                     type: model.TransactionType.Purchase,
+                    autoActivate: purchaseInfo.autoActivate,
                     quoteId: purchaseInfo.quoteId,
                     assetId: purchaseInfo.assetId,
                     quantity: purchaseInfo.quantity,
@@ -411,6 +412,7 @@ module.exports = class TokenLogic {
             else
                 purchase = new Purchase().copy({
                     type: model.TransactionType.Purchase,
+                    autoActivate: purchaseInfo.autoActivate,
                     quoteId: purchaseInfo.quoteId,
                     assetId: purchaseInfo.assetId,
                     quantity: purchaseInfo.quantity,
