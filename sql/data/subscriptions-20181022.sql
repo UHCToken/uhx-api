@@ -6,42 +6,42 @@
 INSERT INTO subscriptions
     (id, offering_id, patient_id, date_next_payment, date_subscribed, date_terminated, auto_renew, date_expired)
 VALUES 
-    (?, "51a3b344-daa9-476f-b044-bb98f60bc21a", ?, "2018-10-01", "2018-09-01", "2018-10-01", true, "2018-09-30");
+    (uuid_generate_v4(), "51a3b344-daa9-476f-b044-bb98f60bc21a", ?, "2018-11-01", "2018-10-01", null, true, "2018-10-31");
 
 INSERT INTO subscriptions
     (id, offering_id, patient_id, date_next_payment, date_subscribed, date_terminated, auto_renew, date_expired)
 VALUES 
-    (?, "51a3b344-daa9-476f-b044-bb98f60bc21a", ?, null, "2018-09-01", "2018-10-01", false, "2018-09-30");
+    (uuid_generate_v4(), "51a3b344-daa9-476f-b044-bb98f60bc21a", ?, null, "2018-09-01", "2018-10-01", false, "2018-09-30");
 
 INSERT INTO subscriptions
     (id, offering_id, patient_id, date_next_payment, date_subscribed, date_terminated, auto_renew, date_expired)
 VALUES 
-    (?, "51a3b344-daa9-476f-b044-bb98f60bc21a", ?, "2018-10-15", "2018-09-15", "2018-10-14", true, "2018-10-14");
+    (uuid_generate_v4(), "51a3b344-daa9-476f-b044-bb98f60bc21a", ?, "2018-10-15", "2018-09-15", "2018-10-14", true, "2018-10-14");
 
 INSERT INTO subscriptions
     (id, offering_id, patient_id, date_next_payment, date_subscribed, date_terminated, auto_renew, date_expired)
 VALUES 
-    (?, "51a3b344-daa9-476f-b044-bb98f60bc21a", ?, null, "2018-09-23", "2018-10-23", false, "2018-10-22");
+    (uuid_generate_v4(), "51a3b344-daa9-476f-b044-bb98f60bc21a", ?, null, "2018-10-23", null, false, "2018-11-22");
 
 INSERT INTO subscriptions
     (id, offering_id, patient_id, date_next_payment, date_subscribed, date_terminated, auto_renew, date_expired)
 VALUES 
-    (?, "51a3b344-daa9-476f-b044-bb98f60bc21a", ?, "2018-11-22", "2018-10-22", null, true, "2018-11-21");
+    (uuid_generate_v4(), "51a3b344-daa9-476f-b044-bb98f60bc21a", ?, "2018-11-22", "2018-10-22", null, true, "2018-11-21");
 
 INSERT INTO subscriptions
     (id, offering_id, patient_id, date_next_payment, date_subscribed, date_terminated, auto_renew, date_expired)
 VALUES 
-    (?, "51a3b344-daa9-476f-b044-bb98f60bc21a", ?, null, "2018-10-23", null, false, "2018-11-22");
+    (uuid_generate_v4(), "51a3b344-daa9-476f-b044-bb98f60bc21a", ?, null, "2018-10-23", null, false, "2018-11-22");
 
 INSERT INTO subscriptions
     (id, offering_id, patient_id, date_next_payment, date_subscribed, date_terminated, auto_renew, date_expired)
 VALUES 
-    (?, "51a3b344-daa9-476f-b044-bb98f60bc21a", ?, "2018-09-30", "2018-08-30", "2018-09-29", true, "2018-09-29");
+    (uuid_generate_v4(), "51a3b344-daa9-476f-b044-bb98f60bc21a", ?, "2018-09-30", "2018-08-30", "2018-09-29", true, "2018-09-29");
 
 INSERT INTO subscriptions
     (id, offering_id, patient_id, date_next_payment, date_subscribed, date_terminated, auto_renew, date_expired)
 VALUES 
-    (?, "51a3b344-daa9-476f-b044-bb98f60bc21a", ?, null, "2018-09-01", "2018-10-01", false, "2018-09-30");
+    (uuid_generate_v4(), "51a3b344-daa9-476f-b044-bb98f60bc21a", ?, null, "2018-08-14", "2018-09-14", false, "2018-09-13");
 
 -- -------------------------------------------------------------------------------------------------------
 
@@ -50,12 +50,52 @@ VALUES
 INSERT INTO subscriptions
     (id, offering_id, patient_id, date_next_payment, date_subscribed, date_terminated, auto_renew, date_expired)
 VALUES 
-    (?, "561455e8-6706-44b0-b1e1-9c3b27a1726c", ?, "2018-09-23", "2017-09-23", "2018-09-22", true, "2018-09-22");
+    (uuid_generate_v4(), "561455e8-6706-44b0-b1e1-9c3b27a1726c", ?, "2019-09-01", "2018-09-01", null, true, "2019-08-30");
 
 INSERT INTO subscriptions
     (id, offering_id, patient_id, date_next_payment, date_subscribed, date_terminated, auto_renew, date_expired)
 VALUES 
-    (?, "561455e8-6706-44b0-b1e1-9c3b27a1726c", ?, null, "2017-09-23", "2018-09-23", false, "2018-09-22");
+    (uuid_generate_v4(), "561455e8-6706-44b0-b1e1-9c3b27a1726c", ?, null, "2018-05-27", null, false, "2019-05-26");
+
+INSERT INTO subscriptions
+    (id, offering_id, patient_id, date_next_payment, date_subscribed, date_terminated, auto_renew, date_expired)
+VALUES 
+    (uuid_generate_v4(), "561455e8-6706-44b0-b1e1-9c3b27a1726c", ?, "2018-09-15", "2017-09-15", "2018-09-15", true, "2018-09-14");
+
+INSERT INTO subscriptions
+    (id, offering_id, patient_id, date_next_payment, date_subscribed, date_terminated, auto_renew, date_expired)
+VALUES 
+    (uuid_generate_v4(), "561455e8-6706-44b0-b1e1-9c3b27a1726c", ?, null, "2018-09-27", null, false, "2019-09-26");
+
+INSERT INTO subscriptions
+    (id, offering_id, patient_id, date_next_payment, date_subscribed, date_terminated, auto_renew, date_expired)
+VALUES 
+    (uuid_generate_v4(), "561455e8-6706-44b0-b1e1-9c3b27a1726c", ?, "2019-10-22", "2018-10-22", null, true, "2019-11-21");
+
+INSERT INTO subscriptions
+    (id, offering_id, patient_id, date_next_payment, date_subscribed, date_terminated, auto_renew, date_expired)
+VALUES 
+    (uuid_generate_v4(), "561455e8-6706-44b0-b1e1-9c3b27a1726c", ?, null, "2017-10-29", null, false, "2018-10-28");
+
+INSERT INTO subscriptions
+    (id, offering_id, patient_id, date_next_payment, date_subscribed, date_terminated, auto_renew, date_expired)
+VALUES 
+    (uuid_generate_v4(), "561455e8-6706-44b0-b1e1-9c3b27a1726c", ?, "2018-09-30", "2017-08-30", "2018-09-29", true, "2018-09-29");
+
+INSERT INTO subscriptions
+    (id, offering_id, patient_id, date_next_payment, date_subscribed, date_terminated, auto_renew, date_expired)
+VALUES 
+    (uuid_generate_v4(), "561455e8-6706-44b0-b1e1-9c3b27a1726c", ?, null, "2017-10-14", "2018-10-14", false, "2018-10-13");
+
+INSERT INTO subscriptions
+    (id, offering_id, patient_id, date_next_payment, date_subscribed, date_terminated, auto_renew, date_expired)
+VALUES 
+    (uuid_generate_v4(), "561455e8-6706-44b0-b1e1-9c3b27a1726c", ?, "2018-09-23", "2017-09-23", "2018-09-22", true, "2018-09-22");
+
+INSERT INTO subscriptions
+    (id, offering_id, patient_id, date_next_payment, date_subscribed, date_terminated, auto_renew, date_expired)
+VALUES 
+    (uuid_generate_v4(), "561455e8-6706-44b0-b1e1-9c3b27a1726c", ?, null, "2018-09-23", "2019-09-23", false, "2019-09-22");
 
 -- -------------------------------------------------------------------------------------------------------
 
