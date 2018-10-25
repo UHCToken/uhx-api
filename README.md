@@ -61,7 +61,9 @@ To setup / run:
    $ node app.js
    ```
 8. Verify the service is running by navigating to [the swagger documentation](http://localhost:4001/api-docs)
-
+## Configure the API
+   The configuration file copied over uses example data and uses crypto testnets. To switch over to real cryptocurrency the configuration endpoints for each network need to be set in the configuration file and wallets need to be generated and set.
+   
 ## Git Workflow Used
 
 If you're interested in contributing, see the [CONTRIBUTING.md](CONTRIBUTING.md) notes. You'll see several branches in this repository:
