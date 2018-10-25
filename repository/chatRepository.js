@@ -57,7 +57,7 @@ module.exports = class ChatRepository {
 
     try {
       await dbc.connect();
-      await dbc.query('INSERT INTO chat_room (title, providerid, patientid) VALUES ($1,$2,$3)', 
+      await dbc.query('INSERT INTO chat_room (title, provider_id, patient_id) VALUES ($1,$2,$3)', 
                               [chatRoom.title || '', chatRoom.providerId, chatRoom.patientId]);
     }
     catch(err){uhx.log.debug(err)}
@@ -76,11 +76,11 @@ module.exports = class ChatRepository {
     try {
       let userChats = [];
       await dbc.connect();
-      let userChatsFromDB = await dbc.query(`SELECT cr.id, cr.title, cr.providerid, cr.patientid, p.name, pt.given_name, pt.family_name 
+      let userChatsFromDB = await dbc.query(`SELECT cr.id, cr.title, cr.provider_id, cr.patient_id, p.name, pt.given_name, pt.family_name 
                                             FROM public.chat_room as cr 
-                                            LEFT JOIN providers as p ON CAST(cr.providerid as text) = CAST(p.id as text) 
-                                            LEFT JOIN patients as pt ON CAST(cr.patientid as text) = CAST(pt.id as text) 
-                                            WHERE cr.patientid = $1`, [userId])
+                                            LEFT JOIN providers as p ON (cr.provider_id = p.id) 
+                                            LEFT JOIN patients as pt ON (cr.patient_id = pt.id) 
+                                            WHERE cr.patient_id = $1`, [userId])
 
 
       for(var r in userChatsFromDB.rows) {
@@ -105,11 +105,11 @@ module.exports = class ChatRepository {
     try {
       let userChats = [];
       await dbc.connect();
-      let userChatsFromDB = await dbc.query(`SELECT cr.id, cr.title, cr.providerid, cr.patientid, p.name, pt.given_name, pt.family_name 
+      let userChatsFromDB = await dbc.query(`SELECT cr.id, cr.title, cr.provider_id, cr.patient_id, p.name, pt.given_name, pt.family_name 
                                             FROM public.chat_room as cr 
-                                            LEFT JOIN providers as p ON CAST(cr.providerid as text) = CAST(p.id as text) 
-                                            LEFT JOIN patients as pt ON CAST(cr.patientid as text) = CAST(pt.id as text) 
-                                            WHERE cr.providerid = $1`, [userId])
+                                            LEFT JOIN providers as p ON (cr.provider_id = p.id) 
+                                            LEFT JOIN patients as pt ON (cr.patient_id = pt.id)
+                                            WHERE cr.provider_id = $1`, [userId])
 
 
       for(var r in userChatsFromDB.rows) {
@@ -135,7 +135,7 @@ module.exports = class ChatRepository {
 
     try {
       await dbc.connect();
-      await dbc.query(`INSERT INTO chat_message (chatroom_id, authorid, datesent, viewedstatus, body, authorname) 
+      await dbc.query(`INSERT INTO chat_message (chatroom_id, author_id, datesent, viewedstatus, body, authorname) 
                         VALUES ($1,$2,$3,$4,$5,$6)`, 
                               [chatRoomId, chatMessage.authorId, chatMessage.dateSent, chatMessage.viewedStatus, chatMessage.body, chatMessage.authorName]);
     }
@@ -185,7 +185,7 @@ module.exports = class ChatRepository {
         SELECT Count(*) FROM chat_message 
         WHERE chatroom_id = $1
         AND viewedstatus = 'Unread'
-        AND authorid != $2
+        AND author_id != $2
         `
         , [chatroomId, userId])
 
@@ -213,7 +213,7 @@ module.exports = class ChatRepository {
       await dbc.query(`UPDATE chat_message  
                       SET viewedstatus = 'Read'
                       WHERE chatroom_id = $1
-                      AND authorid = $2
+                      AND author_id = $2
                       `, 
             [chatid, userId]);
     }

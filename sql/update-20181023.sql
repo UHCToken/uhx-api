@@ -4,6 +4,10 @@
 -- author_types to indicate message source in chat_message
 
 ALTER TABLE chat_room
+    ALTER COLUMN id TYPE uuid
+	USING id::uuid;
+
+ALTER TABLE chat_room
     ALTER COLUMN providerId TYPE uuid
 	USING providerid::uuid;
 
@@ -26,6 +30,15 @@ ALTER TABLE chat_room
    ADD CONSTRAINT fk_patient_id
    FOREIGN KEY (patient_id) 
    REFERENCES patients(id);
+
+ALTER TABLE chat_message
+    ALTER COLUMN chatroom_id TYPE uuid
+	USING chatroom_id::uuid;
+
+ALTER TABLE chat_message 
+   ADD CONSTRAINT fk_chat_room
+   FOREIGN KEY (chatroom_id) 
+   REFERENCES chat_room(id);
 
 ALTER TABLE chat_message
     ALTER COLUMN authorId TYPE uuid
