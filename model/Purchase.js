@@ -184,7 +184,7 @@ module.exports = class Purchase extends Transaction {
      * @returns {User} The user which represents the buyer
      */
     async loadBuyer(_txc) {
-        if(!this._buyer) {
+        if(!this._buyer && this.buyerId) {
             this._buyer = await uhx.Repositories.userRepository.get(this.buyerId, _txc);
             if(this.buyerId == this.createdBy)
                 this._createdBy = this._buyer;
@@ -225,7 +225,7 @@ module.exports = class Purchase extends Transaction {
      * @returns {Asset} The loaded asset
      */
     async loadAsset(_txc) {
-        if(!this._asset)
+        if(!this._asset && this.assetId)
             this._asset = await uhx.Repositories.assetRepository.get(this.assetId, _txc);
         return this._asset;
     }

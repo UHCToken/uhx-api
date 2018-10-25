@@ -61,7 +61,7 @@ module.exports = class GreenMoney {
                     + '&PayorName=' + encodeURI(user.givenName) + ' ' + encodeURI(user.familyName)
                     + '&EmailAddress=' + user.name
                     + '&ItemName=$' + amount + ' USD Credit'
-                    + '&ItemDescription=USD credit for UhX wallet ' + user.name
+                    + '&ItemDescription=USD credit for UHX wallet ' + user.name
                     + '&Amount=' + amount
                     + '&PaymentDate=' + await uhx.GreenMoney.formatDate(new Date())
                     + '&x_delim_data=true&x_delim_char=,';
@@ -215,7 +215,7 @@ module.exports = class GreenMoney {
     */
     async getInvoicesForUser(userId, principal) {
         try {
-            if ((principal._session.userId == userId && principal.grant["invoice"] && security.PermissionType.OWNER) || (principal.grant["user"] & security.PermissionType.LIST)) {
+            if ((principal._session.userId == userId && principal.grant["invoice"] && security.PermissionType.OWNER) || (principal.grant["invoice"] & security.PermissionType.LIST)) {
                 // Gets all invoices from database
                 var invoices = await uhx.Repositories.invoiceRepository.getAllForUser(userId);
 
@@ -257,7 +257,7 @@ module.exports = class GreenMoney {
                     to: user.name,
                     from: uhx.Config.mail.from,
                     template: uhx.Config.mail.templates.greenMoneyReminder,
-                    subject: "You have a pending invoice for UhX USD Credit"
+                    subject: "You have a pending invoice for UHX USD Credit"
                 }, { user: user, invoice: invoices[i] });
                 invoices[i].reminderDate = new Date(new Date().getTime() + uhx.Config.greenMoney.reminderTime);
                 await uhx.Repositories.invoiceRepository.update(invoices[i]);

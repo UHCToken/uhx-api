@@ -25,6 +25,11 @@
     oauth = require('./controllers/oauth'),
     purchase = require('./controllers/purchase'),
     user = require('./controllers/user'),
+    patient = require('./controllers/patient'),
+    provider = require('./controllers/provider'),
+    providerAddress = require('./controllers/providerAddress'),
+    providerService = require('./controllers/providerService'),
+    serviceType = require('./controllers/serviceType'),
     wallet = require('./controllers/wallet'),
     group = require('./controllers/group'),
     invoice = require('./controllers/invoice'),
@@ -32,15 +37,20 @@
     asset = require('./controllers/asset'),
     invitation = require('./controllers/invitation'),
     transaction = require('./controllers/transaction'),
+    careRelationship = require('./controllers/careRelationship'),
+    carePlan = require('./controllers/carePlan'),
     reports = require('./controllers/stats'),
     swagger = require('./controllers/js-doc'),
     stellarFederation = require('./federation/stellar-fed.js'),
     airdrop = require('./controllers/airdrop'),
+    subscription = require('./controllers/subscription'),
+    offering = require('./controllers/offering'),
     toobusy = require('toobusy-js'),
     https = require('https'),
     helmet = require('helmet'),
     http = require('http'),
-    skipper = require("skipper");
+    skipper = require("skipper"),
+    chat = require('./controllers/chat');
     
     toobusy.maxLag(10000);
 // Startup application
@@ -60,8 +70,10 @@ app.use(skipper());
 var restApi = new api.RestApi(uhx.Config.api.base, app);
 
 // Add resources to rest API
-if(uhx.Config.security.enableCors) 
+if(uhx.Config.security.enableCors) {
     restApi.enableCors();
+}
+    
 
 if(uhx.Config.swagger.enabled) {
     restApi.addResource(new swagger.SwaggerMetadataResource());
@@ -71,6 +83,11 @@ if(uhx.Config.swagger.enabled) {
 // Add OAuth token service
 restApi.addResource(new oauth.OAuthTokenService());
 restApi.addResource(new user.UserApiResource());
+restApi.addResource(new patient.PatientApiResource());
+restApi.addResource(new provider.ProviderApiResource());
+restApi.addResource(new providerAddress.ProviderAddressApiResource());
+restApi.addResource(new providerService.ProviderServiceApiResource());
+restApi.addResource(new serviceType.ServiceTypeApiResource());
 restApi.addResource(new purchase.PurchaseApiResource());
 restApi.addResource(new invoice.InvoiceApiResource());
 restApi.addResource(new wallet.WalletApiResource());
@@ -78,10 +95,15 @@ restApi.addResource(new group.GroupApiResource());
 restApi.addResource(new permission.PermissionApiResource());
 restApi.addResource(new asset.AssetApiResource());
 restApi.addResource(new invitation.InvitationApiResource());
+restApi.addResource(new carePlan.CarePlanApiResource());
+restApi.addResource(new careRelationship.CareRelationshipApiResource());
 restApi.addResource(new reports.StatisticsApiResource());
 restApi.addResource(new transaction.TransactionApiResource());
 restApi.addResource(new stellarFederation.StellarFederationApiResource());
 restApi.addResource(new airdrop.AirdropApiResource());
+restApi.addResource(new subscription.SubscriptionApiResource());
+restApi.addResource(new offering.OfferingApiResource());
+restApi.addResource(new chat.ChatApiResource());
 
 uhx.init();
 uhx.initWorker();
@@ -90,10 +112,30 @@ restApi.start();
 
 // Start the express instance
 if(uhx.Config.api.scheme == "http") {
-    http.createServer(app).listen(uhx.Config.api.port);
+    const server = http.createServer(app).listen(uhx.Config.api.port);
+    const io = require('socket.io')(server) 
+    io.on('connection', (socket) => {
+        console.log('-------------------Listening--------------------');
+
+        socket.on('SEND_MESSAGE', async function(data){
+          console.log(`sending`)
+          //Emit to chat
+          socket.broadcast.emit('RECEIVE_MESSAGE', {message: 'Send'});
+        })
+    });
 }
 else {
-    https.createServer(uhx.Config.api.tls, app).listen(uhx.Config.api.port);
+    const server = https.createServer(uhx.Config.api.tls, app).listen(uhx.Config.api.port);
+    const io = require('socket.io')(server) 
+    io.on('connection', (socket) => {
+        console.log('-------------------Listening--------------------');
+
+        socket.on('SEND_MESSAGE', async function(data){
+          console.log(`sending`)
+          //Emit to chat
+          socket.broadcast.emit('RECEIVE_MESSAGE', {message: 'Send'});
+        })
+    });
 }
 
-uhx.log.info(`UhX API started on ${uhx.Config.api.scheme} port ${uhx.Config.api.port}`);
+uhx.log.info(`UHX API started on ${uhx.Config.api.scheme} port ${uhx.Config.api.port}`);

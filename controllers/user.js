@@ -28,7 +28,7 @@ const uhx = require('../uhx'),
  * @swagger
  * tags:
  *  - name: "user"
- *    description: "The user resource represents a single user (client, provider, etc.) which is a member of UhX"
+ *    description: "The user resource represents a single user (client, provider, etc.) which is a member of UHX"
  */
 class UserApiResource {
 
@@ -119,6 +119,13 @@ class UserApiResource {
                         "demand": security.PermissionType.READ,
                         "method": this.getProfilePicture
                     }
+                },
+                {
+                    "path": "user/:uid/group",
+                    "get": {
+                        "demand": security.PermissionType.READ,
+                        "method": this.getGroups
+                    }
                 }
             ]
         };
@@ -134,8 +141,8 @@ class UserApiResource {
      *  post:
      *      tags:
      *      - "user"
-     *      summary: "Registers a new user in the UhX API"
-     *      description: "This method will register a new user in the UhX API and create the necessary accounts and trust transactions"
+     *      summary: "Registers a new user in the UHX API"
+     *      description: "This method will register a new user in the UHX API and create the necessary accounts and trust transactions"
      *      consumes: 
      *      - "application/json"
      *      produces:
@@ -197,8 +204,8 @@ class UserApiResource {
      *  put:
      *      tags:
      *      - "user"
-     *      summary: "Updates an existing user in the UhX API"
-     *      description: "This method will update an existing  user in the UhX API"
+     *      summary: "Updates an existing user in the UHX API"
+     *      description: "This method will update an existing  user in the UHX API"
      *      consumes: 
      *      - "application/json"
      *      produces:
@@ -266,8 +273,8 @@ class UserApiResource {
      *  get:
      *      tags:
      *      - "user"
-     *      summary: "Gets an existing user from the UhX member database"
-     *      description: "This method will fetch an existing user from the UhX member database"
+     *      summary: "Gets an existing user from the UHX member database"
+     *      description: "This method will fetch an existing user from the UHX member database"
      *      produces:
      *      - "application/json"
      *      parameters:
@@ -328,7 +335,7 @@ class UserApiResource {
 
     /**
      * @method
-     * @summary Get all users from the UhX database (optional search parameters)
+     * @summary Get all users from the UHX database (optional search parameters)
      * @param {Express.Reqeust} req The request from the client 
      * @param {Express.Response} res The response from the client
      * @swagger
@@ -336,8 +343,8 @@ class UserApiResource {
      *  get:
      *      tags:
      *      - "user"
-     *      summary: "Queries the UhX member database for users matching the specified parameters"
-     *      description: "This method performs a query against the UhX user's database. This method will return additional information about the specified user including any external identities and wallet"
+     *      summary: "Queries the UHX member database for users matching the specified parameters"
+     *      description: "This method performs a query against the UHX user's database. This method will return additional information about the specified user including any external identities and wallet"
      *      produces:
      *      - "application/json"
      *      parameters:
@@ -406,7 +413,7 @@ class UserApiResource {
     }
     /**
      * @method
-     * @summary Deactivate a user account from the UhX database
+     * @summary Deactivate a user account from the UHX database
      * @param {Express.Reqeust} req The request from the client 
      * @param {Express.Response} res The response from the client
      * @swagger
@@ -414,7 +421,7 @@ class UserApiResource {
      *  delete:
      *      tags:
      *      - "user"
-     *      summary: "Deactivates a user in the UhX member database"
+     *      summary: "Deactivates a user in the UHX member database"
      *      description: "This method will set the deactivation time of the specified user account so they no longer can login or appear in searches."
      *      produces:
      *      - "application/json"
@@ -679,7 +686,7 @@ class UserApiResource {
      */
     async upload(req, res) {
         req.body.id = req.params.uid;
-        var result = await uhx.ObjectStorage.uploadProfileImage(req, res);
+        var result = await uhx.ObjectStorage.uploadProfileImage(req, res, 'profile');
         var status = result instanceof exception.Exception ? 500 : 201;
 
         res.status(status).json(result);
@@ -688,50 +695,92 @@ class UserApiResource {
     }
 
     /**
- * @method
- * @summary Get a single users profile picture
- * @param {Express.Reqeust} req The request from the client 
- * @param {Express.Response} res The response from the client
- * @swagger
- * /user/{userid}/img:
- *  get:
- *      tags:
- *      - "user"
- *      summary: "Gets the profile picture for a specified user"
- *      description: "This method will fetch the profile image for a specific user"
- *      produces:
- *      - "application/json"
- *      parameters:
- *      - name: "userid"
- *        in: "path"
- *        description: "The ID of the user for the profile image"
- *        required: true
- *        type: "string"
- *      responses:
- *          200: 
- *             description: "The requested resource was fetched successfully"
- *             schema: 
- *                  $ref: "#/definitions/User"
- *          404:
- *              description: "The specified user cannot be found"
- *              schema: 
- *                  $ref: "#/definitions/Exception"
- *          500:
- *              description: "An internal server error occurred"
- *              schema:
- *                  $ref: "#/definitions/Exception"
- *      security:
- *      - uhx_auth:
- *          - "read:user"
- */
+     * @method
+     * @summary Get a single users profile picture
+     * @param {Express.Reqeust} req The request from the client 
+     * @param {Express.Response} res The response from the client
+     * @swagger
+     * /user/{userid}/img:
+     *  get:
+     *      tags:
+     *      - "user"
+     *      summary: "Gets the profile picture for a specified user"
+     *      description: "This method will fetch the profile image for a specific user"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "userid"
+     *        in: "path"
+     *        description: "The ID of the user for the profile image"
+     *        required: true
+     *        type: "string"
+     *      responses:
+     *          200: 
+     *             description: "The requested resource was fetched successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/User"
+     *          404:
+     *              description: "The specified user cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "read:user"
+     */
     async getProfilePicture(req, res) {
-        var image = await uhx.ObjectStorage.getProfileImage(req, res);
+        var image = await uhx.ObjectStorage.getProfileImage(req, res, 'profile');
         var status = image instanceof exception.Exception ? 404 : 201;
         if (status == 201)
             image.pipe(res);
         else
             res.status(status).json(image);
 
+        return true;
+    }
+
+    /**
+     * @method
+     * @summary Get a single users groups
+     * @param {Express.Reqeust} req The request from the client 
+     * @param {Express.Response} res The response from the client
+     * @swagger
+     * /user/{userid}/groups:
+     *  get:
+     *      tags:
+     *      - "user"
+     *      summary: "Gets the groups for a specified user"
+     *      description: "This method will fetch the groups for a specific user"
+     *      produces:
+     *      - "application/json"
+     *      parameters:
+     *      - name: "userid"
+     *        in: "path"
+     *        description: "The ID of the user to lookup groups for"
+     *        required: true
+     *        type: "string"
+     *      responses:
+     *          200: 
+     *             description: "The requested resource was fetched successfully"
+     *             schema: 
+     *                  $ref: "#/definitions/User"
+     *          404:
+     *              description: "The specified user cannot be found"
+     *              schema: 
+     *                  $ref: "#/definitions/Exception"
+     *          500:
+     *              description: "An internal server error occurred"
+     *              schema:
+     *                  $ref: "#/definitions/Exception"
+     *      security:
+     *      - uhx_auth:
+     *          - "read:user"
+     */
+    async getGroups(req, res) {
+        res.status(200).json(await uhx.Repositories.groupRepository.getByUserId(req.params.uid));
         return true;
     }
 

@@ -320,7 +320,7 @@ class TransactionApiResource {
      *      tags:
      *      - "transaction"
      *      summary: "Posts a new transaction for general processing"
-     *      description: "This method will request that a transaction be posted to the UhX API for further processing"
+     *      description: "This method will request that a transaction be posted to the UHX API for further processing"
      *      consumes: 
      *      - "application/json"
      *      produces:

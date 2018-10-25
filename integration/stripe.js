@@ -76,7 +76,7 @@ module.exports = class StripeClient {
      * @method
      * @summary Constructs a request to the Stripe payment API for a one time charge
      * @param {string} source The source to charge (the mastercard, amex, or visa token)
-     * @param {User} user The UhX user which is being charged
+     * @param {User} user The UHX user which is being charged
      * @param {MonetaryAmount} amount The amount to be charged to the card
      * @param {MonetaryAmount} fee The additional amount to add to the charge 
      * @param {string} description The textual description of the transaction to be charged
@@ -107,7 +107,7 @@ module.exports = class StripeClient {
                             description,
                             new Date(charges.created),
                             user, 
-                            null, // TODO: Set UhX as the payee
+                            null, // TODO: Set UHX as the payee
                             amount,
                             fee, 
                             charges.id,

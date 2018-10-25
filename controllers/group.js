@@ -17,20 +17,20 @@
  * Developed on behalf of Universal Health Coin by the Mohawk mHealth & eHealth Development & Innovation Centre (MEDIC)
  */
 
- const uhx = require('../uhx'),
+const uhx = require('../uhx'),
     security = require('../security'),
     exception = require('../exception'),
     Group = require('../model/Group'),
     User = require('../model/User');
 
-  /**
-   * @class
-   * @summary Represents a resource to fetch Groups
-   * @swagger
-   * tags:
-   *    - name: group
-   *      description: A resource to fetch user group information from the UhX API
-   */
+/**
+ * @class
+ * @summary Represents a resource to fetch Groups
+ * @swagger
+ * tags:
+ *    - name: group
+ *      description: A resource to fetch user group information from the UHX API
+ */
 module.exports.GroupApiResource = class GroupApiResource {
 
     /**
@@ -38,16 +38,16 @@ module.exports.GroupApiResource = class GroupApiResource {
      * @summary Returns the routes to the API controller
      */
     get routes() {
-        return { 
+        return {
             permission_group: "group",
             routes: [
                 {
                     "path": "group",
-                    "get" : {
+                    "get": {
                         demand: security.PermissionType.LIST,
                         method: this.getAll
                     },
-                    "post" : {
+                    "post": {
                         demand: security.PermissionType.WRITE,
                         method: this.create
                     }
@@ -58,7 +58,7 @@ module.exports.GroupApiResource = class GroupApiResource {
                         demand: security.PermissionType.READ,
                         method: this.get
                     },
-                    "delete" : {
+                    "delete": {
                         demand: security.PermissionType.WRITE,
                         method: this.delete
                     }
@@ -68,7 +68,10 @@ module.exports.GroupApiResource = class GroupApiResource {
                     "get": {
                         demand: security.PermissionType.LIST | security.PermissionType.READ,
                         method: this.listUsers
-                    },
+                    }
+                },
+                {
+                    "path": "group/:gid/user/:uid",
                     "post": {
                         demand: security.PermissionType.WRITE,
                         method: this.addUser
@@ -120,15 +123,15 @@ module.exports.GroupApiResource = class GroupApiResource {
 
     /**
      * @method
-     * @summary Creates a new group in the UhX API
+     * @summary Creates a new group in the UHX API
      * @param {Express.Request} req The HTTP request fromthis client
      * @param {Express.Response} res The HTTP response going to the client
      */
     async create(req, res) {
-        
-        if(!req.body)
+
+        if (!req.body)
             throw new exception.Exception("Missing body", exception.ErrorCodes.MISSING_PAYLOAD);
-        
+
         var group = new Group().copy(req.body);
         res.status(201).json(await uhx.Repositories.groupRepository.insert(group, req.Principal));
         return true;
@@ -136,12 +139,12 @@ module.exports.GroupApiResource = class GroupApiResource {
 
     /**
      * @method
-     * @summary Get a specific group in the UhX API
+     * @summary Get a specific group in the UHX API
      * @param {Express.Request} req The HTTP request fromthis client
      * @param {Express.Response} res The HTTP response going to the client
      */
     async get(req, res) {
-        if(!req.params.gid)
+        if (!req.params.gid)
             throw new exception.Exception("Missing group id parameter", exception.ErrorCodes.MISSING_PROPERTY);
 
         res.status(200).json(await uhx.Repositories.groupRepository.get(req.params.gid));
@@ -150,12 +153,12 @@ module.exports.GroupApiResource = class GroupApiResource {
 
     /**
      * @method
-     * @summary Deactivates the specified group from the UhX API
+     * @summary Deactivates the specified group from the UHX API
      * @param {Express.Request} req The HTTP request fromthis client
      * @param {Express.Response} res The HTTP response going to the client
      */
     async delete(req, res) {
-        if(!req.params.gid)
+        if (!req.params.gid)
             throw new exception.Exception("Missing group id parameter", exception.ErrorCodes.MISSING_PROPERTY);
 
         res.status(201).json(await uhx.Repositories.groupRepository.delete(req.params.gid));
@@ -164,13 +167,13 @@ module.exports.GroupApiResource = class GroupApiResource {
 
     /**
      * @method
-     * @summary Lists users the specified group from the UhX API
+     * @summary Lists users the specified group from the UHX API
      * @param {Express.Request} req The HTTP request fromthis client
      * @param {Express.Response} res The HTTP response going to the client
      */
     async listUsers(req, res) {
 
-        if(!req.params.gid)
+        if (!req.params.gid)
             throw new exception.Exception("Missing group id parameter", exception.ErrorCodes.MISSING_PROPERTY);
 
         res.status(200).json(await uhx.Repositories.groupRepository.getUsers(req.params.gid));
@@ -179,38 +182,58 @@ module.exports.GroupApiResource = class GroupApiResource {
 
     /**
      * @method
-     * @summary Adds a user to the specified group in the UhX API
+     * @summary Adds a user to the specified group in the UHX API
      * @param {Express.Request} req The HTTP request fromthis client
      * @param {Express.Response} res The HTTP response going to the client
      */
     async addUser(req, res) {
-        
-        if(!req.params.gid)
-            throw new exception.Exception("Missing group id parameter", exception.ErrorCodes.MISSING_PROPERTY);
-        if(!req.body) 
-            throw new exception.Exception("Missing payload", exception.ErrorCodes.MISSING_PAYLOAD);
-        
-        if(!req.body.id) 
-            throw new exception.Exception("User object is missing ID", exception.ErrorCodes.MISSING_PROPERTY);
 
-        res.status(200).json(await uhx.Repositories.groupRepository.addUser(req.params.gid, req.body.id));
+        if (!req.params.gid)
+            throw new exception.Exception("Missing group id parameter", exception.ErrorCodes.MISSING_PROPERTY);
+        if (!req.params.uid)
+            throw new exception.Exception("Missing user id parameter", exception.ErrorCodes.MISSING_PROPERTY);
+
+        if (req.params.gid == uhx.Config.security.sysgroups.providers) {
+            var providerExists = await uhx.Repositories.providerRepository.checkIfExists(req.params.uid);
+            if (providerExists)
+                await uhx.Repositories.providerRepository.reactivate(req.params.uid);
+        }
+
+        if (req.params.gid == uhx.Config.security.sysgroups.patients) {
+            var patientExists = await uhx.Repositories.patientRepository.checkIfExists(req.params.uid);
+            if (patientExists)
+                await uhx.Repositories.patientRepository.reactivate(req.params.uid);
+        }
+
+        res.status(200).json(await uhx.Repositories.groupRepository.addUser(req.params.gid, req.params.uid));
         return true;
     }
 
     /**
      * @method
-     * @summary Removes a user from the specified group in the UhX API
+     * @summary Removes a user from the specified group in the UHX API
      * @param {Express.Request} req The HTTP request fromthis client
      * @param {Express.Response} res The HTTP response going to the client
      */
     async deleteUser(req, res) {
-        if(!req.params.gid)
+        if (!req.params.gid)
             throw new exception.Exception("Missing group id parameter", exception.ErrorCodes.MISSING_PROPERTY);
-        if(!req.body && !req.body.id)
+        if (!req.params.uid)
             throw new exception.Exception("Missing user id parameter", exception.ErrorCodes.MISSING_PROPERTY);
-        
-        res.status(201).json(await uhx.Repositories.groupRepository.removeUser(req.params.gid, req.body.id));
+
+        if (req.params.gid == uhx.Config.security.sysgroups.providers) {
+            var providerExists = await uhx.Repositories.providerRepository.checkIfExists(req.params.uid);
+            if (providerExists)
+                await uhx.Repositories.providerRepository.delete(req.params.uid);
+        }
+
+        if (req.params.gid == uhx.Config.security.sysgroups.patients) {
+            var patientExists = await uhx.Repositories.patientRepository.checkIfExists(req.params.uid);
+            if (patientExists)
+                await uhx.Repositories.patientRepository.delete(req.params.uid);
+        }
+        res.status(201).json(await uhx.Repositories.groupRepository.removeUser(req.params.gid, req.params.uid));
         return true;
     }
 }
-  
+

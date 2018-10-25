@@ -28,7 +28,7 @@
    * @swagger
    * tags:
    *    - name: permission
-   *      description: A resource to fetch permission information from the UhX API
+   *      description: A resource to fetch permission information from the UHX API
    */
 module.exports.PermissionApiResource = class PermissionApiResource {
 
@@ -79,7 +79,7 @@ module.exports.PermissionApiResource = class PermissionApiResource {
 
     /**
      * @method
-     * @summary Creates a new permission in the UhX API
+     * @summary Creates a new permission in the UHX API
      * @param {Express.Request} req The HTTP request fromthis client
      * @param {Express.Response} res The HTTP response going to the client
      */
@@ -95,7 +95,7 @@ module.exports.PermissionApiResource = class PermissionApiResource {
 
     /**
      * @method
-     * @summary Get a specific permission in the UhX API
+     * @summary Get a specific permission in the UHX API
      * @param {Express.Request} req The HTTP request fromthis client
      * @param {Express.Response} res The HTTP response going to the client
      */
@@ -109,7 +109,7 @@ module.exports.PermissionApiResource = class PermissionApiResource {
 
     /**
      * @method
-     * @summary Deactivates the specified permission from the UhX API
+     * @summary Deactivates the specified permission from the UHX API
      * @param {Express.Request} req The HTTP request fromthis client
      * @param {Express.Response} res The HTTP response going to the client
      */

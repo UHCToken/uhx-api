@@ -161,9 +161,15 @@ module.exports = class Session extends ModelBase {
             else {
                 // Fetch from the user and application objects
                 var usrPerms = await uhx.Repositories.permissionRepository.getUserPermission(this.userId);
-                for(var p in usrPerms)
-                    this._grants[usrPerms[p].name] = usrPerms[p].grant;
+                for(var p in usrPerms){
+                    if(this._grants[usrPerms[p].name]){
+                        this._grants[usrPerms[p].name] |= usrPerms[p].grant;
+                    }
+                    else{
+                        this._grants[usrPerms[p].name] = usrPerms[p].grant;
+                    }
                 
+                }
                 var appPerms = await uhx.Repositories.permissionRepository.getApplicationPermission(this.applicationId);
                 for(var p in appPerms) {
                     var gp = this._grants[appPerms[p].name];

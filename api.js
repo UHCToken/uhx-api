@@ -93,7 +93,7 @@ class RouteHandler {
                     }
                 }
                 catch(e) {
-                    uhx.log.error(`Error validting security - ${e}`);
+                    uhx.log.error(`Error validating security - ${e}`);
                     if(e instanceof exception.Exception)
                         throw new exception.Exception("Error validating security", exception.ErrorCodes.SECURITY_ERROR, e);
                     else 
@@ -173,7 +173,7 @@ class RouteHandler {
 }
 /**
  * @class
- * @summary UhX Api class
+ * @summary UHX Api class
  */
  class RestApi {
 
@@ -268,7 +268,7 @@ class RouteHandler {
      * @swagger
      * /:
      *  options:
-     *      summary: Gets the operations uspported on this UhX API instance
+     *      summary: Gets the operations uspported on this UHX API instance
      *      description: "Note: When the session is authenticated this resource will only show routes which the authenticated user has access to"
      *      responses:
      *          200:

@@ -1,8 +1,8 @@
 Hello {{user.givenName}},
 
-Thanks for setting up your UhX wallet. We're excited to have you join the Universal Healthcoin community! 
+Thanks for setting up your UHX wallet. We're excited to have you join the Universal Healthcoin community! 
 Here are some resources to help you stay connected:
 
-Visit our blog: https://www.universalhealthcoin.com/blog/
+Visit our blog: https://uhx.io/blog/
 
 Follow our Telegram feed: https://t.me/universalhealthcoinx

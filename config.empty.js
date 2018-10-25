@@ -20,12 +20,12 @@
 const winston = require('winston');
 
 /**
- * @class UhX API Configuration
+ * @class UHX API Configuration
  * @description Configuration parameters for the stellar API
  */
 module.exports = {
     /**
-     * @summary Groups configuration flags related to UhX database API
+     * @summary Groups configuration flags related to UHX database API
      */
     db: {
         /**
@@ -99,6 +99,10 @@ module.exports = {
          */
         tfaValidity: 300000,
         /**
+         * @summary Specifies the amount time for invoice expiry
+         */
+        invoiceValidity: 400000000,
+        /**
          * @summary Confirmation validatity
          */
         confirmationValidity: 300000,
@@ -139,7 +143,9 @@ module.exports = {
          */
         sysgroups: {
             "administrators": "044894bd-084e-47bb-9428-dbd80277614a",
-            "users": "330d2fb4-ba61-4b48-a0a1-8162a4708e96"
+            "users": "330d2fb4-ba61-4b48-a0a1-8162a4708e96",
+            "providers": "4339ef73-25e7-43fd-9080-8f7eb55182eb",
+            "patients" : "285cb044-bf99-4409-b418-7edc5c012ded"
         },
         /**
          * @summary Configuration options for invitations
@@ -176,9 +182,26 @@ module.exports = {
          * @summary Identifies the target account where fees should be collected
          */
         fee_collector: "GB34934894328",
+            /**
+         * @summary Identifies the account to sign for the patient
+         */
+        signer_patient_id: "5ffd56be-d2a2-4abc-93e3-056cc679232d",
+                        /**
+         * @summary Identifies the account to sign for the provider
+         */
+        signer_provider_id: "891ab26a-3c2c-4c41-bcb5-0612f1cff939",
+        /**
+         * @summary Currency to be used for escrow
+         */
+        escrow_asset_code: "TEST",
+            /**
+         * @summary Identifies the account that will hold escrow funds
+         */
+        escrow_id: "610be8a6-dcf2-4e0f-8e83-7f340f6792ca",
         /**
           * @summary The determine if this is part of a testnet
           */
+         
         testnet_use: true,
         /**
           * @summary The horizon endpoint
@@ -311,6 +334,19 @@ module.exports = {
          * @summary Maximum file size in bytes
          */
         maxFileSize: 1048576
+    },
+    /**
+     * @summary Google maps configuration
+     */
+    googleMaps: {
+        /**
+         * @summary API key
+         */
+        key: "XXXXXXXXXXXXXXXXXXXXXXXXX",
+        /**
+         * @summary Use HTTPS
+         */
+        secure: true
     },
     /**
      * @summary Swagger configuration
