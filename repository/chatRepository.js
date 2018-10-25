@@ -134,12 +134,66 @@ module.exports = class ChatRepository {
     const dbc = new pg.Client(this._connectionString);
 
     try {
+      var authorTypeId = await this.getMessageAuthorTypeId(chatRoomId, chatMessage.authorId);
+      
       await dbc.connect();
-      await dbc.query(`INSERT INTO chat_message (chatroom_id, author_id, datesent, viewedstatus, body, authorname) 
-                        VALUES ($1,$2,$3,$4,$5,$6)`, 
-                              [chatRoomId, chatMessage.authorId, chatMessage.dateSent, chatMessage.viewedStatus, chatMessage.body, chatMessage.authorName]);
+
+
+      await dbc.query(`INSERT INTO chat_message (chatroom_id, author_id, datesent, viewedstatus, body, authorname, author_type_id) 
+                        VALUES ($1,$2,$3,$4,$5,$6,$7)`, 
+                              [chatRoomId, chatMessage.authorId, chatMessage.dateSent, chatMessage.viewedStatus, chatMessage.body, chatMessage.authorName, authorTypeId]);
     }
-    catch (err) {console.log(`There was an insert error..... ${error}`)}
+    catch (err) {
+      console.log(`There was an insert error..... ${err}`)
+    }
+    finally {
+      dbc.end();
+    }
+  }
+
+/**
+   * @method
+   * @summary Gets Id representing the source of the message author in the chatroom
+   * @param {string} chatRoomId Chatroom the author is associated with
+   * @param {string} authorId Id of the message author
+   */
+  async getMessageAuthorTypeId(chatRoomId, authorId) {
+    const dbc = new pg.Client(this._connectionString);
+
+    try {
+      await dbc.connect();
+
+      let authorTypeId = '';
+
+      let patientQuery = 'select * from public.chat_room where id = $1 and patient_id = $2';
+      let patientResult = await dbc.query(patientQuery, [chatRoomId, authorId]);
+
+      let providerQuery = 'select * from public.chat_room where id = $1 and provider_id = $2';
+      let providerResult = await dbc.query(providerQuery, [chatRoomId, authorId]);
+
+      if (patientResult.rowCount === 1 && providerResult.rowCount === 0) {
+        let idResult = await dbc.query(`SELECT id
+        FROM public.author_types
+        WHERE type_name = 'patient'`);
+
+        authorTypeId = idResult.rows[0].id;
+      }
+
+      if (providerResult.rowCount === 1 && patientResult.rowCount === 0) {
+        let idResult = await dbc.query(`SELECT id
+        FROM public.author_types
+        WHERE type_name = 'provider'`);
+
+        authorTypeId = idResult.rows[0].id;
+      }
+
+      dbc.end();
+
+      return authorTypeId;
+    }
+    catch (err) {
+      console.log(err);
+    }
     finally {
       dbc.end();
     }
@@ -165,7 +219,7 @@ module.exports = class ChatRepository {
 
       return chatRoomMessages;
     }
-    catch (err) {console.log(error)}
+    catch (err) {console.log(err)}
     finally {
       dbc.end();
     }
@@ -194,7 +248,7 @@ module.exports = class ChatRepository {
       })
       return unreadMessages;
     }
-    catch (err) {console.log(error)}
+    catch (err) {console.log(err)}
     finally {
       dbc.end();
     }
@@ -217,7 +271,7 @@ module.exports = class ChatRepository {
                       `, 
             [chatid, userId]);
     }
-    catch (err) {console.log(error)}
+    catch (err) {console.log(err)}
     finally {
       dbc.end();
     }
