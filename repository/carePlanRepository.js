@@ -187,10 +187,11 @@ module.exports = class CarePlanRepository {
             FROM care_plans as cp) care_plans WHERE care_plans.care_relationship_id IN (SELECT id FROM care_relationships WHERE provider_id = $1)`;
 
             if (status && status != "*") {
-                query = query + 'AND status=$2';
+                query = query + 'AND status=$2 ORDER BY care_plans.creation_time ASC';
                 var rdr = await dbc.query(query, [providerId, status]);
             }
             else {
+                query = query + ' ORDER BY care_plans.creation_time ASC';
                 var rdr = await dbc.query(query, [providerId]);
             }
             if (rdr.rows.length == 0)
@@ -239,10 +240,11 @@ module.exports = class CarePlanRepository {
              ) AS care_services
             FROM care_plans as cp) care_plans WHERE care_plans.care_relationship_id IN (SELECT id FROM care_relationships WHERE patient_id = $1)`;
             if (status && status != "*") {
-                query = query + 'AND status=$2';
+                query = query + 'AND status=$2 ORDER BY care_plans.creation_time ASC';
                 var rdr = await dbc.query(query, [patientId, status]);
             }
             else {
+                query = query + ' ORDER BY care_plans.creation_time ASC';
                 var rdr = await dbc.query(query, [patientId]);
             }
             if (rdr.rows.length == 0)
