@@ -29,7 +29,7 @@ const pg = require('pg'),
 /**
  * @class
  * @summary Represents a data access class to the chat tables
- */  
+ */
 module.exports = class ChatRepository {
 
   /**
@@ -52,15 +52,15 @@ module.exports = class ChatRepository {
    * @param {string} chatRoom The chatroom to be greated
    */
   async createChatRoom(chatRoom) {
-    
+
     const dbc = new pg.Client(this._connectionString);
 
     try {
       await dbc.connect();
-      await dbc.query('INSERT INTO chat_room (title, provider_id, patient_id) VALUES ($1,$2,$3)', 
-                              [chatRoom.title || '', chatRoom.providerId, chatRoom.patientId]);
+      await dbc.query('INSERT INTO chat_room (title, provider_id, patient_id) VALUES ($1,$2,$3)',
+        [chatRoom.title || '', chatRoom.providerId, chatRoom.patientId]);
     }
-    catch(err){uhx.log.debug(err)}
+    catch (err) { uhx.log.debug(err) }
     finally {
       dbc.end();
     }
@@ -83,23 +83,23 @@ module.exports = class ChatRepository {
                                             WHERE cr.patient_id = $1`, [userId])
 
 
-      for(var r in userChatsFromDB.rows) {
+      for (var r in userChatsFromDB.rows) {
         userChats.push(new ChatRoom().fromData(userChatsFromDB.rows[r]));
       }
-        
+
       return userChats;
     }
-    catch(err){console.log(err)}
+    catch (err) { console.log(err) }
     finally {
       dbc.end();
     }
   }
 
-   /**
-   * @method
-   * @summary gets chatrooms associated with specific provider
-   * @param {string} userId The user associated with the chat rooms
-   */
+  /**
+  * @method
+  * @summary gets chatrooms associated with specific provider
+  * @param {string} userId The user associated with the chat rooms
+  */
   async getChatRoomsProviders(userId) {
     const dbc = new pg.Client(this._connectionString);
     try {
@@ -112,13 +112,13 @@ module.exports = class ChatRepository {
                                             WHERE cr.provider_id = $1`, [userId])
 
 
-      for(var r in userChatsFromDB.rows) {
+      for (var r in userChatsFromDB.rows) {
         userChats.push(new ChatRoom().fromData(userChatsFromDB.rows[r]));
       }
-        
+
       return userChats;
     }
-    catch(err){console.log(err)}
+    catch (err) { console.log(err) }
     finally {
       dbc.end();
     }
@@ -135,13 +135,13 @@ module.exports = class ChatRepository {
 
     try {
       var authorTypeId = await this.getMessageAuthorTypeId(chatRoomId, chatMessage.authorId);
-      
+
       await dbc.connect();
 
 
       await dbc.query(`INSERT INTO chat_message (chatroom_id, author_id, datesent, viewedstatus, body, authorname, author_type_id) 
-                        VALUES ($1,$2,$3,$4,$5,$6,$7)`, 
-                              [chatRoomId, chatMessage.authorId, chatMessage.dateSent, chatMessage.viewedStatus, chatMessage.body, chatMessage.authorName, authorTypeId]);
+                        VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+        [chatRoomId, chatMessage.authorId, chatMessage.dateSent, chatMessage.viewedStatus, chatMessage.body, chatMessage.authorName, authorTypeId]);
     }
     catch (err) {
       console.log(`There was an insert error..... ${err}`)
@@ -151,12 +151,12 @@ module.exports = class ChatRepository {
     }
   }
 
-/**
-   * @method
-   * @summary Gets Id representing the source of the message author in the chatroom
-   * @param {string} chatRoomId Chatroom the author is associated with
-   * @param {string} authorId Id of the message author
-   */
+  /**
+     * @method
+     * @summary Gets Id representing the source of the message author in the chatroom
+     * @param {string} chatRoomId Chatroom the author is associated with
+     * @param {string} authorId Id of the message author
+     */
   async getMessageAuthorTypeId(chatRoomId, authorId) {
     const dbc = new pg.Client(this._connectionString);
 
@@ -213,13 +213,13 @@ module.exports = class ChatRepository {
                                             WHERE chatroom_id = $1
                                             ORDER BY datesent ASC`, [chatRoomId])
 
-      for(var r in messagesFromDB.rows) {
+      for (var r in messagesFromDB.rows) {
         chatRoomMessages.push(new ChatMessage().fromData(messagesFromDB.rows[r]));
       }
 
       return chatRoomMessages;
     }
-    catch (err) {console.log(err)}
+    catch (err) { console.log(err) }
     finally {
       dbc.end();
     }
@@ -235,7 +235,7 @@ module.exports = class ChatRepository {
     try {
       await dbc.connect();
       let unreadMessages = 0
-      let results =  await dbc.query(`
+      let results = await dbc.query(`
         SELECT Count(*) FROM chat_message 
         WHERE chatroom_id = $1
         AND viewedstatus = 'Unread'
@@ -243,23 +243,23 @@ module.exports = class ChatRepository {
         `
         , [chatroomId, userId])
 
-      results.rows.forEach(row=> {
+      results.rows.forEach(row => {
         unreadMessages += parseInt(row.count)
       })
       return unreadMessages;
     }
-    catch (err) {console.log(err)}
+    catch (err) { console.log(err) }
     finally {
       dbc.end();
     }
   }
 
-    /**
-   * @method
-   * @summary Updates unread chat messages to read
-   * @param {string} chatid id of the chat room the message is associated with
-   * @param {string} userId user that chat messages are associated with
-   */
+  /**
+ * @method
+ * @summary Updates unread chat messages to read
+ * @param {string} chatid id of the chat room the message is associated with
+ * @param {string} userId user that chat messages are associated with
+ */
   async updateChatMessagesToRead(chatid, userId) {
     const dbc = new pg.Client(this._connectionString);
     try {
@@ -268,10 +268,10 @@ module.exports = class ChatRepository {
                       SET viewedstatus = 'Read'
                       WHERE chatroom_id = $1
                       AND author_id = $2
-                      `, 
-            [chatid, userId]);
+                      `,
+        [chatid, userId]);
     }
-    catch (err) {console.log(err)}
+    catch (err) { console.log(err) }
     finally {
       dbc.end();
     }
