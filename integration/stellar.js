@@ -42,7 +42,49 @@ class StellarException extends exception.Exception {
      * @param {*} stellarErr The RAW error from the stellar server
      */
     constructor(stellarErr) {
-        super("Error interacting with Stellar network", exception.ErrorCodes.COM_FAILURE, stellarErr);
+        var returnError = "Error interacting with Stellar network";
+        if (stellarErr && stellarErr.data && stellarErr.data.extras && stellarErr.data.extras.result_codes && stellarErr.data.extras.result_codes.operations && stellarErr.data.extras.result_codes.operations.length > 0 && stellarErr.data.extras.result_codes.operations.length < 2) {
+            switch (stellarErr.data.extras.result_codes.operations[0]) {
+                case "op_low_reserve":
+                    returnError = "Transaction would bring your balance below the minimum required reserve.";
+                    break;
+                case "op_malformed":
+                    returnError = "Transaction operation is malformed";
+                    break;
+                case "op_underfunded":
+                    returnError = "Not enough funds to cover that transaction";
+                    break;
+                case "op_line_full":
+                    returnError = "Transaction would go over the destinations trust limit for that asset";
+                    break;
+                case "op_no_issuer":
+                    returnError = "Missing the asset issuer information";
+                    break;
+                case "op_src_not_authorized":
+                    returnError = "Sender is not authorized to do this transaction";
+                    break;
+                case "op_src_no_trust":
+                    returnError = "Sender does not have a trustline for that asset";
+                    break;
+                case "op_no_destination":
+                    returnError = "Destination address is missing";
+                    break;
+                case "op_no_trust":
+                    returnError = "Destination address does not have a trustline for that asset";
+                    break;
+                case "op_not_authorized":
+                    returnError = "Destination address is not authorized to receive that transaction";
+                    break;
+            }
+        } else if (stellarErr && stellarErr.message) {
+            switch (stellarErr.message) {
+                case "destination is invalid":
+                    returnError = "Destination address has is invalid or may not be created yet";
+                    break;
+            }
+        }
+
+        super(returnError, exception.ErrorCodes.COM_FAILURE, stellarErr);
     }
 
 }
@@ -274,7 +316,7 @@ module.exports = class StellarClient {
                 }));
 
             // Add ref as memo
-            if(refId) {
+            if (refId) {
                 var memoObject = Stellar.Memo.hash(crypto.createHash('sha256').update(refId).digest('hex'));
                 newAcctTx.addMemo(memoObject);
             }
@@ -341,10 +383,10 @@ module.exports = class StellarClient {
                 }
 
             // Add memo
-            if(refId) {
+            if (refId) {
                 var memoObject = Stellar.Memo.hash(crypto.createHash('sha256').update(refId).digest('hex'));
                 changeTrustTx.addMemo(memoObject);
-            }             
+            }
 
             // Build the transaction
             changeTrustTx = changeTrustTx.build();
@@ -418,7 +460,7 @@ module.exports = class StellarClient {
         try {
 
             uhx.log.info(`createPayment() : ${payorWallet.address} > ${payeeWallet.address} [${amount.value} ${amount.code}]`);
-            
+
             if (payorWallet.address == payeeWallet.address)
                 throw new exception.BusinessRuleViolationException("Cannot send to self");
 
@@ -426,7 +468,7 @@ module.exports = class StellarClient {
             var payorStellarAcct = await this.server.loadAccount(payorWallet.address);
 
             // Check for minimum balance
-            var payorBalance = payorStellarAcct.balances.find(o=>o.asset_type == "native").balance;
+            var payorBalance = payorStellarAcct.balances.find(o => o.asset_type == "native").balance;
             var minBalance = payorStellarAcct.balances.length * 0.5 + 0.50001
             if (((payorBalance - amount.value) < minBalance) && amount.code == "XLM")
                 throw new exception.BusinessRuleViolationException("Payment would exceed the minimum required balance");
@@ -452,11 +494,11 @@ module.exports = class StellarClient {
             // Memo field if memo is present
             if (ref) {
                 var memoObject = null;
-                if(uuidRegex.test(ref)) // uuid
+                if (uuidRegex.test(ref)) // uuid
                     memoObject = Stellar.Memo.hash(crypto.createHash('sha256').update(ref).digest('hex'));
                 else
                     memoObject = Stellar.Memo.text(ref);
-                    
+
                 paymentTx.addMemo(memoObject);
             }
 
@@ -758,7 +800,7 @@ module.exports = class StellarClient {
     async execute(transaction) {
         try {
 
-            if(transaction.state != model.TransactionStatus.Pending && 
+            if (transaction.state != model.TransactionStatus.Pending &&
                 transaction.state != model.TransactionStatus.Active)
                 return transaction;
 
@@ -768,12 +810,12 @@ module.exports = class StellarClient {
 
             // Do the transaction
             var stlrTx = null;
-            switch(Number(transaction.type)) {
+            switch (Number(transaction.type)) {
                 case model.TransactionType.AccountManagement:
                     stlrTx = await this.activateAccount(transaction._payeeWallet, transaction.amount.value, transaction._payorWallet, transaction.id);
                     break;
                 case model.TransactionType.Trust:
-                    stlrTx = await this.createTrust(transaction._payeeWallet, await uhx.Repositories.assetRepository.getByCode(transaction.amount.code), null,  transaction.id);
+                    stlrTx = await this.createTrust(transaction._payeeWallet, await uhx.Repositories.assetRepository.getByCode(transaction.amount.code), null, transaction.id);
                     break;
                 case model.TransactionType.Purchase:
                 case model.TransactionType.Deposit:
@@ -791,10 +833,10 @@ module.exports = class StellarClient {
             transaction.state = model.TransactionStatus.Complete;
             transaction.postingDate = new Date();
         }
-        catch(e) {
+        catch (e) {
             uhx.log.error(`Could not perform transaction  ${transaction.id} due to ${e.message}`);
             transaction.state = model.TransactionStatus.Failed;
-            transaction.ref = exception.ErrorCodes.COM_FAILURE;
+            transaction.ref = e.message ? e.message : exception.ErrorCodes.COM_FAILURE;
             transaction.postingDate = new Date();
         }
         return transaction;
@@ -814,7 +856,7 @@ module.exports = class StellarClient {
         try {
 
             uhx.log.info(`createPayment() : ${payorWallet.address} > ${payeeWallet.address} [${amount.value} ${amount.code}]`);
-            
+
             if (payorWallet.address == payeeWallet.address)
                 throw new exception.BusinessRuleViolationException("Cannot send to self");
 
@@ -822,7 +864,7 @@ module.exports = class StellarClient {
             var payorStellarAcct = await this.server.loadAccount(payorWallet.address);
 
             // Check for minimum balance
-            var payorBalance = payorStellarAcct.balances.find(o=>o.asset_type == "native").balance;
+            var payorBalance = payorStellarAcct.balances.find(o => o.asset_type == "native").balance;
             var minBalance = payorStellarAcct.balances.length * 0.5 + 0.50001
             if (((payorBalance - amount.value) < minBalance) && amount.code == "XLM")
                 throw new exception.BusinessRuleViolationException("Payment would exceed the minimum required balance");
@@ -832,21 +874,21 @@ module.exports = class StellarClient {
 
             // Create payment transaction
             escrowTx.addOperation(Stellar.Operation.setOptions({
-                signer: { 
+                signer: {
                     ed25519PublicKey: payorWallet.address,
                     weight: 1
                 }
             }))
-            .addOperation(Stellar.Operation.setOptions({
-                masterWeight: 0,
-                lowThreshold: 2,
-                medThreshold: 2,
-                highThreshold: 2,
-                signer: {
-                    ed25519PublicKey: payeeWallet.address,
-                    weight: 1
-                }
-            }))
+                .addOperation(Stellar.Operation.setOptions({
+                    masterWeight: 0,
+                    lowThreshold: 2,
+                    medThreshold: 2,
+                    highThreshold: 2,
+                    signer: {
+                        ed25519PublicKey: payeeWallet.address,
+                        weight: 1
+                    }
+                }))
 
             escrowTx = escrowTx.build();
 
@@ -867,22 +909,22 @@ module.exports = class StellarClient {
         }
     }
 
-        /**
-     * @method
-     * @summary Signs and sends funds from an escrow
-     * @param {Wallet} escrowWallet The wallet from which the payment should be made
-     * @param {Wallet} payeeWallet The wallet to which the payment should be made
-     * @param {Array} wallets that are being used to sign the escrow transaction
-     * @param {MonetaryAmount} amount The amount of the payment
-     * @param {string} ref The id of the batch or ID that is being used for this payment
-     * @returns {Transaction} The transaction information for the operation
-     */
+    /**
+ * @method
+ * @summary Signs and sends funds from an escrow
+ * @param {Wallet} escrowWallet The wallet from which the payment should be made
+ * @param {Wallet} payeeWallet The wallet to which the payment should be made
+ * @param {Array} wallets that are being used to sign the escrow transaction
+ * @param {MonetaryAmount} amount The amount of the payment
+ * @param {string} ref The id of the batch or ID that is being used for this payment
+ * @returns {Transaction} The transaction information for the operation
+ */
     async sendEscrowTransaction(escrowWallet, payeeWallet, signers, amount, ref) {
 
         try {
 
             uhx.log.info(`releaseFunds() : ${escrowWallet.address} > ${payeeWallet.address} [${amount.value} ${amount.code}]`);
-            
+
             if (escrowWallet.address == payeeWallet.address)
                 throw new exception.BusinessRuleViolationException("Cannot send to self");
 
@@ -890,7 +932,7 @@ module.exports = class StellarClient {
             var escrowStellarAcct = await this.server.loadAccount(escrowWallet.address);
 
             // Check for minimum balance
-            var escrowBalance = escrowStellarAcct.balances.find(o=>o.asset_type == "native").balance;
+            var escrowBalance = escrowStellarAcct.balances.find(o => o.asset_type == "native").balance;
             var minBalance = escrowStellarAcct.balances.length * 0.5 + 0.50001
             if (((escrowBalance - amount.value) < minBalance) && amount.code == "XLM")
                 throw new exception.BusinessRuleViolationException("Payment would exceed the minimum required balance");
