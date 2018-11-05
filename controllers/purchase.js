@@ -139,10 +139,7 @@ class PurchaseApiResource {
      *          - write:purchase
      */
     async post(req, res)  {
-
-        if(!req.body.quoteId)
-            throw new exception.ArgumentException("quoteId missing");
-        else if(!req.body.assetId)
+        if(!req.body.assetId)
             throw new exception.ArgumentException("assetId missing");
         else if(!req.body.quantity)
             throw new exception.ArgumentException("quantity missing");
