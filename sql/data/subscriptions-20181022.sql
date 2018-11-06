@@ -12,7 +12,7 @@ VALUES
 INSERT INTO subscription_services 
     (id, name, description, group_id, website, phone) 
 VALUES 
-    ('eff0d631-92b1-493d-bb81-7e8cbfc2df3b', 'TeleDoc', 'TeleDoc service #1', '874', 'www.teledoc.test.com', '(222) 222-2222');
+    ('eff0d631-92b1-493d-bb81-7e8cbfc2df3b', 'Teladoc', 'Teladoc service #1', '874', 'www.teledoc.test.com', '(222) 222-2222');
 
 INSERT INTO subscription_services 
     (id, name, description, group_id, website, phone) 
