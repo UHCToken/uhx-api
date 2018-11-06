@@ -28,7 +28,7 @@ const uhx = require('../uhx'),
  * @swagger
  * tags:
  *  - name: "patient"
- *    description: "The patient resource represents a single patient (client, patient, etc.) which is a member of UhX"
+ *    description: "The patient resource represents a single patient (client, patient, etc.) which is a member of UHX"
  */
 class PatientApiResource {
 
@@ -98,8 +98,8 @@ class PatientApiResource {
      *  post:
      *      tags:
      *      - "patient"
-     *      summary: "Registers a new patient in the UhX API"
-     *      description: "This method will register a new patient in the UhX API"
+     *      summary: "Registers a new patient in the UHX API"
+     *      description: "This method will register a new patient in the UHX API"
      *      consumes: 
      *      - "application/json"
      *      produces:
@@ -187,8 +187,8 @@ class PatientApiResource {
      *  put:
      *      tags:
      *      - "patient"
-     *      summary: "Updates an existing patient in the UhX API"
-     *      description: "This method will update an existing patient in the UhX API"
+     *      summary: "Updates an existing patient in the UHX API"
+     *      description: "This method will update an existing patient in the UHX API"
      *      consumes: 
      *      - "application/json"
      *      produces:
@@ -244,8 +244,8 @@ class PatientApiResource {
      *  get:
      *      tags:
      *      - "patient"
-     *      summary: "Gets an existing patient from the UhX database"
-     *      description: "This method will fetch an existing patient from the UhX database"
+     *      summary: "Gets an existing patient from the UHX database"
+     *      description: "This method will fetch an existing patient from the UHX database"
      *      produces:
      *      - "application/json"
      *      parameters:
@@ -404,7 +404,7 @@ class PatientApiResource {
             var id = req.body.userId;
         else if (req.params.patientid){
             var patient = await uhx.Repositories.patientRepository.get(req.params.patientid);
-            var id = patient.userId;
+            if (patient) var id = patient.userId; else var id = req.params.patientid;
         }
         // if the token has OWNER set for PATIENT permission then this user must be SELF
         return (principal.grant.patient & security.PermissionType.OWNER && id == principal.session.userId) // the permission on the principal is for OWNER only

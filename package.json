@@ -34,7 +34,7 @@
     "poolio": "^0.2.54016",
     "request": "^2.87.0",
     "request-promise": "^4.2.2",
-    "skipper": "^0.8.5",
+    "skipper": "^0.8.7",
     "skipper-s3": "^0.5.11",
     "socket.io": "^2.1.1",
     "ssh2-sftp-client": "^3.1.0",

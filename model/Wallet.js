@@ -24,17 +24,17 @@ const ModelBase = require('./ModelBase'),
 
 /**
  * @class
- * @summary Represents a wallet in the UhX data store
+ * @summary Represents a wallet in the UHX data store
  * @swagger
  * definitions:
  *  Wallet:
  *      properties:
  *          address:
  *              type: string
- *              description: The public address of the stellar account this UhX wallet represents
+ *              description: The public address of the stellar account this UHX wallet represents
  *          id:
  *              type: string
- *              description: The unique identifier for the wallet in the UhX user database
+ *              description: The unique identifier for the wallet in the UHX user database
  *          balances:
  *              $ref: "#/definitions/MonetaryAmount"
  *              description: The balance of assets held within the account

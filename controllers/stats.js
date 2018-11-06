@@ -27,7 +27,7 @@
    * @swagger
    * tags:
    *    - name: "stats"
-   *      description: Tools for running reports against the UhX API
+   *      description: Tools for running reports against the UHX API
    */
 class StatisticsApiResource {
 

@@ -64,9 +64,9 @@ module.exports = class ChatRoom extends ModelBase {
   fromData(dbMessage) {
     this.id = dbMessage.id;
     this.title = dbMessage.title;
-    this.providerid = dbMessage.providerid;
+    this.providerid = dbMessage.provider_id;
     this.providerName = dbMessage.name;
-    this.patientid = dbMessage.patientid;
+    this.patientid = dbMessage.patient_id;
     this.patientName = `${dbMessage.given_name} ${dbMessage.family_name}`;
     return this;
   }
@@ -79,9 +79,9 @@ module.exports = class ChatRoom extends ModelBase {
     return {
       id: this.id,
       title: this.title,
-      providerid: this.providerid,
+      provider_id: this.providerid,
       providerName: this.providerName,
-      patientid: this.patientid,
+      patient_id: this.patientid,
       patientName: this.patientName
     }
   }

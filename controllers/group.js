@@ -29,7 +29,7 @@ const uhx = require('../uhx'),
  * @swagger
  * tags:
  *    - name: group
- *      description: A resource to fetch user group information from the UhX API
+ *      description: A resource to fetch user group information from the UHX API
  */
 module.exports.GroupApiResource = class GroupApiResource {
 
@@ -123,7 +123,7 @@ module.exports.GroupApiResource = class GroupApiResource {
 
     /**
      * @method
-     * @summary Creates a new group in the UhX API
+     * @summary Creates a new group in the UHX API
      * @param {Express.Request} req The HTTP request fromthis client
      * @param {Express.Response} res The HTTP response going to the client
      */
@@ -139,7 +139,7 @@ module.exports.GroupApiResource = class GroupApiResource {
 
     /**
      * @method
-     * @summary Get a specific group in the UhX API
+     * @summary Get a specific group in the UHX API
      * @param {Express.Request} req The HTTP request fromthis client
      * @param {Express.Response} res The HTTP response going to the client
      */
@@ -153,7 +153,7 @@ module.exports.GroupApiResource = class GroupApiResource {
 
     /**
      * @method
-     * @summary Deactivates the specified group from the UhX API
+     * @summary Deactivates the specified group from the UHX API
      * @param {Express.Request} req The HTTP request fromthis client
      * @param {Express.Response} res The HTTP response going to the client
      */
@@ -167,7 +167,7 @@ module.exports.GroupApiResource = class GroupApiResource {
 
     /**
      * @method
-     * @summary Lists users the specified group from the UhX API
+     * @summary Lists users the specified group from the UHX API
      * @param {Express.Request} req The HTTP request fromthis client
      * @param {Express.Response} res The HTTP response going to the client
      */
@@ -182,7 +182,7 @@ module.exports.GroupApiResource = class GroupApiResource {
 
     /**
      * @method
-     * @summary Adds a user to the specified group in the UhX API
+     * @summary Adds a user to the specified group in the UHX API
      * @param {Express.Request} req The HTTP request fromthis client
      * @param {Express.Response} res The HTTP response going to the client
      */
@@ -211,7 +211,7 @@ module.exports.GroupApiResource = class GroupApiResource {
 
     /**
      * @method
-     * @summary Removes a user from the specified group in the UhX API
+     * @summary Removes a user from the specified group in the UHX API
      * @param {Express.Request} req The HTTP request fromthis client
      * @param {Express.Response} res The HTTP response going to the client
      */

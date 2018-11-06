@@ -172,8 +172,8 @@ class ProviderServiceApiResource {
      *  post:
      *      tags:
      *      - "addressservice"
-     *      summary: "Registers a new provider address service in the UhX API"
-     *      description: "This method will register a new provider address service in the UhX API"
+     *      summary: "Registers a new provider address service in the UHX API"
+     *      description: "This method will register a new provider address service in the UHX API"
      *      consumes: 
      *      - "application/json"
      *      produces:
@@ -237,8 +237,8 @@ class ProviderServiceApiResource {
      *  put:
      *      tags:
      *      - "addressservice"
-     *      summary: "Updates provider address services for an address in the UhX API"
-     *      description: "This method will update existing address services in the UhX API"
+     *      summary: "Updates provider address services for an address in the UHX API"
+     *      description: "This method will update existing address services in the UHX API"
      *      consumes: 
      *      - "application/json"
      *      produces:
@@ -302,8 +302,8 @@ class ProviderServiceApiResource {
      *  get:
      *      tags:
      *      - "addressservice"
-     *      summary: "Gets an existing provider address service from the UhX member database"
-     *      description: "This method will fetch an existing provider address service from the UhX member database"
+     *      summary: "Gets an existing provider address service from the UHX member database"
+     *      description: "This method will fetch an existing provider address service from the UHX member database"
      *      produces:
      *      - "application/json"
      *      parameters:
@@ -347,8 +347,8 @@ class ProviderServiceApiResource {
      *  put:
      *      tags:
      *      - "addressservice"
-     *      summary: "Updates an existing provider address service in the UhX API"
-     *      description: "This method will update an existing provider address service in the UhX API"
+     *      summary: "Updates an existing provider address service in the UHX API"
+     *      description: "This method will update an existing provider address service in the UHX API"
      *      consumes: 
      *      - "application/json"
      *      produces:
@@ -403,8 +403,8 @@ class ProviderServiceApiResource {
      *  delete:
      *      tags:
      *      - "addressservice"
-     *      summary: "Deactivates an existing provider address service in the UhX API"
-     *      description: "This method will deactivate an existing provider address service in the UhX API"
+     *      summary: "Deactivates an existing provider address service in the UHX API"
+     *      description: "This method will deactivate an existing provider address service in the UHX API"
      *      consumes: 
      *      - "application/json"
      *      produces:

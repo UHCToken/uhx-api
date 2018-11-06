@@ -184,7 +184,7 @@ class CarePlanApiResource {
      *             schema: 
      *                  $ref: "#/definitions/Wallet"
      *          404: 
-     *             description: "The user has not bought any UhX yet and does not have an active wallet"
+     *             description: "The user has not bought any UHX yet and does not have an active wallet"
      *             schema: 
      *                  $ref: "#/definitions/Exception"
      *          500:
