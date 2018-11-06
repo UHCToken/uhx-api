@@ -2,6 +2,23 @@
 -- Updated On: 2018-11-06
 -- Generates sample data for subscriptions related to Karis, Teladoc
 
+-- Generate services for subscriptions
+
+INSERT INTO subscription_services 
+    (id, name, description, group_id, website, phone) 
+VALUES 
+    ('578f53cd-0824-4169-9a1d-0cdf91d8effd', 'Karis', 'Karis service #1', '123', 'www.karis.test.com', '(111) 111-1111');
+
+INSERT INTO subscription_services 
+    (id, name, description, group_id, website, phone) 
+VALUES 
+    ('eff0d631-92b1-493d-bb81-7e8cbfc2df3b', 'TeleDoc', 'TeleDoc service #1', '874', 'www.teledoc.test.com', '(222) 222-2222');
+
+INSERT INTO subscription_services 
+    (id, name, description, group_id, website, phone) 
+VALUES 
+    ('5cd35670-356c-4c5d-a665-24835674283e', 'BestDoctors', 'BestDoctors service #1', '945', 'www.bestdoctors.test.com', '(333) 333-3333');
+
 -- Generate groups for offerings
 
 INSERT INTO offering_groups 
@@ -23,6 +40,53 @@ INSERT INTO offering_groups
     (id, name, description, is_visible) 
 VALUES 
     ('ce997904-4ac4-4f7f-84d0-8c2ba519eb0c', 'Canada Only Offering Group', 'This offering group contains only Canada offerings.', true);
+
+-- Generate bundles for subscriptions
+
+INSERT INTO service_bundles 
+    (offering_group_id, subscription_service_id) 
+VALUES 
+    ('02121aab-a391-4def-a9df-100007650018', '578f53cd-0824-4169-9a1d-0cdf91d8effd');
+
+INSERT INTO service_bundles 
+    (offering_group_id, subscription_service_id) 
+VALUES 
+    ('02121aab-a391-4def-a9df-100007650018', 'eff0d631-92b1-493d-bb81-7e8cbfc2df3b');
+
+INSERT INTO service_bundles 
+    (offering_group_id, subscription_service_id) 
+VALUES 
+    ('02121aab-a391-4def-a9df-100007650018', '5cd35670-356c-4c5d-a665-24835674283e');
+
+INSERT INTO service_bundles 
+    (offering_group_id, subscription_service_id) 
+VALUES 
+    ('b749c932-8fc4-49bc-ac9c-7bace7463c96', '578f53cd-0824-4169-9a1d-0cdf91d8effd');
+
+INSERT INTO service_bundles 
+    (offering_group_id, subscription_service_id) 
+VALUES 
+    ('b749c932-8fc4-49bc-ac9c-7bace7463c96', 'eff0d631-92b1-493d-bb81-7e8cbfc2df3b');
+
+INSERT INTO service_bundles 
+    (offering_group_id, subscription_service_id) 
+VALUES 
+    ('f027d1e4-4dca-47bf-9d10-c5cb30d12081', '5cd35670-356c-4c5d-a665-24835674283e');
+
+INSERT INTO service_bundles 
+    (offering_group_id, subscription_service_id) 
+VALUES 
+    ('f027d1e4-4dca-47bf-9d10-c5cb30d12081', 'eff0d631-92b1-493d-bb81-7e8cbfc2df3b');
+
+INSERT INTO service_bundles 
+    (offering_group_id, subscription_service_id) 
+VALUES 
+    ('f027d1e4-4dca-47bf-9d10-c5cb30d12081', '578f53cd-0824-4169-9a1d-0cdf91d8effd');
+
+INSERT INTO service_bundles 
+    (offering_group_id, subscription_service_id) 
+VALUES 
+    ('ce997904-4ac4-4f7f-84d0-8c2ba519eb0c', '578f53cd-0824-4169-9a1d-0cdf91d8effd');
 
 -- Generate offerings for subscriptions
 
