@@ -40,3 +40,5 @@ CREATE OR REPLACE VIEW rpt_purchase_by_currency_date AS
         code, charge_currency, date
     ORDER BY 
         date;  
+
+ALTER TABLE purchase ALTER COLUMN quote_id DROP NOT NULL;

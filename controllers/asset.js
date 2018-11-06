@@ -20,6 +20,7 @@
 const uhx = require('../uhx'),
     security = require('../security'),
     exception = require('../exception'),
+    Bittrex = require("../integration/bittrex"),
     Asset = require('../model/Asset');
 
 /**
@@ -56,6 +57,13 @@ module.exports.AssetApiResource = class AssetApiResource {
                     "post": {
                         demand: security.PermissionType.EXECUTE,
                         method: this.quote
+                    }
+                },
+                {
+                    "path": "asset/quoteOpenMarketToken",
+                    "post": {
+                        demand: security.PermissionType.EXECUTE,
+                        method: this.quoteOpenMarketToken
                     }
                 },
                 {
@@ -436,10 +444,9 @@ module.exports.AssetApiResource = class AssetApiResource {
      *          - execute:asset
      */
     async quote(req, res) {
-
         if (!req.query.from && !req.body.from)
             throw new exception.ArgumentException("from");
-        if (!req.query.to && !req.body.from)
+        if (!req.query.to && !req.body.to)
             throw new exception.ArgumentException("to");
 
         // The asset
@@ -453,6 +460,21 @@ module.exports.AssetApiResource = class AssetApiResource {
             quote.currentOffer = activeOffer;
         }
         res.status(201).json(quote);
+        return true;
+    }
+
+    async quoteOpenMarketToken (req, res) {
+        if (!req.query.from && !req.body.from)
+            throw new exception.ArgumentException("from");
+        if (!req.query.to && !req.body.to)
+            throw new exception.ArgumentException("to");
+            
+        new Bittrex().getExchange({from: req.body.from, to: req.body.to}).then((data) => {
+            res.status(200).json(data);
+        }).catch((error) => {
+            res.status(500).json(error);
+        });
+
         return true;
     }
 }
