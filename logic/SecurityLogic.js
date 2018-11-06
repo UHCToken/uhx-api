@@ -840,6 +840,9 @@ module.exports = class SecurityLogic {
         }
         catch (e) {
             uhx.log.error(`Error claiming invitation: ${JSON.stringify(e)}`);
+            if (e.code == "ERR_NOTFOUND")
+            throw new exception.Exception("This invitation is not valid. Please check your email for a more recent invitation, or contact support for assistance.", e.code || exception.ErrorCodes.INVALID_ACCOUNT, e);
+            else
             throw new exception.Exception("Error claiming invitation", e.code || exception.ErrorCodes.UNKNOWN, e);
         }
     }
