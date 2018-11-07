@@ -87,7 +87,7 @@ module.exports = class KarisService {
             if (subscriptions) {
                 for (let i = 0; i < subscriptions.length; i++) {
                     const subscription = subscriptions[i];
-                    const user = await uhx.Repositories.userRepository.get(subscription.userId);
+                    const user = await uhx.Repositories.patientRepository.get(subscription.patientId);
 
                     reports.push(new model.Karis().fromData(user, subscription));
                 }
