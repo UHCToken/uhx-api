@@ -39,11 +39,40 @@ module.exports = class ChatRepository {
    */
   constructor(connectionString) {
     this._connectionString = connectionString;
+    this.checkIfChatRoomExists = this.checkIfChatRoomExists.bind(this);
     this.createChatRoom = this.createChatRoom.bind(this);
     this.getChatRoomsPatients = this.getChatRoomsPatients.bind(this);
     this.getChatRoomsProviders = this.getChatRoomsProviders.bind(this);
     this.createChatMessage = this.createChatMessage.bind(this);
     this.getChatMessages = this.getChatMessages.bind(this);
+  }
+
+  /**
+   * @method
+   * @summary Checks if a chatroom already exists between a patient and provider
+   * @param {string} patientId The user associated with the chat rooms
+   * @param {string} providerId The provider associated with the chat rooms
+   */
+  async checkIfChatRoomExists(patientId, providerId) {
+    const dbc = new pg.Client(this._connectionString);
+
+    try {
+      await dbc.connect();
+      let chatroomsFromDB = await dbc.query(`SELECT *
+                                            FROM public.chat_room as cr 
+                                            WHERE cr.patient_id = $1 AND cr.provider_id = $2`,
+                                            [patientId, providerId])
+
+      if (chatroomsFromDB.rowCount > 0) {
+        let chatroom = new ChatRoom().fromData(chatroomsFromDB.rows[0])
+        return chatroom.id
+      }
+      return
+    }
+    catch (err) { console.log(err) }
+    finally {
+      dbc.end();
+    }
   }
 
   /**
@@ -138,10 +167,9 @@ module.exports = class ChatRepository {
 
       await dbc.connect();
 
-
-      await dbc.query(`INSERT INTO chat_message (chatroom_id, author_id, datesent, viewedstatus, body, authorname, author_type_id) 
-                        VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-        [chatRoomId, chatMessage.authorId, chatMessage.dateSent, chatMessage.viewedStatus, chatMessage.body, chatMessage.authorName, authorTypeId]);
+      await dbc.query(`INSERT INTO chat_message (chatroom_id, author_id, viewedstatus, body, authorname, author_type_id) 
+                        VALUES ($1,$2,$3,$4,$5,$6)`,
+        [chatRoomId, chatMessage.authorId, chatMessage.viewedStatus, chatMessage.body, chatMessage.authorName, authorTypeId]);
     }
     catch (err) {
       console.log(`There was an insert error..... ${err}`)
