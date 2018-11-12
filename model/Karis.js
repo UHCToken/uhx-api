@@ -19,7 +19,7 @@
 
 const ModelBase = require('./ModelBase'),
     config = require ('../config'),
-    uhx = require('../uhx');
+    moment = require('moment');
 
 /**
  * @class Karis
@@ -116,6 +116,7 @@ module.exports = class Karis extends ModelBase {
      */
     constructor() {
         super();
+        this.fromData = this.fromData.bind(this);
         this.toData = this.toData.bind(this);
         this.toJSON = this.toJSON.bind(this);
     }
@@ -125,11 +126,11 @@ module.exports = class Karis extends ModelBase {
      * @summary Converts this object into a data model
      */
     fromData(patient, subscription) {
-        this.memberNumber = patient.id;
+        this.memberNumber = patient.email;
         this.memberFullName = patient.givenName + " " + patient.familyName;
         this.memberFirstName = patient.givenName;
         this.memberLastName = patient.familyName;
-        this.addressLine1 = patient.address.unitSuite + " " + patient.address.street;
+        this.addressLine1 = patient.address.street;
         this.city = patient.address.city;
         this.state = patient.address.stateProv;
         this.zipcode = patient.address.postalZip;
@@ -137,13 +138,15 @@ module.exports = class Karis extends ModelBase {
         this.faxNumber = patient.fax;
         this.email = patient.email;
         this.gender = patient.gender;
-        this.effectiveDate = subscription.startingDate;
-        this.terminationDate = subscription.terminationDate;
-        this.dob = patient.dob;
+        this.effectiveDate = moment(new Date(subscription.dateSubscribed)).format('MM/DD/YYYY');
+        this.terminationDate = subscription.dateTerminated === null ? null : moment(new Date(subscription.dateTerminated)).format('MM/DD/YYYY');
+        this.dob = moment(patient.dob).format('MM/DD/YYYY');
         this.clientCode = config.karis.clientCode;
         this.groupCode = config.karis.groupCode;
         this.planCode = config.karis.planCode;
         this.memberAffiliation = config.karis.memberAffiliation;
+
+        return this;
     }
 
     /**

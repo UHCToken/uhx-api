@@ -104,7 +104,6 @@ const pg = require('pg'),
      * @returns {User} The retrieved user
      */
     async get(id, _txc) {
-
         const dbc =  _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
@@ -117,7 +116,6 @@ const pg = require('pg'),
         finally {
             if(!_txc) dbc.end();
         }
-
     }
 
         /**

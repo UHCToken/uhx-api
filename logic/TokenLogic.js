@@ -670,6 +670,9 @@ module.exports = class TokenLogic {
             else if (principal.grant["transaction"] == 15 && model.TransactionType.Purchase) {
                 transactions = transactions.map(t => new Transaction(t.id, t.type, t.memo, t.postingDate, t.payor || t.payorId || principal.session.userId, t.payee || t.payeeId, t.amount, null, null, t.state));
             }
+            else if (principal.grant === "internal") {
+                transactions = transactions.map(t=> new Transaction(t.id, t.type, t.memo, t.postingDate, t.payor || t.payorId , t.payee || t.payeeId, t.amount, null, null, t.state));
+            }
             else {
                 // Transaction map
                 transactions = transactions.map(t => new Transaction(t.id, t.type, t.memo, t.postingDate, t.payor || t.payorId, t.payee || t.payeeId, t.amount, null, null, t.state));

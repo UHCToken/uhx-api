@@ -770,6 +770,8 @@ module.exports = class SecurityLogic {
             ruleViolations.push(new exception.RuleViolation("Given name format is invalid", exception.ErrorCodes.INVALID_NAME, exception.RuleViolationSeverity.ERROR));
         if (user.familyName && !new RegExp(uhx.Config.security.name_regex).test(user.familyName))
             ruleViolations.push(new exception.RuleViolation("Family name format is invalid", exception.ErrorCodes.INVALID_NAME, exception.RuleViolationSeverity.ERROR));
+        if (user.tel && !new RegExp(uhx.Config.security.tel_regex).test(user.tel))
+            ruleViolations.push(new exception.RuleViolation("Invalid phone number", exception.ErrorCodes.INVALID_NAME, exception.RuleViolationSeverity.ERROR));
         if (ruleViolations.length > 0)
             throw new exception.BusinessRuleViolationException(ruleViolations);
 
