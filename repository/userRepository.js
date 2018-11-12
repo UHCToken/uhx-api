@@ -130,7 +130,7 @@ const pg = require('pg'),
         const dbc =  _txc || new pg.Client(this._connectionString);
         try {
             if(!_txc) await dbc.connect();
-            const rdr = await dbc.query("SELECT * FROM users WHERE users.id IN (SELECT user_group.user_id from user_group WHERE user_group.group_id='330d2fb4-ba61-4b48-a0a1-8162a4708e96') AND users.id NOT IN (SELECT wallets.user_id from wallets WHERE wallets.network_id=$1)", [network]);
+            const rdr = await dbc.query("SELECT * FROM users WHERE users.id IN (SELECT user_group.user_id from user_group WHERE user_group.group_id='330d2fb4-ba61-4b48-a0a1-8162a4708e96') AND users.id NOT IN (SELECT wallets.user_id from wallets WHERE wallets.network_id=$1 AND wallets.user_id IS NOT NULL)", [network]);
             if(rdr.rows.length == 0)
                 return [];
             else{

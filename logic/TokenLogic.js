@@ -524,7 +524,23 @@ module.exports = class TokenLogic {
 
                     // 4. Insert the ACTIVE order
                     purchase._payorWalletId = sourceWallet.id;
-                    purchase._payeeWalletId = (await buyer.loadStellarWallet(_txc)).id;
+
+                    let purchaserWallet = (await buyer.loadStellarWallet(_txc))
+
+                    if (purchaserWallet === null && !purchaseInfo.autoActivate) {
+                        throw new exception.Exception("No wallet found for the given purchaser.", exception.ErrorCodes.NOT_FOUND);
+                    }
+
+                    if (purchaserWallet === null && purchaseInfo.autoActivate) {
+                        // Creates and links a Stellar wallet to the users account
+                        await uhx.TokenLogic.generateWallets(1);
+
+                        purchaserWallet = (await buyer.loadStellarWallet(_txc));
+                        purchase._payeeWalletId = purchaserWallet.id;
+                    } else if (purchaserWallet) {
+                        purchase._payeeWalletId = purchaserWallet.id;
+                    }
+
                     await purchase.loadPayee(_txc);
                     await purchase.loadPayor(_txc);
 
@@ -984,8 +1000,8 @@ module.exports = class TokenLogic {
 
     /**
  * @method
- * @summary Gets all balances for the user wallet
- * @param {Wallet} userWallet The wallet for which the balances should be added to
+ * @summary Generates wallets for users that currently do not have one on a given netowrk
+ * @param {number} network The network id to generate wallets for
  */
     async generateWallets(network) {
 
@@ -1005,6 +1021,9 @@ module.exports = class TokenLogic {
                 for (var i = 0; i < users.length; i++) {
                     if (config.client.createFn) {
                         var wallet = await uhx[config.client.name][config.client.createFn](users[i].id) || await uhx[config.client.name][config.client.createFn]();
+                        if (users[i].id) {
+                            wallet.userId = users[i].id
+                        }
                         await uhx.Repositories.walletRepository.insert(wallet);
                         created++;
                     }
