@@ -85,18 +85,18 @@ module.exports = class SecurityLogic {
      * @param {string} tfa_secret The one time TFA secret to be used
      * @returns {Principal} The authenticated user principal
      */
-    async establishSession(clientPrincipal, username, password, scope, tfa_secret, remote_ip) {
+    async establishSession(clientPrincipal, email, password, scope, tfa_secret, remote_ip) {
 
         // Ensure that the application information is loaded
         await clientPrincipal.session.loadApplication();
         var application = clientPrincipal.session.application;
 
         try {
-            var user = await uhx.Repositories.userRepository.getByNameSecret(username, password);
+            var user = await uhx.Repositories.userRepository.getByNameSecret(email, password);
 
             // User was successful but their account is still locked
             if (!user)
-                throw new exception.Exception("Invalid username or password", exception.ErrorCodes.INVALID_ACCOUNT);
+                throw new exception.Exception("Invalid email or password", exception.ErrorCodes.INVALID_ACCOUNT);
             else if (user.lockout > new Date())
                 throw new exception.Exception("Account is locked", exception.ErrorCodes.ACCOUNT_LOCKED);
             else if (user.deactivationTime && user.deactivationTime < new Date())
@@ -131,12 +131,12 @@ module.exports = class SecurityLogic {
                 throw e;
 
             // Attempt to increment the invalid login count
-            var invalidUser = await uhx.Repositories.userRepository.incrementLoginFailure(username, uhx.Config.security.maxFailedLogin);
+            var invalidUser = await uhx.Repositories.userRepository.incrementLoginFailure(email, uhx.Config.security.maxFailedLogin);
 
             if (invalidUser && invalidUser.lockout)
                 throw new exception.Exception("Account is locked", exception.ErrorCodes.ACCOUNT_LOCKED, e);
             else if (e.code == exception.ErrorCodes.NOT_FOUND)
-                throw new exception.Exception("Invalid username or password", exception.ErrorCodes.INVALID_ACCOUNT);
+                throw new exception.Exception("Invalid email or password", exception.ErrorCodes.INVALID_ACCOUNT);
 
             throw e;
         }
