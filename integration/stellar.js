@@ -296,9 +296,7 @@ module.exports = class StellarClient {
      * @param {String} refId The reference identifier to append to the transaction
      */
     async activateAccount(userWallet, startingBalance, initiatorWallet, refId) {
-
         try {
-
             uhx.log.info(`activateAccount(): Activating ${userWallet.address} on Horizon API`);
 
             // Generate the random KP
@@ -355,7 +353,6 @@ module.exports = class StellarClient {
      * @param {String} refId The reference identifier to append to the transaction
      */
     async createTrust(userWallet, asset, limit, refId) {
-
         try {
             // Load stellar user acct
             var stellarAcct = await this.server.loadAccount(userWallet.address);
@@ -456,9 +453,7 @@ module.exports = class StellarClient {
      * @returns {Transaction} The transaction information for the operation
      */
     async createPayment(payorWallet, payeeWallet, amount, ref) {
-
         try {
-
             uhx.log.info(`createPayment() : ${payorWallet.address} > ${payeeWallet.address} [${amount.value} ${amount.code}]`);
 
             if (payorWallet.address == payeeWallet.address)

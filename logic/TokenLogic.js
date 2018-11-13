@@ -561,11 +561,27 @@ module.exports = class TokenLogic {
 
                         // If the buyer wallet does not have a trust line, trust the asset
                         buyerWallet = await uhx.StellarClient.getAccount(buyerWallet);
-                        if (!buyerWallet.balances.find(o => o.code == asset.code))
+                        if (!buyerWallet.balances.find(o => o.code == asset.code)) {
+                            const minBalance = (buyerWallet.balances.length + 1) * 0.5 + 0.50001;
+                            const topUp = minBalance - buyerWallet.balances.find(o => o.code == "XLM").value;
+
+                            if (topUp > 0) {
+                                const topUpWallet = await uhx.Repositories.walletRepository.get(uhx.Config.subscription.topUpAccount);
+                                const topUpStellarWallet = await uhx.StellarClient.getAccount(topUpWallet);
+
+                                const topUpAmount = {
+                                    code: 'XLM',
+                                    value: topUp.toFixed(7)
+                                };
+
+                                await uhx.StellarClient.createPayment(topUpStellarWallet, buyerWallet, topUpAmount);
+                            }
+
                             buyerWallet = await uhx.StellarClient.createTrust(buyerWallet, asset);
+                        }
 
                         // Process the payment
-                        var transaction = await uhx.StellarClient.createPayment(sourceWallet, buyerWallet, new MonetaryAmount(purchase.quantity, asset.code), purchase.id, 'hash');
+                        const transaction = await uhx.StellarClient.createPayment(sourceWallet, buyerWallet, new MonetaryAmount(purchase.quantity, asset.code), purchase.id, 'hash');
                         purchase.state = model.TransactionStatus.Complete;
                         purchase.ref = transaction.ref;
                         purchase.postingDate = purchase.transactionTime = purchase.transactionTime || new Date();
