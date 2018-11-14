@@ -226,13 +226,15 @@ module.exports = class UserRepository {
     * @param {Client} _txc The postgresql connection with an active transaction to run in
     * @returns {User} The fetched user
     */
-    async getByNameSecret(email, password, _txc) {
+    async getByNameSecret(username, password, _txc) {
 
         const dbc = _txc || new pg.Client(this._connectionString);
+
         try {
             if (!_txc) await dbc.connect();
 
-            const rdr = await dbc.query("SELECT * FROM users WHERE LOWER(email) = $1 AND password = crypt($2, password)", [email, password]);
+            const rdr = await dbc.query("SELECT * FROM users WHERE LOWER(name) = $1 AND password = crypt($2, password)", [ username, password ]);
+
             if (rdr.rows.length == 0)
                 throw new exception.NotFoundException("users", username);
             else
@@ -275,12 +277,13 @@ module.exports = class UserRepository {
      * @param {Client} _txc The postgresql connection with an active transaction to run in
      * @returns {User} The updated user object.
      */
-    async incrementLoginFailure(email, lockoutThreshold, _txc) {
+    async incrementLoginFailure(username, lockoutThreshold, _txc) {
         const dbc = _txc || new pg.Client(this._connectionString);
         try {
             if (!_txc) await dbc.connect();
 
-            const rdr = await dbc.query("UPDATE users SET invalid_login = invalid_login + 1, lockout = CASE WHEN invalid_login >= $2 THEN current_timestamp + '1 DAY'::interval ELSE null END WHERE email = $1 RETURNING *", [email, lockoutThreshold]);
+            const rdr = await dbc.query("UPDATE users SET invalid_login = invalid_login + 1, lockout = CASE WHEN invalid_login >= $2 THEN current_timestamp + '1 DAY'::interval ELSE null END WHERE name = $1 RETURNING *", [ username, lockoutThreshold ]);
+
             if (rdr.rows.length > 0) {
                 return new User().fromData(rdr.rows[0]);
             }
@@ -315,12 +318,10 @@ module.exports = class UserRepository {
 
             delete (dbUser.name); // <-- Constraint : Cannot update name
 
-            delete (dbUser.email); // <-- Constraint : Must preserve email
-
             var updateCmd = model.Utils.generateUpdate(dbUser, 'users', 'updated_time');
 
             const rdr = await dbc.query(updateCmd.sql, updateCmd.args);
-            
+
             if (rdr.rows.length == 0)
                 throw new exception.Exception("Could not update user in data store", exception.ErrorCodes.DATA_ERROR);
             else
