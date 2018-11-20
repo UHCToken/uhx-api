@@ -464,7 +464,7 @@ module.exports = class StellarClient {
 
             // Check for minimum balance
             var payorBalance = payorStellarAcct.balances.find(o => o.asset_type == "native").balance;
-            var minBalance = payorStellarAcct.balances.length * 0.5 + 0.50001
+            var minBalance = ((2 + payorStellarAcct.balances.length) * 0.5) + 0.00001
             if (((payorBalance - amount.value) < minBalance) && amount.code == "XLM")
                 throw new exception.BusinessRuleViolationException("Payment would exceed the minimum required balance");
 
@@ -860,7 +860,7 @@ module.exports = class StellarClient {
 
             // Check for minimum balance
             var payorBalance = payorStellarAcct.balances.find(o => o.asset_type == "native").balance;
-            var minBalance = payorStellarAcct.balances.length * 0.5 + 0.50001
+            var minBalance = ((2 + payorStellarAcct.balances.length) * 0.5) + 0.00001
             if (((payorBalance - amount.value) < minBalance) && amount.code == "XLM")
                 throw new exception.BusinessRuleViolationException("Payment would exceed the minimum required balance");
 
@@ -928,7 +928,7 @@ module.exports = class StellarClient {
 
             // Check for minimum balance
             var escrowBalance = escrowStellarAcct.balances.find(o => o.asset_type == "native").balance;
-            var minBalance = escrowStellarAcct.balances.length * 0.5 + 0.50001
+            var minBalance = ((2 + escrowStellarAcct.balances.length) * 0.5) + 0.00001
             if (((escrowBalance - amount.value) < minBalance) && amount.code == "XLM")
                 throw new exception.BusinessRuleViolationException("Payment would exceed the minimum required balance");
 
