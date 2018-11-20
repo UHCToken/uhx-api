@@ -78,6 +78,8 @@ module.exports = class BillingLogic {
    */
   async billUsers(subscriptions) {
     try {
+      let transactions = [];
+
       // Loop through subscription data, create transactions for each with sufficient funds
       for (let sub of subscriptions) {
         // Terminate a subscription that expires today and has auto renew turned off 
@@ -87,14 +89,14 @@ module.exports = class BillingLogic {
 
         const subscriberWallet = await uhx.Repositories.walletRepository.getByPatientAndNetworkId(sub.patientId, "1");
 
-        if (!await uhx.StellarClient.isActive(subscriberWallet)) {
+        if (!subscriberWallet || !await uhx.StellarClient.isActive(subscriberWallet)) {
           // The user does not have an active wallet and will therefore have no funds to subscribe
           await this.terminateSubscription(sub);
           continue;
         }
 
         const subscriberStellarAccount = await uhx.StellarClient.getAccount(subscriberWallet);
-        const assetBalance = subscriberStellarAccount.balances.find((o) => o.code == sub.currency);
+        const assetBalance = subscriberStellarAccount.balances.find((o) => o.code == sub.asset);
 
         if (!assetBalance || assetBalance.value < sub.price) {
           await this.terminateSubscription(sub);
@@ -102,15 +104,8 @@ module.exports = class BillingLogic {
         }
 
         if (!this.doesUserHaveEnoughXLMForTransaction(subscriberStellarAccount)) {
-          throw new exception.Exception("Not enough assets to fulfill this funding", exception.ErrorCodes.INSUFFICIENT_FUNDS);
+          await this.topUpUserWalletWithXLM(subscriberStellarAccount);
         }
-
-        const principal = {
-          grant: "internal",
-          session: {
-            userId: config.subscription.paymentAccount
-          }
-        };
 
         let transaction = {
           "type": "1",
@@ -118,28 +113,20 @@ module.exports = class BillingLogic {
           "payorId": sub.userId,
           "amount": {
             "value": sub.price,
-            "code": sub.currency,
+            "code": sub.asset,
           },
           "state": "1",
           "memo": "Subscription Payment"
         };
 
         transaction = new model.Transaction().copy(transaction);
+        transaction.subscription = sub;
 
-        const stellarTransaction = (await uhx.TokenLogic.createTransaction([transaction], principal))[0];
+        transactions.push(transaction);
+      }
 
-        // Save status of payment
-        if (parseInt(stellarTransaction.state) === model.TransactionStatus.Complete) {
-          sub.status = 'complete';
-        }
-        else {
-          sub.status = 'failed';
-        }
-
-        await this.subscriptionBilled(sub);
-
-        // Update transactions
-        await uhx.Repositories.transactionRepository.update(stellarTransaction, { session: { userId: config.subscription.paymentAccount } });
+      if (transactions.length > 0) {
+        uhx.WorkerPool.anyp({action: 'processSubscriptionsForBilling', transactions: transactions });
       }
 
       return;
@@ -149,14 +136,10 @@ module.exports = class BillingLogic {
   }
 
   async doesUserHaveEnoughXLMForTransaction(stellarAccount) {
-    const minStellarBalance = (stellarAccount.balances.length * 0.5) + 0.0001;
+    const minStellarBalance = ((2 + stellarAccount.balances.length) * 0.5) + 0.00001;
     const payorStellarBalance = stellarAccount.balances.find(o => o.code == "XLM").value;
 
-    if ((payorStellarBalance - 0.0001) < minStellarBalance) {
-      return false;
-    }
-
-    return true;
+    return (payorStellarBalance - 0.00001) >= minStellarBalance;
   }
 
   async terminateSubscription(subscription) {
@@ -167,5 +150,17 @@ module.exports = class BillingLogic {
     await uhx.Repositories.subscriptionRepository.updateBilledSubscription(subscription);
 
     uhx.log.info('Updating next payment dates for billed subscriptions...')
+  }
+
+  async topUpUserWalletWithXLM(stellarWallet) {
+    const topUpWallet = await uhx.Repositories.walletRepository.get(uhx.Config.subscription.topUpAccount);
+    const topUpStellarWallet = await uhx.StellarClient.getAccount(topUpWallet);
+
+    const topUpAmount = {
+      code: 'XLM',
+      value: 0.01
+    };
+
+    await uhx.StellarClient.createPayment(topUpStellarWallet, stellarWallet, topUpAmount);
   }
 }

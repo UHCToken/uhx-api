@@ -561,11 +561,27 @@ module.exports = class TokenLogic {
 
                         // If the buyer wallet does not have a trust line, trust the asset
                         buyerWallet = await uhx.StellarClient.getAccount(buyerWallet);
-                        if (!buyerWallet.balances.find(o => o.code == asset.code))
+                        if (!buyerWallet.balances.find(o => o.code == asset.code)) {
+                            const minBalance = ((2 + buyerWallet.balances.length) * 0.5) + 0.00001;
+                            const topUp = minBalance - buyerWallet.balances.find(o => o.code == "XLM").value;
+
+                            if (topUp > 0) {
+                                const topUpWallet = await uhx.Repositories.walletRepository.get(uhx.Config.subscription.topUpAccount);
+                                const topUpStellarWallet = await uhx.StellarClient.getAccount(topUpWallet);
+
+                                const topUpAmount = {
+                                    code: 'XLM',
+                                    value: topUp.toFixed(7)
+                                };
+
+                                await uhx.StellarClient.createPayment(topUpStellarWallet, buyerWallet, topUpAmount);
+                            }
+
                             buyerWallet = await uhx.StellarClient.createTrust(buyerWallet, asset);
+                        }
 
                         // Process the payment
-                        var transaction = await uhx.StellarClient.createPayment(sourceWallet, buyerWallet, new MonetaryAmount(purchase.quantity, asset.code), purchase.id, 'hash');
+                        const transaction = await uhx.StellarClient.createPayment(sourceWallet, buyerWallet, new MonetaryAmount(purchase.quantity, asset.code), purchase.id, 'hash');
                         purchase.state = model.TransactionStatus.Complete;
                         purchase.ref = transaction.ref;
                         purchase.postingDate = purchase.transactionTime = purchase.transactionTime || new Date();
@@ -712,17 +728,16 @@ module.exports = class TokenLogic {
                 // TODO: Verify balances before transacting with Stellar
 
                 // Execute the transaction batch
-                // var batchId = transactions[0].batchId;
-                // if(transactions.length > 4)
-                //     uhx.WorkerPool.anyp({action: 'processTransactions', batchId: batchId, sessionId: principal.session.id });
-                // else {
-                // Update the transactions
-                for (var i in transactions) {
-                    await uhx.StellarClient.execute(transactions[i]);
-                    await uhx.Repositories.transactionRepository.update(transactions[i], principal, _txc);
+                var batchId = transactions[0].batchId;
+                if(transactions.length > 4)
+                    uhx.WorkerPool.anyp({action: 'processTransactions', batchId: batchId, sessionId: principal.session.id });
+                else {
+                    // Update the transactions
+                    for (var i in transactions) {
+                        await uhx.StellarClient.execute(transactions[i]);
+                        await uhx.Repositories.transactionRepository.update(transactions[i], principal, _txc);
+                    }
                 }
-                // }
-
 
                 return transactions;
             });
@@ -870,7 +885,7 @@ module.exports = class TokenLogic {
                     // Does the user have a trust line?
                     else if (!w.balances.find(o => o.code == dropSpec.amount.code)) {
                         // We will need to trust, does the user have enough XLM to trust?
-                        var minBalance = (1.1 + w.balances.length * 0.5);
+                        var minBalance = (2 + (w.balances.length + 1)) * 0.5;
                         var topUp = minBalance - w.balances.find(o => o.code == "XLM").value;
                         if (topUp > 0) {
                             if (dropSpec.autoTopUp) {
@@ -965,7 +980,6 @@ module.exports = class TokenLogic {
             throw new exception.Exception("Error planning airdrop", e.code || exception.ErrorCodes.UNKNOWN, e);
         }
     }
-
 
     /**
      * @method

@@ -92,7 +92,7 @@ module.exports = class SubscriptionRepository {
             const today = moment().format('YYYY-MM-DD');
 
             // Get subscriptions to bill today
-            const rdr = await dbc.query('SELECT * FROM subscription_lookup WHERE date_expired = $1', [today]);
+            const rdr = await dbc.query('SELECT * FROM subscription_lookup WHERE (date_expired = $1 OR date_next_payment = $1) AND date_terminated IS NULL', [today]);
 
             if (rdr.rows.length === 0) {
                 // No subscriptions to bill

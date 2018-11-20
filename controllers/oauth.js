@@ -305,7 +305,10 @@ class OAuthTokenService {
     // GRANT TYPE
     switch (req.body.grant_type) {
       case "password":
-        userPrincipal = await uhx.SecurityLogic.establishSession(principal, req.body.username.toLowerCase(), req.body.password, req.body.scope || "*", req.body.tfa_secret, forwardHeader || req.ip);
+        let username = req.body.username.toLowerCase();
+        username = username.trim();
+
+        userPrincipal = await uhx.SecurityLogic.establishSession(principal, username, req.body.password, req.body.scope || "*", req.body.tfa_secret, forwardHeader || req.ip);
         break;
       case "refresh_token":
         userPrincipal = await uhx.SecurityLogic.refreshSession(principal, req.body.refresh_token, forwardHeader || req.ip);

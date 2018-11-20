@@ -157,6 +157,6 @@ SELECT
 FROM subscriptions s
 LEFT JOIN offerings o ON s.offering_id = o.id
 LEFT JOIN offering_groups og ON og.id = o.offering_group_id
-LEFT JOIN currencies c ON c.id = o.currency_id
+LEFT JOIN assets a ON a.id = o.asset_id
 LEFT JOIN patients p ON p.id = s.patient_id
 LEFT JOIN users u ON p.user_id = u.id;

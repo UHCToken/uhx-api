@@ -110,7 +110,7 @@ module.exports = class Subscription extends ModelBase {
         this.periodInMonths = dbSubscription.period_in_months;
         this.autoRenew = dbSubscription.auto_renew;
         this.price = dbSubscription.price;
-        this.currency = dbSubscription.currency;
+        this.asset = dbSubscription.asset;
         return this;
     }
 
@@ -132,7 +132,7 @@ module.exports = class Subscription extends ModelBase {
             period_in_months: this.periodInMonths,
             auto_renew: this.autoRenew,
             price: this.price,
-            currency: this.currency
+            asset: this.asset
         };
     }
 
@@ -154,7 +154,7 @@ module.exports = class Subscription extends ModelBase {
             periodInMonths: this.periodInMonths,
             autoRenew: this.autoRenew,
             price: this.price,
-            currency: this.currency
+            asset: this.asset
         }
     }
 }
