@@ -86,7 +86,6 @@ module.exports = class SecurityLogic {
      * @returns {Principal} The authenticated user principal
      */
     async establishSession(clientPrincipal, username, password, scope, tfa_secret, remote_ip) {
-
         // Ensure that the application information is loaded
         await clientPrincipal.session.loadApplication();
         var application = clientPrincipal.session.application;
@@ -770,6 +769,8 @@ module.exports = class SecurityLogic {
             ruleViolations.push(new exception.RuleViolation("Given name format is invalid", exception.ErrorCodes.INVALID_NAME, exception.RuleViolationSeverity.ERROR));
         if (user.familyName && !new RegExp(uhx.Config.security.name_regex).test(user.familyName))
             ruleViolations.push(new exception.RuleViolation("Family name format is invalid", exception.ErrorCodes.INVALID_NAME, exception.RuleViolationSeverity.ERROR));
+        if (user.tel && !new RegExp(uhx.Config.security.tel_regex).test(user.tel))
+            ruleViolations.push(new exception.RuleViolation("Invalid phone number", exception.ErrorCodes.INVALID_NAME, exception.RuleViolationSeverity.ERROR));
         if (ruleViolations.length > 0)
             throw new exception.BusinessRuleViolationException(ruleViolations);
 
@@ -840,7 +841,10 @@ module.exports = class SecurityLogic {
         }
         catch (e) {
             uhx.log.error(`Error claiming invitation: ${JSON.stringify(e)}`);
-            throw new exception.Exception("Error claiming invitation", e.code || exception.ErrorCodes.UNKNOWN, e);
+            if (e.code == "ERR_NOTFOUND")
+                throw new exception.Exception("This invitation is not valid. Please check your email for a more recent invitation, or contact support for assistance.", e.code || exception.ErrorCodes.INVALID_ACCOUNT, e);
+            else
+                throw new exception.Exception("Error claiming invitation", e.code || exception.ErrorCodes.UNKNOWN, e);
         }
     }
 

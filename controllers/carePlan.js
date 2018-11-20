@@ -163,7 +163,7 @@ class CarePlanApiResource {
      * @summary Deactivates a wallet
      * @param {Express.Request} req The HTTP request from the client
      * @param {Express.Response} res The HTTP response to the client
-    * @swagger
+     * @swagger
      * /user/{userid}/wallet:
      *  delete:
      *      tags:
@@ -255,11 +255,11 @@ class CarePlanApiResource {
     }
 
     /**
- * @summary Disputes a specified care plan
- * @method
- * @param {Express.Request} req The HTTP request from the client
- * @param {Express.Response} res The HTTP response to the client
- */
+     * @summary Disputes a specified care plan
+     * @method
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to the client
+     */
     async dispute(req, res) {
 
         var carePlan = await uhx.CareLogic.disputeCarePlan(req.body, req.principal);
@@ -279,13 +279,12 @@ class CarePlanApiResource {
         return true;
     }
 
-
     /**
- * @summary Gets all care plans associated with either the provider or patient
- * @method
- * @param {Express.Request} req The HTTP request from the client
- * @param {Express.Response} res The HTTP response to the client
- */
+     * @summary Gets all care plans associated with either the provider or patient
+     * @method
+     * @param {Express.Request} req The HTTP request from the client
+     * @param {Express.Response} res The HTTP response to the client
+     */
     async getAll(req, res) {
         if (req.body.providerId) {
             var carePlans = await uhx.Repositories.carePlanRepository.getByProviderId(req.body.providerId, req.body.status);

@@ -197,6 +197,29 @@ const pg = require('pg'),
 
     /**
      * @method
+     * @summary Retrieve a specific wallet from the database
+     * @param {uuid} patientId The identity of the patient to retrieve
+     * @param {string} networkId The network of the wallet
+     * @param {Client} _txc The postgresql connection with an active transaction to run in
+     * @returns {Wallet} The fetched wallet
+     */
+    async getByPatientAndNetworkId(patientId, networkId, _txc) {
+        const dbc = _txc || new pg.Client(this._connectionString);
+        try {
+            if(!_txc) await dbc.connect();
+            const rdr = await dbc.query("SELECT wallets.*, wallet_network.name AS network, wallet_network.symbol AS symbol FROM wallets INNER JOIN wallet_network ON (wallets.network_id = wallet_network.id) INNER JOIN users ON (users.id = wallets.user_id) INNER JOIN patients ON (patients.user_id = users.id) WHERE patients.id = $1 AND wallets.network_id = $2", [patientId, networkId]);
+            if(rdr.rows.length == 0)
+                return null;
+            else
+                return new model.Wallet().fromData(rdr.rows[0]);
+        }
+        finally {
+            if(!_txc) dbc.end();
+        }
+    }
+
+    /**
+     * @method
      * @summary Retrieve all specific wallets from the database for a user
      * @param {uuid} userId The identity of the user to retrieve
      * @param {Client} _txc The postgresql connection with an active transaction to run in

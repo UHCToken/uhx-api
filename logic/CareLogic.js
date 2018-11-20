@@ -105,8 +105,20 @@ module.exports = class CareLogic {
                 careRelationship.providerNote = careRelationshipBody.feedback;
                 careRelationship = await uhx.Repositories.careRelationshipRepository.update(careRelationship, principal);
 
-                await uhx.Repositories.chatRepository.createChatRoom(careRelationship);
 
+                let chatroomId = await uhx.Repositories.chatRepository.checkIfChatRoomExists(careRelationship.patientId, careRelationship.providerId)
+                if (chatroomId) {
+                    let chatMessage = {
+                        authorId: careRelationship.providerId,
+                        dateSent: null,
+                        viewedStatus : 'Unread',
+                        body: 'A new care request has been accepted',
+                        authorName: 'UHX System',
+                    }
+                    await uhx.Repositories.chatRepository.createChatMessage(chatroomId, chatMessage);
+                } else {
+                    await uhx.Repositories.chatRepository.createChatRoom(careRelationship);
+                }
 
                 return careRelationship;
             }

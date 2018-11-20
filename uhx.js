@@ -34,6 +34,7 @@ const config = require('./config'),
     poolio = require('poolio'),
     Web3Client = require("./integration/web3"),
     BitcoinClient = require("./integration/bitcoin"),
+    TeladocService = require("./integration/teladoc"),
     KarisService = require("./integration/karis"),
     worker = require('./worker');
 
@@ -66,6 +67,8 @@ module.exports.init = () => {
         module.exports.GreenMoney = new GreenMoney();
         winston.info("Karis Initialized...");
         module.exports.Karis = new KarisService();
+        winston.info("Teladoc Initialized...");
+        module.exports.Teladoc = new TeladocService();
         winston.info("ObjectStorage Initialized...");
         module.exports.ObjectStorage = new ObjectStorage();
         winston.info("Google Maps Initialized...");

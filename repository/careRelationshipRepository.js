@@ -99,7 +99,7 @@ module.exports = class CareRelationshipRepository {
             if (rdr.rows.length == 0)
                 throw new exception.Exception("Could not update care relationship", exception.ErrorCodes.DATA_ERROR);
             else
-                return careRelationship.fromData(rdr.rows[0]); 
+                return careRelationship.fromData(rdr.rows[0]);
         }
         finally {
             if (!_txc) dbc.end();
@@ -130,13 +130,13 @@ module.exports = class CareRelationshipRepository {
         }
     }
 
-        /**
-     * @method
-     * @summary Gets the specified asset by ID
-     * @param {string} id The id of the asset to get
-     * @param {Client} _txc When present, the database transaction to use
-     * @returns {Asset} The asset with identifier matching
-     */
+    /**
+ * @method
+ * @summary Gets the specified asset by ID
+ * @param {string} id The id of the asset to get
+ * @param {Client} _txc When present, the database transaction to use
+ * @returns {Asset} The asset with identifier matching
+ */
     async getByProviderId(providerId, status, _txc) {
         var dbc = _txc || new pg.Client(this._connectionString);
         try {
@@ -148,19 +148,21 @@ module.exports = class CareRelationshipRepository {
                  provider_addresses.id as address_id, provider_addresses.address_name\
                  FROM care_relationships, patients, service_types, provider_addresses\
                  WHERE care_relationships.provider_id = $1 AND patients.id = care_relationships.patient_id AND provider_addresses.id = care_relationships.address_id AND service_types.id = care_relationships.service_type_id';
-            
-            if(status && status != "*"){
-                query = query + "AND care_relationship.status = $2";
+
+            if (status && status != "*") {
+                query = query + "AND care_relationship.status = $2 ORDER BY care_relationships.creation_time ASC";
+
                 var rdr = await dbc.query(query, [providerId, status]);
             }
-            else{
-                 var rdr = await dbc.query(query, [providerId]);
+            else {
+                query = query + " ORDER BY care_relationships.creation_time ASC"
+                var rdr = await dbc.query(query, [providerId]);
             }
             if (rdr.rows.length == 0)
                 return [];
-            else{
+            else {
                 var retVal = [];
-                rdr.rows.forEach(o=>retVal.push(new CareRelationship().fromData(o)));
+                rdr.rows.forEach(o => retVal.push(new CareRelationship().fromData(o)));
                 return retVal;
             }
         }
@@ -169,13 +171,13 @@ module.exports = class CareRelationshipRepository {
         }
     }
 
-            /**
-     * @method
-     * @summary Gets the specified asset by ID
-     * @param {string} id The id of the asset to get
-     * @param {Client} _txc When present, the database transaction to use
-     * @returns {Asset} The asset with identifier matching
-     */
+    /**
+* @method
+* @summary Gets the specified asset by ID
+* @param {string} id The id of the asset to get
+* @param {Client} _txc When present, the database transaction to use
+* @returns {Asset} The asset with identifier matching
+*/
     async getByPatientId(patientId, status, _txc) {
         var dbc = _txc || new pg.Client(this._connectionString);
         try {
@@ -188,19 +190,20 @@ module.exports = class CareRelationshipRepository {
                  provider_addresses.id as address_id, provider_addresses.address_name\
                  FROM care_relationships, providers, service_types, provider_addresses\
                  WHERE patient_id = $1 AND providers.id = care_relationships.provider_id AND provider_addresses.id = care_relationships.address_id AND service_types.id = care_relationships.service_type_id';
-            if(status && status != "*"){
-                query = query + 'AND status=$2';
+            if (status && status != "*") {
+                query = query + 'AND status=$2 ORDER BY care_relationships.creation_time ASC';
                 var rdr = await dbc.query(query, [patientId, status]);
             }
-            else{
+            else {
+                query = query + ' ORDER BY care_relationships.creation_time ASC';
                 var rdr = await dbc.query(query, [patientId]);
             }
             if (rdr.rows.length == 0)
                 return [];
-            else{
+            else {
                 var retVal = [];
-                rdr.rows.forEach(o=>retVal.push(new CareRelationship().fromData(o)));
-                
+                rdr.rows.forEach(o => retVal.push(new CareRelationship().fromData(o)));
+
                 return retVal;
             }
         }

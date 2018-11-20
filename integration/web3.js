@@ -46,7 +46,7 @@ class EthereumException extends exception.Exception {
 
 /**
  * @class
- * @summary Provides a wrapper around the stellar client
+ * @summary Provides a wrapper around the ethereum client
  */
 module.exports = class WebClient {
 
