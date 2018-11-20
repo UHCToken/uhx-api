@@ -728,17 +728,16 @@ module.exports = class TokenLogic {
                 // TODO: Verify balances before transacting with Stellar
 
                 // Execute the transaction batch
-                // var batchId = transactions[0].batchId;
-                // if(transactions.length > 4)
-                //     uhx.WorkerPool.anyp({action: 'processTransactions', batchId: batchId, sessionId: principal.session.id });
-                // else {
-                // Update the transactions
-                for (var i in transactions) {
-                    await uhx.StellarClient.execute(transactions[i]);
-                    await uhx.Repositories.transactionRepository.update(transactions[i], principal, _txc);
+                var batchId = transactions[0].batchId;
+                if(transactions.length > 4)
+                    uhx.WorkerPool.anyp({action: 'processTransactions', batchId: batchId, sessionId: principal.session.id });
+                else {
+                    // Update the transactions
+                    for (var i in transactions) {
+                        await uhx.StellarClient.execute(transactions[i]);
+                        await uhx.Repositories.transactionRepository.update(transactions[i], principal, _txc);
+                    }
                 }
-                // }
-
 
                 return transactions;
             });
