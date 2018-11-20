@@ -10,5 +10,3 @@ ALTER TABLE offerings
    ADD CONSTRAINT fk_offerings_assets
    FOREIGN KEY (asset_id) 
    REFERENCES assets(id);
-
-DROP TABLE IF EXISTS currencies;
