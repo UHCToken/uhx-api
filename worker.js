@@ -1,6 +1,7 @@
 'use strict';
 
 const StellarClient = require("./integration/stellar"),
+    Transaction = require('./model/Transaction'),
     exception = require("./exception"),
     model = require("./model/model"),
     security = require("./security"),
@@ -49,6 +50,7 @@ const actions = {
             transactions = await uhx.Repositories.transactionRepository.getByBatch(workData.batchId);
         uhx.log.info(`Worker process will transact ${transactions.length} for batch ${workData.batchId}`);
         for(var i in transactions) {
+            uhx.log.info(transactions[i].state);
             if(transactions[i].state == model.TransactionStatus.Pending ||
                 transactions[i].state == model.TransactionStatus.Active) {
                 try {
@@ -71,6 +73,52 @@ const actions = {
                 uhx.log.info(`Transaction ${transactions[i].id} has state of ${transactions[i].state}, will not retry`);
         }
         return workData.batchId;
+    },
+    /**
+     * @method
+     * @summary Processes subscriptions
+     * @param {*} workData Parameters for the transaction processing
+     */
+    processSubscriptionsForBilling : async (workData) => {
+        // Execute as session
+        const session = new model.Session(await uhx.Repositories.userRepository.get("00000000-0000-0000-0000-000000000000"), new model.Application(), '*', null, null);
+        
+        await session.loadUser();
+        var principal = new security.Principal(session);
+
+        var transactions = workData.transactions;
+
+        const stellarClient = await uhx.Repositories.assetRepository.query().then(function (result) {
+            return new StellarClient(config.stellar.horizon_server, result, config.stellar.testnet_use);   
+        });
+
+        uhx.log.info(`Worker process will transact ${transactions.length} subscriptions.`);
+
+        try {
+            transactions = transactions.map(t => {
+                const trans = new Transaction(t.id, t.type, t.memo, t.postingDate, t.payor || t.payorId, t.payee || t.payeeId, t.amount, null, null, t.state)
+                trans.subscription = t.subscription;
+                return trans;
+            });
+             
+            await uhx.Repositories.transaction(async (_txc) => {  
+              for (var i in transactions) {
+                await transactions[i].loadPayorWallet();
+                await transactions[i].loadPayeeWallet();
+                await stellarClient.execute(transactions[i]);
+                await uhx.Repositories.transactionRepository.insert(transactions[i], principal, _txc);
+                await uhx.Repositories.subscriptionRepository.updateBilledSubscription(transactions[i].subscription);
+              }  
+            });
+          }
+          catch (e) {
+            uhx.log.error(`Error creating transaction: ${e.message}`);
+            while (e.code == exception.ErrorCodes.DATA_ERROR && e.cause)
+                e = e.cause[0];
+            throw new exception.Exception("Error creating transaction", e.code || exception.ErrorCodes.UNKNOWN, e);
+          }
+
+        return;
     }
 }
 
